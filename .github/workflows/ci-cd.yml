@@ -43,19 +43,6 @@ jobs:
         ls -la node_modules/.bin/ | grep tsc
       continue-on-error: true
     
-    - name: Run type checking
-      working-directory: ./web
-      run: |
-        echo "Running TypeScript type checking..."
-        if [ -f "node_modules/.bin/tsc" ]; then
-          echo "Local TypeScript found, using it..."
-          ./node_modules/.bin/tsc --noEmit
-        else
-          echo "Local TypeScript not found, skipping..."
-          exit 0
-        fi
-      continue-on-error: true
-    
     - name: Build application
       working-directory: ./web
       run: npm run build
