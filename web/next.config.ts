@@ -1,9 +1,15 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  // Minimal configuration for CI compatibility
-  experimental: {
-    // Disable experimental features that might cause issues
+  webpack: (config, { isServer }) => {
+    // Ensure path aliases work in both client and server
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname, 'src'),
+    };
+    
+    return config;
   },
   // Ensure TypeScript path mapping works
   typescript: {
