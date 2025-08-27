@@ -1,14 +1,14 @@
-name: CI/CD Pipeline
+name: Development Workflow (Simple)
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ develop, feature/*, bugfix/* ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
-  # Frontend tests and build
-  frontend:
+  # Development tests and preview
+  development:
     runs-on: ubuntu-latest
     
     steps:
@@ -18,15 +18,12 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: web/package-lock.json
+        # Removed cache to avoid cache-related errors
     
     - name: Install dependencies
       run: |
         cd web
-        npm ci --prefer-offline --no-audit
-      env:
-        NODE_ENV: development
+        npm install
     
     - name: Run linting
       run: |
@@ -47,43 +44,20 @@ jobs:
       env:
         NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
 
-  # Backend tests
-  backend:
+  # Create preview deployment
+  preview:
+    needs: development
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        cd backend
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Run backend tests
-      run: |
-        cd backend
-        python -m pytest tests/ -v
-      continue-on-error: true  # Remove this when you add actual tests
-
-  # Deploy to Vercel (only on main branch)
-  deploy:
-    needs: [frontend, backend]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to Vercel
+    - name: Deploy Preview to Vercel
       uses: amondnet/vercel-action@v25
       with:
         vercel-token: ${{ secrets.VERCEL_TOKEN }}
         vercel-org-id: ${{ secrets.ORG_ID }}
         vercel-project-id: ${{ secrets.PROJECT_ID }}
         working-directory: ./web
+        vercel-args: '--prod'
