@@ -82,17 +82,61 @@ jobs:
           echo "web directory not found"
         fi
     
+    - name: Detailed web directory investigation
+      run: |
+        echo "=== Detailed web directory investigation ==="
+        echo "Current directory: $(pwd)"
+        echo "=== Web directory exists? ==="
+        if [ -d "web" ]; then
+          echo "YES - web directory exists"
+          echo "=== Web directory absolute path ==="
+          echo "$(pwd)/web"
+          echo "=== Web directory contents (detailed) ==="
+          ls -la web/
+          echo "=== Web directory permissions ==="
+          ls -ld web/
+          echo "=== Web directory size ==="
+          du -sh web/
+          echo "=== Web directory hidden files ==="
+          ls -la web/.* 2>/dev/null || echo "No hidden files or error listing hidden files"
+          echo "=== Web package.json check ==="
+          if [ -f "web/package.json" ]; then
+            echo "YES - web/package.json exists"
+            echo "=== Package.json size ==="
+            ls -lh web/package.json
+            echo "=== Package.json contents ==="
+            cat web/package.json
+          else
+            echo "NO - web/package.json does not exist"
+            echo "=== What's in web directory? ==="
+            find web/ -type f
+          fi
+        else
+          echo "NO - web directory does not exist"
+        fi
+    
     - name: Install dependencies
       run: |
         echo "Installing dependencies..."
-        if [ -d "web" ] && [ -f "web/package.json" ]; then
-          cd web
-          npm install
-          echo "Dependencies installed successfully"
+        echo "Current directory: $(pwd)"
+        echo "=== Checking web directory ==="
+        if [ -d "web" ]; then
+          echo "web directory exists"
+          if [ -f "web/package.json" ]; then
+            echo "web/package.json exists"
+            echo "=== Installing dependencies ==="
+            cd web
+            npm install
+            echo "Dependencies installed successfully"
+          else
+            echo "ERROR: web/package.json not found!"
+            echo "=== Web directory contents ==="
+            ls -la web/
+            exit 1
+          fi
         else
-          echo "ERROR: web directory or package.json not found!"
-          echo "Current directory: $(pwd)"
-          echo "Available directories:"
+          echo "ERROR: web directory not found!"
+          echo "=== Available directories ==="
           ls -la
           exit 1
         fi
@@ -100,7 +144,10 @@ jobs:
     - name: Build application
       run: |
         echo "Building application..."
+        echo "Current directory: $(pwd)"
+        echo "=== Checking web directory ==="
         if [ -d "web" ] && [ -f "web/package.json" ]; then
+          echo "web directory and package.json exist"
           cd web
           echo "Current directory: $(pwd)"
           echo "Directory contents:"
@@ -110,6 +157,8 @@ jobs:
           echo "Build completed successfully"
         else
           echo "ERROR: Cannot build - web directory or package.json not found!"
+          echo "=== Web directory exists: $([ -d "web" ] && echo "YES" || echo "NO") ==="
+          echo "=== Web package.json exists: $([ -f "web/package.json" ] && echo "YES" || echo "NO") ==="
           exit 1
         fi
       env:
