@@ -2,8 +2,13 @@
 
 import * as React from "react"
 import * as SeparatorPrimitive from "@radix-ui/react-separator"
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 
-import { cn } from "@/lib/utils"
+// Inline cn utility to avoid module resolution issues
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 const Separator = React.forwardRef<
   React.ElementRef<typeof SeparatorPrimitive.Root>,

@@ -1,151 +1,87 @@
 "use client";
 
-import * as React from "react";
-import { createContext, useContext, useState } from "react";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 
-interface SidebarContextType {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
+// Inline cn utility to avoid module resolution issues
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }
 
-const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isOpen, setIsOpen] = useState(true);
-
-  return (
-    <SidebarContext.Provider value={{ isOpen, setIsOpen }}>
-      {children}
-    </SidebarContext.Provider>
-  );
-}
-
-export function useSidebar() {
-  const context = useContext(SidebarContext);
-  if (context === undefined) {
-    throw new Error("useSidebar must be used within a SidebarProvider");
-  }
-  return context;
-}
-
-export function Sidebar({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  const { isOpen } = useSidebar();
-
-  return (
+const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
+  ({ className, children, ...props }, ref) => (
     <div
-      className={cn(
-        "flex h-full w-64 flex-col border-r bg-[var(--color-bg-secondary)] transition-all duration-300",
-        !isOpen && "w-16",
-        className
-      )}
-      {...props}
-    />
-  );
-}
-
-export function SidebarHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("flex h-16 shrink-0 items-center border-b px-6", className)}
-      {...props}
-    />
-  );
-}
-
-export function SidebarContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn("flex flex-1 flex-col gap-4 p-4", className)} {...props} />
-  );
-}
-
-export function SidebarGroup({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col gap-2", className)} {...props} />;
-}
-
-export function SidebarGroupLabel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        "px-2 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider",
-        className
-      )}
-      {...props}
-    />
-  );
-}
-
-export function SidebarGroupContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col gap-1", className)} {...props} />;
-}
-
-export function SidebarMenu({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col gap-1", className)} {...props} />;
-}
-
-export function SidebarMenuItem({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("", className)} {...props} />;
-}
-
-interface SidebarMenuButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  isActive?: boolean;
-}
-
-export function SidebarMenuButton({ 
-  className, 
-  isActive = false, 
-  children, 
-  ...props 
-}: SidebarMenuButtonProps) {
-  return (
-    <button
-      className={cn(
-        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]",
-        isActive && "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]",
-        !isActive && "text-[var(--color-text-secondary)]",
-        className
-      )}
+      ref={ref}
+      className={cn("flex h-full w-full flex-col gap-4", className)}
       {...props}
     >
       {children}
-    </button>
-  );
-}
+    </div>
+  )
+)
+Sidebar.displayName = "Sidebar"
 
-export function SidebarFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
+interface SidebarHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+const SidebarHeader = React.forwardRef<HTMLDivElement, SidebarHeaderProps>(
+  ({ className, children, ...props }, ref) => (
     <div
-      className={cn("flex shrink-0 items-center border-t p-4", className)}
-      {...props}
-    />
-  );
-}
-
-export function SidebarTrigger({ className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const { isOpen, setIsOpen } = useSidebar();
-
-  return (
-    <button
-      className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-md border hover:bg-[var(--color-bg-tertiary)]",
-        className
-      )}
-      onClick={() => setIsOpen(!isOpen)}
+      ref={ref}
+      className={cn("flex h-[60px] items-center px-2", className)}
       {...props}
     >
-      <svg
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4 6h16M4 12h16M4 18h16"
-        />
-      </svg>
-    </button>
-  );
-}
+      {children}
+    </div>
+  )
+)
+SidebarHeader.displayName = "SidebarHeader"
+
+interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {}
+
+const SidebarNav = React.forwardRef<HTMLElement, SidebarNavProps>(
+  ({ className, children, ...props }, ref) => (
+    <nav
+      ref={ref}
+      className={cn("flex flex-1 flex-col gap-2 px-2", className)}
+      {...props}
+    >
+      {children}
+    </nav>
+  )
+)
+SidebarNav.displayName = "SidebarNav"
+
+interface SidebarNavItemProps extends React.HTMLAttributes<HTMLLIElement> {}
+
+const SidebarNavItem = React.forwardRef<HTMLLIElement, SidebarNavItemProps>(
+  ({ className, children, ...props }, ref) => (
+    <li
+      ref={ref}
+      className={cn("flex items-center gap-2 rounded-md px-3 py-2", className)}
+      {...props}
+    >
+      {children}
+    </li>
+  )
+)
+SidebarNavItem.displayName = "SidebarNavItem"
+
+interface SidebarFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+const SidebarFooter = React.forwardRef<HTMLDivElement, SidebarFooterProps>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("flex h-[60px] items-center px-2", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+SidebarFooter.displayName = "SidebarFooter"
+
+export { Sidebar, SidebarHeader, SidebarNav, SidebarNavItem, SidebarFooter }
