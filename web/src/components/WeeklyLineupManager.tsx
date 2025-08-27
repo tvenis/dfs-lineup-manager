@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Input } from "./ui/input";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
 
@@ -55,7 +54,7 @@ interface Lineup {
   created_at: string;
   updated_at?: string;
   tags?: string;
-  slots: Record<string, any>;
+  slots: Record<string, string>;
 }
 
 // Temporary mock store
@@ -73,30 +72,20 @@ const useLineupsStore = () => {
 
 // Temporary mock services
 class MockLineupService {
-  static async getLineups(weekId?: number): Promise<Lineup[]> {
+  static async getLineups(): Promise<Lineup[]> {
     return [];
   }
   
-  static async deleteLineup(lineupId: string): Promise<void> {
+  static async deleteLineup(): Promise<void> {
     // Mock implementation
   }
   
-  static async exportLineup(lineupId: string, format: string): Promise<Blob> {
+  static async exportLineup(): Promise<Blob> {
     return new Blob(['mock data'], { type: 'text/plain' });
   }
 }
 
-class MockPlayerService {
-  static async getWeeks(): Promise<{ weeks: Week[]; total: number }> {
-    return { weeks: [], total: 0 };
-  }
-  
-  static async getPlayerPool(weekId: number): Promise<{ entries: PlayerPoolEntry[]; total: number; week_id: number }> {
-    return { entries: [], total: 0, week_id: weekId };
-  }
-}
-
-import { Search, Filter, Eye, Edit, Trash2, Download } from "lucide-react";
+import { Eye, Trash2, Download } from "lucide-react";
 
 export function WeeklyLineupManager() {
   const { lineups, loading, setLineups, setLoading } = useLineupsStore();
@@ -163,7 +152,7 @@ export function WeeklyLineupManager() {
     if (!lineupToDelete) return;
     
     try {
-      await MockLineupService.deleteLineup(lineupToDelete.id);
+      await MockLineupService.deleteLineup();
       setLineups(prev => prev.filter(l => l.id !== lineupToDelete.id));
       setShowDeleteDialog(false);
       setLineupToDelete(null);
@@ -174,7 +163,7 @@ export function WeeklyLineupManager() {
 
   const handleExportLineup = async (lineup: Lineup) => {
     try {
-      const blob = await MockLineupService.exportLineup(lineup.id, 'csv');
+      const blob = await MockLineupService.exportLineup();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -330,11 +319,11 @@ export function WeeklyLineupManager() {
               </DialogHeader>
               
               <div className="space-y-4">
-                {lineup.tags && (
+                {selectedLineup.tags && (
                   <div>
                     <h4 className="font-medium mb-2">Tags</h4>
                     <div className="flex flex-wrap gap-1">
-                      {lineup.tags.split(',').map((tag, index) => (
+                      {selectedLineup.tags.split(',').map((tag: string, index: number) => (
                         <Badge key={index} variant="secondary">
                           {tag.trim()}
                         </Badge>

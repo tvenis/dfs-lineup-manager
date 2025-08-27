@@ -2,12 +2,9 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Badge } from './ui/badge'
 import { Label } from './ui/label'
 
-import { Save, Trash2, Download, RotateCcw, User, DollarSign, ArrowUpDown, Plus } from 'lucide-react'
 import { Progress } from './ui/progress'
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
 
 // Temporary mock interfaces to get build working
@@ -28,13 +25,6 @@ interface PlayerPoolEntry {
   projectedPoints?: number;
 }
 
-interface LineupCreate {
-  name: string;
-  week_id: number;
-  players: string[];
-  tags?: string;
-}
-
 type LineupSlotId = 'QB' | 'RB1' | 'RB2' | 'WR1' | 'WR2' | 'WR3' | 'TE' | 'FLEX' | 'DST';
 
 type RosterSlot = {
@@ -43,25 +33,11 @@ type RosterSlot = {
   eligiblePositions: string[]
 }
 
-type SortField = 'name' | 'team' | 'opponent' | 'salary' | 'projectedPoints' | 'opponentRank' | 'value'
-type SortDirection = 'asc' | 'desc'
-
-interface LineupBuilderProps {
-  onPlayerSelect?: (player: Player) => void;
-  selectedWeek?: string;
-}
-
-export function LineupBuilder({ 
-  onPlayerSelect, 
-  selectedWeek = "1" 
-}: LineupBuilderProps) {
+export function LineupBuilder() {
   const SALARY_CAP = 50000
   
   const [lineupName, setLineupName] = useState('')
   const [tags, setTags] = useState('')
-  const [selectedPosition, setSelectedPosition] = useState<string>('QB')
-  const [sortField, setSortField] = useState<SortField>('projectedPoints')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [roster, setRoster] = useState<RosterSlot[]>([
     { position: 'QB', player: null, eligiblePositions: ['QB'] },
     { position: 'RB1', player: null, eligiblePositions: ['RB'] },
@@ -77,7 +53,6 @@ export function LineupBuilder({
   // State for player pool data
   const [playerPool, setPlayerPool] = useState<PlayerPoolEntry[]>([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   // Mock data for testing
   const mockPlayerPool: PlayerPoolEntry[] = [
@@ -123,14 +98,6 @@ export function LineupBuilder({
     return sum + (playerEntry?.salary || 0)
   }, 0)
   
-  const totalProjected = roster.reduce((sum, slot) => {
-    const playerEntry = playerPool.find(entry => entry.player.playerDkId === slot.player?.playerDkId)
-    if (playerEntry?.projectedPoints) {
-      return sum + (playerEntry.projectedPoints || 0)
-    }
-    return sum
-  }, 0)
-
   const remainingSalary = SALARY_CAP - totalSalary
   const filledSlots = roster.filter(slot => slot.player).length
 
@@ -241,8 +208,6 @@ export function LineupBuilder({
             <CardContent>
               {loading ? (
                 <div className="text-center py-8">Loading players...</div>
-              ) : error ? (
-                <div className="text-red-500 text-center py-8">{error}</div>
               ) : (
                 <Table>
                   <TableHeader>

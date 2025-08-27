@@ -1,13 +1,10 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, X, RotateCcw, ExternalLink, Loader2, Calendar, CalendarDays, Eye, EyeOff } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
 
 // Temporary mock interfaces to get build working
 interface PlayerPoolEntry {
@@ -62,19 +59,19 @@ interface WeekFilters {
 
 // Temporary mock service
 class MockPlayerService {
-  static async getWeeks(filters?: WeekFilters): Promise<{ weeks: Week[]; total: number }> {
+  static async getWeeks(): Promise<{ weeks: Week[]; total: number }> {
     return { weeks: [], total: 0 };
   }
   
-  static async getPlayerPool(weekId: number, filters: Record<string, unknown> = {}): Promise<PlayerPoolResponse> {
+  static async getPlayerPool(weekId: number): Promise<PlayerPoolResponse> {
     return { entries: [], total: 0, week_id: weekId };
   }
 
-  static async updatePlayerPoolEntry(entryId: number, updates: Record<string, unknown>): Promise<void> {
+  static async updatePlayerPoolEntry(): Promise<void> {
     // Mock implementation
   }
 
-  static async bulkUpdatePlayerPoolEntries(updates: Record<string, unknown>[]): Promise<void> {
+  static async bulkUpdatePlayerPoolEntries(): Promise<void> {
     // Mock implementation
   }
 
@@ -85,13 +82,9 @@ class MockPlayerService {
   }
 }
 
-type Position = 'QB' | 'RB' | 'WR' | 'TE' | 'FLEX' | 'DST';
-
 export default function PlayerPoolPage() {
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<Position>('QB');
-  const [excludedPlayers, setExcludedPlayers] = useState<Set<string>>(new Set());
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [playerPool, setPlayerPool] = useState<PlayerPoolResponse | null>(null);
@@ -99,11 +92,6 @@ export default function PlayerPoolPage() {
   const [error, setError] = useState<string | null>(null);
   const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
   
-  // Sorting state
-  const [sortField, setSortField] = useState<'salary' | 'name' | 'team' | 'position' | 'status' | 'projection' | 'opponentRank' | 'value' | 'exclude'>('salary');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [showExcluded, setShowExcluded] = useState<boolean>(true);
-
   // Fetch available years on component mount
   useEffect(() => {
     const fetchAvailableYears = async () => {
@@ -122,14 +110,14 @@ export default function PlayerPoolPage() {
     };
 
     fetchAvailableYears();
-  }, []);
+  }, [yearFilter]);
 
   // Fetch weeks when year filter changes
   useEffect(() => {
     const fetchWeeks = async () => {
       try {
         setLoading(true);
-        const weeksResponse = await MockPlayerService.getWeeks({ year: yearFilter });
+        const weeksResponse = await MockPlayerService.getWeeks();
         setWeeks(weeksResponse.weeks);
         
         // Set the Active week as selected, or fall back to the first week if no Active week exists
@@ -160,7 +148,7 @@ export default function PlayerPoolPage() {
       try {
         setLoading(true);
         setError(null);
-        const poolResponse = await MockPlayerService.getPlayerPool(selectedWeek, { limit: 1000 });
+        const poolResponse = await MockPlayerService.getPlayerPool(selectedWeek);
         setPlayerPool(poolResponse);
       } catch (err) {
         setError('Failed to fetch player pool');
