@@ -15,7 +15,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 1
+        fetch-depth: 0
         submodules: false
         token: ${{ secrets.GITHUB_TOKEN }}
     
@@ -24,21 +24,25 @@ jobs:
       with:
         node-version: '18'
     
-    - name: Comprehensive repository debugging
+    - name: Investigate checkout and repository
       run: |
+        echo "=== Current working directory ==="
+        pwd
         echo "=== Git status ==="
         git status
         echo "=== Git remote ==="
         git remote -v
         echo "=== Git branch ==="
         git branch -a
+        echo "=== Git log (last 5 commits) ==="
+        git log --oneline -5
         echo "=== Root directory contents ==="
         ls -la
+        echo "=== All directories ==="
+        find . -type d -maxdepth 2
         echo "=== Web directory contents ==="
-        ls -la web/
-        echo "=== Web directory exists? ==="
         if [ -d "web" ]; then
-          echo "web directory exists"
+          ls -la web/
           echo "=== Web directory permissions ==="
           ls -ld web/
         else
@@ -52,26 +56,62 @@ jobs:
         else
           echo "web/package.json does not exist"
         fi
-        echo "=== Repository structure ==="
-        find . -type f -name "*.json" -o -name "*.tsx" -o -name "*.ts" | head -20
+        echo "=== Repository structure (all files) ==="
+        find . -type f | head -30
+        echo "=== Package.json files ==="
+        find . -name "package.json" -type f
+    
+    - name: Try alternative checkout approach
+      run: |
+        echo "=== Trying to understand the issue ==="
+        echo "Current directory: $(pwd)"
+        echo "Git working tree: $(git rev-parse --show-toplevel)"
+        echo "Git index: $(git rev-parse --git-dir)"
+        echo "=== Checking if this is a shallow clone ==="
+        if git rev-parse --is-shallow-repository; then
+          echo "This is a shallow repository"
+        else
+          echo "This is a full repository"
+        fi
+        echo "=== Checking repository size ==="
+        du -sh .
+        echo "=== Checking web directory size ==="
+        if [ -d "web" ]; then
+          du -sh web/
+        else
+          echo "web directory not found"
+        fi
     
     - name: Install dependencies
       run: |
         echo "Installing dependencies..."
-        cd web
-        npm install
-        echo "Dependencies installed successfully"
+        if [ -d "web" ] && [ -f "web/package.json" ]; then
+          cd web
+          npm install
+          echo "Dependencies installed successfully"
+        else
+          echo "ERROR: web directory or package.json not found!"
+          echo "Current directory: $(pwd)"
+          echo "Available directories:"
+          ls -la
+          exit 1
+        fi
     
     - name: Build application
       run: |
         echo "Building application..."
-        cd web
-        echo "Current directory: $(pwd)"
-        echo "Directory contents:"
-        ls -la
-        echo "Running Next.js build directly..."
-        npx next build
-        echo "Build completed successfully"
+        if [ -d "web" ] && [ -f "web/package.json" ]; then
+          cd web
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          echo "Running Next.js build directly..."
+          npx next build
+          echo "Build completed successfully"
+        else
+          echo "ERROR: Cannot build - web directory or package.json not found!"
+          exit 1
+        fi
       env:
         NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
 
@@ -85,7 +125,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 1
+        fetch-depth: 0
         submodules: false
         token: ${{ secrets.GITHUB_TOKEN }}
     
