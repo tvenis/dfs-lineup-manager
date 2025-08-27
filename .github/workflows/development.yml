@@ -1,4 +1,4 @@
-name: Development Workflow
+name: Development Workflow (Simple)
 
 on:
   push:
@@ -18,15 +18,12 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: web/package-lock.json
+        # Removed cache to avoid cache-related errors
     
     - name: Install dependencies
       run: |
         cd web
-        npm ci --prefer-offline --no-audit
-      env:
-        NODE_ENV: development
+        npm install
     
     - name: Run linting
       run: |
