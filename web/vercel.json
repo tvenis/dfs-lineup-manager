@@ -10,6 +10,7 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
+  "rootDirectory": ".",
   "functions": {
     "app/**/*.tsx": {
       "maxDuration": 30
