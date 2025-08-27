@@ -1,4 +1,4 @@
-name: Development Workflow (Simple)
+name: Development Workflow
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  # Development tests and preview
+  # Development build and test
   development:
     runs-on: ubuntu-latest
     
@@ -18,16 +18,10 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        # No caching to avoid cache-related errors
     
     - name: Install dependencies
       working-directory: ./web
       run: npm install
-    
-    - name: Check available scripts
-      working-directory: ./web
-      run: npm run
-      continue-on-error: true
     
     - name: Run linting
       working-directory: ./web
@@ -36,11 +30,7 @@ jobs:
     
     - name: Run type checking
       working-directory: ./web
-      run: |
-        # Ensure TypeScript is available
-        npm list typescript
-        # Run type checking using the local TypeScript installation
-        ./node_modules/.bin/tsc --noEmit
+      run: npx tsc --noEmit
       continue-on-error: true
     
     - name: Build application

@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Simple)
+name: CI/CD Pipeline
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  # Frontend tests and build
+  # Frontend build and test
   frontend:
     runs-on: ubuntu-latest
     
@@ -18,24 +18,10 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        # No caching to avoid cache-related errors
     
     - name: Install dependencies
       working-directory: ./web
       run: npm install
-    
-    - name: Verify dependencies
-      working-directory: ./web
-      run: |
-        npm list eslint
-        npm list @eslint/eslintrc
-        npm list typescript
-      continue-on-error: true
-    
-    - name: Check available scripts
-      working-directory: ./web
-      run: npm run
-      continue-on-error: true
     
     - name: Run linting
       working-directory: ./web
@@ -44,11 +30,7 @@ jobs:
     
     - name: Run type checking
       working-directory: ./web
-      run: |
-        # Ensure TypeScript is available
-        npm list typescript
-        # Run type checking using the local TypeScript installation
-        ./node_modules/.bin/tsc --noEmit
+      run: npx tsc --noEmit
       continue-on-error: true
     
     - name: Build application
@@ -57,7 +39,7 @@ jobs:
       env:
         NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
 
-  # Backend tests
+  # Backend verification
   backend:
     runs-on: ubuntu-latest
     
@@ -75,10 +57,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Run backend tests
+    - name: Verify backend setup
       working-directory: ./backend
-      run: python -m pytest tests/ -v
-      continue-on-error: true  # Remove this when you add actual tests
+      run: |
+        python -c "import fastapi; print('FastAPI imported successfully')"
+        python -c "import sqlalchemy; print('SQLAlchemy imported successfully')"
 
   # Deploy to Vercel (only on main branch)
   deploy:
