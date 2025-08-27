@@ -24,18 +24,36 @@ jobs:
       with:
         node-version: '18'
     
-    - name: Debug repository structure
+    - name: Comprehensive repository debugging
       run: |
+        echo "=== Git status ==="
+        git status
+        echo "=== Git remote ==="
+        git remote -v
+        echo "=== Git branch ==="
+        git branch -a
         echo "=== Root directory contents ==="
         ls -la
         echo "=== Web directory contents ==="
         ls -la web/
-        echo "=== Web package.json ==="
+        echo "=== Web directory exists? ==="
+        if [ -d "web" ]; then
+          echo "web directory exists"
+          echo "=== Web directory permissions ==="
+          ls -ld web/
+        else
+          echo "web directory does not exist"
+        fi
+        echo "=== Web package.json exists? ==="
         if [ -f "web/package.json" ]; then
+          echo "web/package.json exists"
+          echo "=== Web package.json contents ==="
           cat web/package.json
         else
-          echo "web/package.json not found"
+          echo "web/package.json does not exist"
         fi
+        echo "=== Repository structure ==="
+        find . -type f -name "*.json" -o -name "*.tsx" -o -name "*.ts" | head -20
     
     - name: Install dependencies
       run: |
