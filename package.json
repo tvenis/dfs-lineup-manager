@@ -1,0 +1,16 @@
+{
+  "name": "dfs-lineup-manager",
+  "version": "1.0.0",
+  "description": "A full-stack web application for managing Daily Fantasy Sports lineups",
+  "scripts": {
+    "dev": "./start_dev.sh",
+    "dev:frontend": "cd web && npm run dev",
+    "dev:backend": "cd backend && python main.py",
+    "build": "cd web && npm run build",
+    "install:all": "npm install && cd web && npm install && cd ../backend && pip install -r requirements.txt",
+    "setup": "chmod +x start_dev.sh && npm install && cd web && npm install && cd ../backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
+  },
+  "keywords": ["dfs", "fantasy-sports", "lineup-manager", "nextjs", "fastapi"],
+  "author": "Your Name",
+  "license": "MIT"
+}
