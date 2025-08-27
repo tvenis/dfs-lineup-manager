@@ -7,10 +7,10 @@ import { Input } from "./ui/input";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
-import { useLineupsStore } from "@/store";
-import { LineupService } from "@/lib/lineupService";
-import { PlayerService } from "@/lib/playerService";
-import { PlayerPoolEntry, Week, Lineup } from "@/types/prd";
+import { useLineupsStore } from "../store";
+import { LineupService } from "../lib/lineupService";
+import { PlayerService } from "../lib/playerService";
+import { PlayerPoolEntry, Week, Lineup } from "../types/prd";
 import { Search, Filter, Eye, Edit, Trash2, Download } from "lucide-react";
 
 export function WeeklyLineupManager() {
