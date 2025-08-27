@@ -115,6 +115,24 @@ jobs:
           echo "NO - web directory does not exist"
         fi
     
+    - name: Test repository file existence
+      run: |
+        echo "=== Testing repository file existence ==="
+        echo "=== Git ls-files (all tracked files) ==="
+        git ls-files | grep "^web/" | head -20
+        echo "=== Git ls-files (web directory only) ==="
+        git ls-files web/ | head -20
+        echo "=== Git show HEAD:web/package.json ==="
+        if git show HEAD:web/package.json >/dev/null 2>&1; then
+          echo "SUCCESS: web/package.json exists in HEAD"
+          echo "=== File contents from HEAD ==="
+          git show HEAD:web/package.json
+        else
+          echo "ERROR: web/package.json does not exist in HEAD"
+        fi
+        echo "=== Git show HEAD:web/ ==="
+        git show HEAD:web/ | head -20
+    
     - name: Install dependencies
       run: |
         echo "Installing dependencies..."
