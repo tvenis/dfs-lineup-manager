@@ -90,7 +90,7 @@ export function LineupBuilder() {
   useEffect(() => {
     setPlayerPool(mockPlayerPool);
     setLoading(false);
-  }, []);
+  }, [mockPlayerPool]);
 
   const totalSalary = roster.reduce((sum, slot) => {
     if (!slot.player) return sum

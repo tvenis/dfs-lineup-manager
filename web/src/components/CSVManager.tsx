@@ -28,7 +28,7 @@ class MockCSVImportService {
     };
   }
   
-  static async exportCSV(data: any, filename: string): Promise<void> {
+  static async exportCSV(data: Record<string, unknown>, filename: string): Promise<void> {
     // Mock export functionality
     console.log('Exporting CSV:', filename, data);
   }
@@ -146,16 +146,8 @@ export function CSVManager() {
     try {
       const csvText = await file.text()
       
-      // First, just parse to validate the CSV format
-      // const parseResult = CSVImportService.parseDraftKingsCSV(csvText)
-      
-      // if (!parseResult.success) {
-      //   setImportResult(parseResult)
-      //   return
-      // }
-
-      // If parsing is successful, import to backend
-      const importResult = await MockCSVImportService.importCSV(file)
+              // Import directly using mock service
+        const importResult = await MockCSVImportService.importCSV(file)
       setImportResult(importResult)
 
       if (importResult.success) {

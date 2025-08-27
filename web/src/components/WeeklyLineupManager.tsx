@@ -8,30 +8,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Separator } from "./ui/separator";
 
 // Temporary mock interfaces to get build working
-interface PlayerPoolEntry {
-  id: string;
-  name: string;
-  team: string;
-  salary: number;
-  position: string;
-  status: string;
-  excluded: boolean;
-  projectedPoints?: number;
-  game_info?: string;
-  avg_points?: number;
-  entry_id: number;
-  opponentRank: { value: number; sortValue: number; quality: string };
-  player?: {
-    name: string;
-    team: string;
-    position: string;
-    player_dk_id: string;
-  };
-  draftStatAttributes?: {
-    value?: number;
-    quality?: string;
-  };
-}
 
 interface Week {
   id: number;
@@ -132,7 +108,7 @@ export function WeeklyLineupManager() {
     setLineups(mockLineups);
     setSelectedWeek(1);
     setLoading(false);
-  }, []);
+  }, [mockWeeks, mockLineups, setLineups, setLoading]);
 
   const filteredLineups = useMemo(() => {
     return lineups.filter(lineup => {

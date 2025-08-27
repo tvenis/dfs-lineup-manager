@@ -52,10 +52,7 @@ interface PlayerPoolResponse {
   week_id: number;
 }
 
-interface WeekFilters {
-  year?: number;
-  status?: 'Completed' | 'Active' | 'Upcoming';
-}
+
 
 // Temporary mock service
 class MockPlayerService {
@@ -197,7 +194,7 @@ export default function PlayerPoolPage() {
     setWeeks(mockWeeks);
     setAvailableYears([2024]);
     setLoading(false);
-  }, []);
+  }, [mockPlayerPool, mockWeeks]);
 
   return (
     <div className="container mx-auto p-6">
