@@ -24,17 +24,30 @@ jobs:
       with:
         node-version: '18'
     
+    - name: Debug repository structure
+      run: |
+        echo "=== Root directory contents ==="
+        ls -la
+        echo "=== Web directory contents ==="
+        ls -la web/
+        echo "=== Web package.json ==="
+        if [ -f "web/package.json" ]; then
+          cat web/package.json
+        else
+          echo "web/package.json not found"
+        fi
+    
     - name: Install dependencies
-      working-directory: ./web
       run: |
         echo "Installing dependencies..."
+        cd web
         npm install
         echo "Dependencies installed successfully"
     
     - name: Build application
-      working-directory: ./web
       run: |
         echo "Building application..."
+        cd web
         echo "Current directory: $(pwd)"
         echo "Directory contents:"
         ls -la
