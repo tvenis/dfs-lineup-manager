@@ -23,34 +23,6 @@ jobs:
       working-directory: ./web
       run: npm install
     
-    - name: Debug package.json
-      working-directory: ./web
-      run: |
-        echo "=== Current directory ==="
-        pwd
-        echo "=== Directory contents ==="
-        ls -la
-        echo "=== Package.json contents ==="
-        if [ -f "package.json" ]; then
-          cat package.json
-        else
-          echo "package.json not found in current directory"
-        fi
-        echo "=== Available scripts ==="
-        npm run
-        echo "=== ESLint config ==="
-        ls -la | grep eslint || echo "No ESLint files found"
-        if [ -f "eslint.config.mjs" ]; then
-          echo "ESLint config found"
-          cat eslint.config.mjs
-        else
-          echo "No ESLint config found"
-        fi
-        echo "=== TypeScript installation ==="
-        npm list typescript
-        ls -la node_modules/.bin/ | grep tsc || echo "No tsc binary found"
-      continue-on-error: true
-    
     - name: Build application
       working-directory: ./web
       run: npm run build
