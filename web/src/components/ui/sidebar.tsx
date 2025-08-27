@@ -185,11 +185,15 @@ const SidebarTrigger = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttri
 )
 SidebarTrigger.displayName = "SidebarTrigger"
 
-const SidebarMenuButton = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
-  ({ className, children, ...props }, ref) => (
+interface SidebarMenuButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  isActive?: boolean;
+}
+
+const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenuButtonProps>(
+  ({ className, children, isActive, ...props }, ref) => (
     <button
       ref={ref}
-      className={cn("flex w-full items-center justify-start rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground", className)}
+      className={cn("flex w-full items-center justify-start rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground", isActive && "bg-accent text-accent-foreground", className)}
       {...props}
     >
       {children}
