@@ -25,6 +25,12 @@ jobs:
         cd web
         npm install
     
+    - name: Check available scripts
+      run: |
+        cd web
+        npm run
+      continue-on-error: true
+    
     - name: Run linting
       run: |
         cd web

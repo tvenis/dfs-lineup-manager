@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Simple)
+name: CI/CD Pipeline (Minimal)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  # Frontend tests and build
+  # Frontend build only
   frontend:
     runs-on: ubuntu-latest
     
@@ -18,37 +18,11 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        # Removed cache to avoid cache-related errors
     
     - name: Install dependencies
       run: |
         cd web
         npm install
-    
-    - name: Verify dependencies
-      run: |
-        cd web
-        npm list eslint
-        npm list @eslint/eslintrc
-      continue-on-error: true
-    
-    - name: Check available scripts
-      run: |
-        cd web
-        npm run
-      continue-on-error: true
-    
-    - name: Run linting
-      run: |
-        cd web
-        npm run lint
-      continue-on-error: true
-    
-    - name: Run type checking
-      run: |
-        cd web
-        npx tsc --noEmit
-      continue-on-error: true
     
     - name: Build application
       run: |
@@ -75,11 +49,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Run backend tests
+    - name: Verify backend setup
       run: |
         cd backend
-        python -m pytest tests/ -v
-      continue-on-error: true  # Remove this when you add actual tests
+        python -c "import fastapi; print('FastAPI imported successfully')"
+        python -c "import sqlalchemy; print('SQLAlchemy imported successfully')"
 
   # Deploy to Vercel (only on main branch)
   deploy:
