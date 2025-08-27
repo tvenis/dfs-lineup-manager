@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from './ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Label } from './ui/label'
 import { Input } from './ui/input'
-import { Upload, Download, FileText, CheckCircle, XCircle, AlertTriangle, Eye, FileJson, RefreshCw } from 'lucide-react'
+import { Upload, Download, FileText, CheckCircle, XCircle, Eye, FileJson, RefreshCw } from 'lucide-react'
 
 // Types for API responses
 interface DraftKingsImportResponse {

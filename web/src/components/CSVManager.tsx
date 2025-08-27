@@ -144,8 +144,6 @@ export function CSVManager() {
     setImportResult(null)
 
     try {
-      const csvText = await file.text()
-      
               // Import directly using mock service
         const importResult = await MockCSVImportService.importCSV(file)
       setImportResult(importResult)

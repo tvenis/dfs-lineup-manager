@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -55,7 +55,7 @@ export function LineupBuilder() {
   const [loading, setLoading] = useState(false)
 
   // Mock data for testing
-  const mockPlayerPool: PlayerPoolEntry[] = [
+  const mockPlayerPool = useMemo<PlayerPoolEntry[]>(() => [
     {
       id: "1",
       player: {
@@ -84,7 +84,7 @@ export function LineupBuilder() {
       salary: 9200,
       projectedPoints: 22.8
     }
-  ];
+  ], []);
 
   // Use mock data for now
   useEffect(() => {

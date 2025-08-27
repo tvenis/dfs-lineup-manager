@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -159,7 +159,7 @@ export default function PlayerPoolPage() {
   }, [selectedWeek]);
 
   // Mock data for testing
-  const mockPlayerPool: PlayerPoolEntry[] = [
+  const mockPlayerPool = useMemo<PlayerPoolEntry[]>(() => [
     {
       id: "1",
       name: "Patrick Mahomes",
@@ -172,9 +172,9 @@ export default function PlayerPoolPage() {
       entry_id: 1,
       opponentRank: { value: 15, sortValue: 15, quality: "Good" }
     }
-  ];
+  ], []);
 
-  const mockWeeks: Week[] = [
+  const mockWeeks = useMemo<Week[]>(() => [
     {
       id: 1,
       week_number: 1,
@@ -186,7 +186,7 @@ export default function PlayerPoolPage() {
       imported_at: "2024-09-05T00:00:00Z",
       created_at: "2024-09-05T00:00:00Z"
     }
-  ];
+  ], []);
 
   // Use mock data for now
   useEffect(() => {

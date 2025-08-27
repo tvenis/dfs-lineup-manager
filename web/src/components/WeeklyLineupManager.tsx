@@ -73,7 +73,7 @@ export function WeeklyLineupManager() {
   const [lineupToDelete, setLineupToDelete] = useState<Lineup | null>(null);
 
   // Mock data for testing
-  const mockWeeks: Week[] = [
+  const mockWeeks = useMemo<Week[]>(() => [
     {
       id: 1,
       week_number: 1,
@@ -85,9 +85,9 @@ export function WeeklyLineupManager() {
       imported_at: "2024-09-05T00:00:00Z",
       created_at: "2024-09-05T00:00:00Z"
     }
-  ];
+  ], []);
 
-  const mockLineups: Lineup[] = [
+  const mockLineups = useMemo<Lineup[]>(() => [
     {
       id: "1",
       name: "My First Lineup",
@@ -100,7 +100,7 @@ export function WeeklyLineupManager() {
         RB2: "Saquon Barkley"
       }
     }
-  ];
+  ], []);
 
   // Use mock data for now
   useEffect(() => {
