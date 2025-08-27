@@ -368,7 +368,7 @@ export function WeeklyLineupManager() {
           <DialogHeader>
             <DialogTitle>Delete Lineup</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{lineupToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{lineupToDelete?.name}&quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           

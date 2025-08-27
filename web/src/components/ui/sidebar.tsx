@@ -9,9 +9,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
+const Sidebar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
@@ -24,9 +22,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
 )
 Sidebar.displayName = "Sidebar"
 
-interface SidebarHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-const SidebarHeader = React.forwardRef<HTMLDivElement, SidebarHeaderProps>(
+const SidebarHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
@@ -39,9 +35,7 @@ const SidebarHeader = React.forwardRef<HTMLDivElement, SidebarHeaderProps>(
 )
 SidebarHeader.displayName = "SidebarHeader"
 
-interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {}
-
-const SidebarNav = React.forwardRef<HTMLElement, SidebarNavProps>(
+const SidebarNav = React.forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(
   ({ className, children, ...props }, ref) => (
     <nav
       ref={ref}
@@ -54,9 +48,7 @@ const SidebarNav = React.forwardRef<HTMLElement, SidebarNavProps>(
 )
 SidebarNav.displayName = "SidebarNav"
 
-interface SidebarNavItemProps extends React.HTMLAttributes<HTMLLIElement> {}
-
-const SidebarNavItem = React.forwardRef<HTMLLIElement, SidebarNavItemProps>(
+const SidebarNavItem = React.forwardRef<HTMLLIElement, React.HTMLAttributes<HTMLLIElement>>(
   ({ className, children, ...props }, ref) => (
     <li
       ref={ref}
@@ -69,9 +61,7 @@ const SidebarNavItem = React.forwardRef<HTMLLIElement, SidebarNavItemProps>(
 )
 SidebarNavItem.displayName = "SidebarNavItem"
 
-interface SidebarFooterProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-const SidebarFooter = React.forwardRef<HTMLDivElement, SidebarFooterProps>(
+const SidebarFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
@@ -84,4 +74,129 @@ const SidebarFooter = React.forwardRef<HTMLDivElement, SidebarFooterProps>(
 )
 SidebarFooter.displayName = "SidebarFooter"
 
-export { Sidebar, SidebarHeader, SidebarNav, SidebarNavItem, SidebarFooter }
+// Add missing components that App.tsx needs
+interface SidebarProviderProps {
+  children: React.ReactNode;
+}
+
+const SidebarProvider = ({ children }: SidebarProviderProps) => (
+  <div className="flex h-screen">
+    {children}
+  </div>
+)
+
+const SidebarContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("flex h-full w-64 flex-col border-r bg-background", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+SidebarContent.displayName = "SidebarContent"
+
+const SidebarGroup = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("flex flex-col gap-2", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+SidebarGroup.displayName = "SidebarGroup"
+
+const SidebarGroupLabel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("px-2 py-1 text-xs font-semibold text-muted-foreground", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+SidebarGroupLabel.displayName = "SidebarGroupLabel"
+
+const SidebarGroupContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("flex flex-col gap-1", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+SidebarGroupContent.displayName = "SidebarGroupContent"
+
+const SidebarMenu = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("flex flex-col gap-1", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+SidebarMenu.displayName = "SidebarMenu"
+
+interface SidebarMenuItemProps extends React.HTMLAttributes<HTMLDivElement> {
+  href?: string;
+  active?: boolean;
+}
+
+const SidebarMenuItem = React.forwardRef<HTMLDivElement, SidebarMenuItemProps>(
+  ({ className, children, href, active, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+        active && "bg-accent text-accent-foreground",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+SidebarMenuItem.displayName = "SidebarMenuItem"
+
+const SidebarTrigger = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
+  ({ className, children, ...props }, ref) => (
+    <button
+      ref={ref}
+      className={cn("flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground", className)}
+      {...props}
+    >
+      {children}
+    </button>
+  )
+)
+SidebarTrigger.displayName = "SidebarTrigger"
+
+export { 
+  Sidebar, 
+  SidebarHeader, 
+  SidebarNav, 
+  SidebarNavItem, 
+  SidebarFooter,
+  SidebarProvider,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarTrigger
+}

@@ -66,15 +66,15 @@ class MockPlayerService {
     return { weeks: [], total: 0 };
   }
   
-  static async getPlayerPool(weekId: number, filters: any = {}): Promise<PlayerPoolResponse> {
+  static async getPlayerPool(weekId: number, filters: Record<string, unknown> = {}): Promise<PlayerPoolResponse> {
     return { entries: [], total: 0, week_id: weekId };
   }
 
-  static async updatePlayerPoolEntry(entryId: number, updates: any): Promise<void> {
+  static async updatePlayerPoolEntry(entryId: number, updates: Record<string, unknown>): Promise<void> {
     // Mock implementation
   }
 
-  static async bulkUpdatePlayerPoolEntries(updates: any[]): Promise<void> {
+  static async bulkUpdatePlayerPoolEntries(updates: Record<string, unknown>[]): Promise<void> {
     // Mock implementation
   }
 
