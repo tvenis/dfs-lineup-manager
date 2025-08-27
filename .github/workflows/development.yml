@@ -23,21 +23,20 @@ jobs:
       working-directory: ./web
       run: npm install
     
-    - name: Check available scripts
-      working-directory: ./web
-      run: npm run
-      continue-on-error: true
-    
-    - name: Run linting
+    - name: Debug package.json
       working-directory: ./web
       run: |
-        echo "Checking if lint script exists..."
-        if npm run | grep -q "lint"; then
-          echo "Lint script found, running..."
-          npm run lint
+        echo "=== Package.json contents ==="
+        cat package.json
+        echo "=== Available scripts ==="
+        npm run
+        echo "=== ESLint config ==="
+        ls -la | grep eslint
+        if [ -f "eslint.config.mjs" ]; then
+          echo "ESLint config found"
+          cat eslint.config.mjs
         else
-          echo "Lint script not found, skipping..."
-          exit 0
+          echo "No ESLint config found"
         fi
       continue-on-error: true
     

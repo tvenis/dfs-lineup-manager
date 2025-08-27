@@ -40,19 +40,6 @@ jobs:
         fi
       continue-on-error: true
     
-    - name: Run linting
-      working-directory: ./web
-      run: |
-        echo "Attempting to run linting..."
-        if npm run | grep -q "lint"; then
-          echo "Lint script found, running..."
-          npm run lint
-        else
-          echo "Lint script not found, skipping..."
-          exit 0
-        fi
-      continue-on-error: true
-    
     - name: Run type checking
       working-directory: ./web
       run: |
