@@ -8,8 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, X, RotateCcw, ExternalLink, Loader2, Calendar, CalendarDays, Eye, EyeOff } from "lucide-react";
-import { PlayerService, PlayerPoolResponse, Week, WeekFilters } from "../../lib/playerService";
-import { PlayerPoolEntry } from "@/types/prd";
+import { PlayerService, PlayerPoolResponse, Week, WeekFilters, PlayerPoolEntry } from "../../services";
+import { PlayerPoolEntry as PlayerPoolEntryType } from "@/types/prd";
 
 type Position = 'QB' | 'RB' | 'WR' | 'TE' | 'FLEX' | 'DST';
 

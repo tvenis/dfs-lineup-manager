@@ -9,9 +9,7 @@ import { Save, Trash2, Download, RotateCcw, User, DollarSign, ArrowUpDown, Plus 
 import { Progress } from './ui/progress'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
-import { PlayerService } from '../lib/playerService'
-import { LineupService, LineupCreate } from '../lib/lineupService'
-import { Player, LineupSlotId, PlayerPoolEntry } from '../types/prd'
+import { PlayerService, LineupService, LineupCreate, Player, LineupSlotId, PlayerPoolEntry } from '../services'
 
 
 type RosterSlot = {
