@@ -18,16 +18,16 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
     
     - name: Install dependencies
-      run: |
-        cd web
-        npm install
+      working-directory: ./web
+      run: npm install
     
     - name: Build application
-      run: |
-        cd web
-        npm run build
+      working-directory: ./web
+      run: npm run build
       env:
         NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
 
@@ -44,14 +44,14 @@ jobs:
         python-version: '3.11'
     
     - name: Install dependencies
+      working-directory: ./backend
       run: |
-        cd backend
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
     - name: Verify backend setup
+      working-directory: ./backend
       run: |
-        cd backend
         python -c "import fastapi; print('FastAPI imported successfully')"
         python -c "import sqlalchemy; print('SQLAlchemy imported successfully')"
 

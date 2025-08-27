@@ -18,35 +18,31 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        # Removed cache to avoid cache-related errors
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
     
     - name: Install dependencies
-      run: |
-        cd web
-        npm install
+      working-directory: ./web
+      run: npm install
     
     - name: Check available scripts
-      run: |
-        cd web
-        npm run
+      working-directory: ./web
+      run: npm run
       continue-on-error: true
     
     - name: Run linting
-      run: |
-        cd web
-        npm run lint
+      working-directory: ./web
+      run: npm run lint
       continue-on-error: true
     
     - name: Run type checking
-      run: |
-        cd web
-        npx tsc --noEmit
+      working-directory: ./web
+      run: npx tsc --noEmit
       continue-on-error: true
     
     - name: Build application
-      run: |
-        cd web
-        npm run build
+      working-directory: ./web
+      run: npm run build
       env:
         NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
 
