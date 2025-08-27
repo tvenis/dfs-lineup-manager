@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  # Development build and test
+  # Development build
   development:
     runs-on: ubuntu-latest
     
@@ -21,11 +21,17 @@ jobs:
     
     - name: Install dependencies
       working-directory: ./web
-      run: npm install
+      run: |
+        echo "Installing dependencies..."
+        npm install
+        echo "Dependencies installed successfully"
     
     - name: Build application
       working-directory: ./web
-      run: npm run build
+      run: |
+        echo "Building application..."
+        npm run build
+        echo "Build completed successfully"
       env:
         NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
 
