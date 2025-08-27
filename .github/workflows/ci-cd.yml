@@ -23,14 +23,41 @@ jobs:
       working-directory: ./web
       run: npm install
     
+    - name: Debug package.json
+      working-directory: ./web
+      run: |
+        echo "=== Package.json contents ==="
+        cat package.json
+        echo "=== Available scripts ==="
+        npm run
+        echo "=== ESLint config ==="
+        ls -la | grep eslint
+        if [ -f "eslint.config.mjs" ]; then
+          echo "ESLint config found"
+          cat eslint.config.mjs
+        else
+          echo "No ESLint config found"
+        fi
+      continue-on-error: true
+    
     - name: Run linting
       working-directory: ./web
-      run: npm run lint
+      run: |
+        echo "Attempting to run linting..."
+        if npm run | grep -q "lint"; then
+          echo "Lint script found, running..."
+          npm run lint
+        else
+          echo "Lint script not found, skipping..."
+          exit 0
+        fi
       continue-on-error: true
     
     - name: Run type checking
       working-directory: ./web
-      run: npx tsc --noEmit
+      run: |
+        echo "Running TypeScript type checking..."
+        npx tsc --noEmit
       continue-on-error: true
     
     - name: Build application

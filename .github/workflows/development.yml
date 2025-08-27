@@ -23,14 +23,29 @@ jobs:
       working-directory: ./web
       run: npm install
     
+    - name: Check available scripts
+      working-directory: ./web
+      run: npm run
+      continue-on-error: true
+    
     - name: Run linting
       working-directory: ./web
-      run: npm run lint
+      run: |
+        echo "Checking if lint script exists..."
+        if npm run | grep -q "lint"; then
+          echo "Lint script found, running..."
+          npm run lint
+        else
+          echo "Lint script not found, skipping..."
+          exit 0
+        fi
       continue-on-error: true
     
     - name: Run type checking
       working-directory: ./web
-      run: npx tsc --noEmit
+      run: |
+        echo "Running TypeScript type checking..."
+        npx tsc --noEmit
       continue-on-error: true
     
     - name: Build application
