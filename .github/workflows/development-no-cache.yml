@@ -36,7 +36,11 @@ jobs:
     
     - name: Run type checking
       working-directory: ./web
-      run: npx tsc --noEmit
+      run: |
+        # Ensure TypeScript is available
+        npm list typescript
+        # Run type checking using the local TypeScript installation
+        ./node_modules/.bin/tsc --noEmit
       continue-on-error: true
     
     - name: Build application
