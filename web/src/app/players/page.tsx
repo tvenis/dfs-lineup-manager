@@ -126,16 +126,16 @@ export default function PlayerPoolPage() {
     }
   };
 
-  // Filter players for current tab
-  const getFilteredPlayers = (position: string) => {
-    let players = getAllPlayersForPosition(position);
-    
-    console.log(`🎯 getFilteredPlayers for ${position}:`, {
-      initialCount: players.length,
-      searchTerm,
-      hideExcluded,
-      excludedCount: excludedPlayers.size
-    });
+               // Filter players for current tab
+             const getFilteredPlayers = (position: string) => {
+               let players = getAllPlayersForPosition(position);
+               
+               console.log(`🎯 getFilteredPlayers for ${position}:`, {
+                 initialCount: players.length,
+                 searchTerm,
+                 hideExcluded,
+                 databaseExcludedCount: players.filter(p => p.excluded === true).length
+               });
 
     // Filter out disabled players first (isDisabled = 1)
     players = players.filter(entry => !entry.isDisabled);
@@ -342,7 +342,7 @@ export default function PlayerPoolPage() {
 
           {(['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'] as string[]).map((position) => {
             const filteredPlayers = getFilteredPlayers(position);
-            const excludedCount = filteredPlayers.filter(player => excludedPlayers.has(player.id)).length;
+                                   const excludedCount = filteredPlayers.filter(player => player.excluded === true).length;
             
             return (
               <TabsContent key={position} value={position} className="m-0 border-t">
