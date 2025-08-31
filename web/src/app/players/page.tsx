@@ -400,39 +400,32 @@ export default function PlayerPoolPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredPlayers.map((player, index) => {
-                        const isExcluded = excludedPlayers.has(player.id);
-                        const isDatabaseExcluded = player.excluded === true;
-                        return (
-                          <TableRow 
-                            key={player.id}
-                            className={`
-                              ${isExcluded ? 'opacity-50 bg-muted/30' : ''} 
-                              ${isDatabaseExcluded ? 'bg-yellow-50' : ''}
-                              hover:bg-muted/50 transition-colors
-                              ${index !== filteredPlayers.length - 1 ? 'border-b' : 'border-b-0'}
-                            `}
-                          >
-                            <TableCell className="py-3">
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 text-left">
-                                  <span className={`${isExcluded ? 'line-through' : ''}`}>
-                                    {player.player.displayName}
-                                  </span>
-                                </div>
-                                {isExcluded && <X className="w-4 h-4 text-destructive ml-1" />}
-                                {isDatabaseExcluded && (
-                                  <Badge variant="outline" className="text-xs ml-2 bg-yellow-100 text-yellow-800">
-                                    DB Excluded
-                                  </Badge>
-                                )}
-                                {position === 'FLEX' && (
-                                  <Badge variant="outline" className="text-xs ml-2">
-                                    {player.player.position}
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
+                                                       {filteredPlayers.map((player, index) => {
+                                   const isExcluded = excludedPlayers.has(player.id);
+                                   return (
+                                                               <TableRow 
+                                       key={player.id}
+                                       className={`
+                                         ${player.excluded === true ? 'opacity-50 bg-muted/30' : ''} 
+                                         hover:bg-muted/50 transition-colors
+                                         ${index !== filteredPlayers.length - 1 ? 'border-b' : 'border-b-0'}
+                                       `}
+                                     >
+                                                                   <TableCell className="py-3">
+                                         <div className="flex items-center gap-2">
+                                           <div className="flex items-center gap-2 text-left">
+                                             <span className={`${player.excluded === true ? 'line-through' : ''}`}>
+                                               {player.player.displayName}
+                                             </span>
+                                           </div>
+                                           {player.excluded === true && <X className="w-4 h-4 text-destructive ml-1" />}
+                                           {position === 'FLEX' && (
+                                             <Badge variant="outline" className="text-xs ml-2">
+                                               {player.player.position}
+                                             </Badge>
+                                           )}
+                                         </div>
+                                       </TableCell>
                             <TableCell className="py-3 font-medium text-muted-foreground">
                               {player.player.team}
                             </TableCell>
@@ -456,13 +449,13 @@ export default function PlayerPoolPage() {
                                 {player.status || 'Active'}
                               </Badge>
                             </TableCell>
-                            <TableCell className="py-3">
-                              <Checkbox
-                                checked={isExcluded}
-                                onCheckedChange={() => togglePlayerExclusion(player.id)}
-                                className="opacity-60 hover:opacity-100"
-                              />
-                            </TableCell>
+                                                                   <TableCell className="py-3">
+                                         <Checkbox
+                                           checked={player.excluded === true}
+                                           onCheckedChange={() => togglePlayerExclusion(player.id)}
+                                           className="opacity-60 hover:opacity-100"
+                                         />
+                                       </TableCell>
                           </TableRow>
                         );
                       })}
