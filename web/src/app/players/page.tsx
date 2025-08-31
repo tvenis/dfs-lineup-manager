@@ -19,7 +19,7 @@ export default function PlayerPoolPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [hideExcluded, setHideExcluded] = useState(false);
+               const [hideExcluded, setHideExcluded] = useState(true);
   const [excludedPlayers, setExcludedPlayers] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState<string>('QB');
 
