@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, EyeOff, RotateCcw, Search, X, UserX } from 'lucide-react';
+import Link from 'next/link';
 
 export default function PlayerPoolPage() {
   const [weeks, setWeeks] = useState<Week[]>([]);
@@ -398,9 +399,12 @@ export default function PlayerPoolPage() {
                                                                    <TableCell className="py-3">
                                          <div className="flex items-center gap-2">
                                            <div className="flex items-center gap-2 text-left">
-                                             <span className={`${player.excluded === true ? 'line-through' : ''}`}>
+                                             <Link 
+                                               href={`/profile/${player.player.playerDkId}`}
+                                               className={`${player.excluded === true ? 'line-through' : ''} hover:text-blue-600 hover:underline transition-colors`}
+                                             >
                                                {player.player.displayName}
-                                             </span>
+                                             </Link>
                                            </div>
                                            {player.excluded === true && <X className="w-4 h-4 text-destructive ml-1" />}
                                            {position === 'FLEX' && (
