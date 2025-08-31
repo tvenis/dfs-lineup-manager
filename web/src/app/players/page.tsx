@@ -187,19 +187,22 @@ export default function PlayerPoolPage() {
     setExcludedPlayers(new Set());
   };
 
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'questionable':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'out':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+               // Get status color
+             const getStatusColor = (status: string) => {
+               switch (status?.toLowerCase()) {
+                 case 'active':
+                 case 'available':
+                   return 'bg-green-100 text-green-800 border-green-200';
+                 case 'questionable':
+                 case 'q':
+                   return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                 case 'out':
+                 case 'ir':
+                   return 'bg-red-100 text-red-800 border-red-200';
+                 default:
+                   return 'bg-gray-100 text-gray-800 border-gray-200';
+               }
+             };
 
   if (loading) {
     return (
