@@ -42,10 +42,10 @@ export default function PlayerPoolPage() {
           console.log('🎯 Selected week:', defaultWeek);
           setSelectedWeek(defaultWeek.id);
           
-          // Fetch player pool for the selected week
-          console.log('🎯 Fetching player pool for week:', defaultWeek.id);
-          console.log('🎯 PlayerService.getPlayerPool will be called with week ID:', defaultWeek.id);
-          const poolData = await PlayerService.getPlayerPool(defaultWeek.id);
+                               // Fetch player pool for the selected week
+                     console.log('🎯 Fetching player pool for week:', defaultWeek.id);
+                     console.log('🎯 PlayerService.getPlayerPool will be called with week ID:', defaultWeek.id);
+                     const poolData = await PlayerService.getPlayerPool(defaultWeek.id, { limit: 1000 });
           console.log('🎯 Player pool data received:', poolData);
           console.log('🎯 Pool data entries length:', poolData.entries?.length || 'undefined');
           console.log('🎯 Pool data total:', poolData.total || 'undefined');
@@ -71,19 +71,19 @@ export default function PlayerPoolPage() {
   useEffect(() => {
     if (!selectedWeek) return;
 
-    const fetchPlayerPool = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const poolData = await PlayerService.getPlayerPool(selectedWeek);
-        setPlayerPool(poolData.entries || []);
-      } catch (err: any) {
-        console.error('Error fetching player pool:', err);
-        setError('Failed to fetch player pool');
-      } finally {
-        setLoading(false);
-      }
-    };
+                   const fetchPlayerPool = async () => {
+                 try {
+                   setLoading(true);
+                   setError(null);
+                   const poolData = await PlayerService.getPlayerPool(selectedWeek, { limit: 1000 });
+                   setPlayerPool(poolData.entries || []);
+                 } catch (err: any) {
+                   console.error('Error fetching player pool:', err);
+                   setError('Failed to fetch player pool');
+                 } finally {
+                   setLoading(false);
+                 }
+               };
 
     fetchPlayerPool();
   }, [selectedWeek]);
