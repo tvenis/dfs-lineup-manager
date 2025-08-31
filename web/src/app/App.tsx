@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import {
   Sidebar,
   SidebarContent,
@@ -28,8 +29,8 @@ import {
 export default function App({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  console.log('App component rendering, pathname:', pathname);
-  console.log('App children:', children);
+  console.log('🎯 App component rendering, pathname:', pathname);
+  console.log('🎯 App children:', children);
 
   const navigationItems = [
     {
@@ -97,19 +98,22 @@ export default function App({ children }: { children: React.ReactNode }) {
                     const Icon = item.icon;
                     const isActive = pathname === item.href;
                     
+                    console.log(`🎯 Navigation item ${item.label}: href=${item.href}, isActive=${isActive}, pathname=${pathname}`);
+                    
                     return (
                       <SidebarMenuItem key={item.id}>
-                        <a 
+                        <Link 
                           href={item.href} 
                           className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
                             isActive 
                               ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
                               : "text-[var(--color-text-secondary)]"
                           }`}
+                          onClick={() => console.log(`🎯 Clicked navigation item: ${item.label} -> ${item.href}`)}
                         >
                           <Icon className="h-4 w-4" />
                           {item.label}
-                        </a>
+                        </Link>
                       </SidebarMenuItem>
                     );
                   })}
@@ -127,11 +131,16 @@ export default function App({ children }: { children: React.ReactNode }) {
           </SidebarFooter>
         </Sidebar>
         
-        <main className="flex-1 overflow-auto">
-          <div className="p-4">
-            <h2 className="text-lg font-semibold mb-2">Main Content Area</h2>
-            {children}
-          </div>
+        <main className="flex-1 min-w-0" style={{
+          backgroundColor: '#ffffff',
+          minHeight: '100vh',
+          position: 'relative',
+          zIndex: 1,
+          padding: '20px',
+          width: '100%',
+          maxWidth: 'none'
+        }}>
+          {children}
         </main>
         
         <SidebarTrigger className="fixed left-4 top-4 z-50" />

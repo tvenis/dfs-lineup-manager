@@ -13,7 +13,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
   ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("flex h-full w-full flex-col gap-4", className)}
+      className={cn("flex h-full w-64 flex-col gap-4 border-r bg-background", className)}
       {...props}
     >
       {children}
@@ -89,7 +89,7 @@ const SidebarContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTM
   ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("flex h-full w-64 flex-col border-r bg-background", className)}
+      className={cn("flex h-full flex-col", className)}
       {...props}
     >
       {children}

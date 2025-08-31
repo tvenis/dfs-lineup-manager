@@ -2,11 +2,11 @@
 export const API_CONFIG = {
   BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
   ENDPOINTS: {
-    PLAYERS: '/api/players',
-    WEEKS: '/api/weeks',
-    TEAMS: '/api/teams',
-    LINEUPS: '/api/lineups',
-    CSV_IMPORT: '/api/csv'
+    PLAYERS: '/api/players/',
+    WEEKS: '/api/weeks/',
+    TEAMS: '/api/teams/',
+    LINEUPS: '/api/lineups/',
+    CSV_IMPORT: '/api/csv/'
   }
 };
 
@@ -15,8 +15,8 @@ export const buildApiUrl = (endpoint: string): string => {
   // Ensure the endpoint starts with a slash
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Remove trailing slash to prevent double slashes when appending paths
-  const trimmedEndpoint = cleanEndpoint.endsWith('/') ? cleanEndpoint.slice(0, -1) : cleanEndpoint;
+  // Ensure the endpoint ends with a slash for FastAPI compatibility
+  const finalEndpoint = cleanEndpoint.endsWith('/') ? cleanEndpoint : `${cleanEndpoint}/`;
   
-  return `${API_CONFIG.BASE_URL}${trimmedEndpoint}`;
+  return `${API_CONFIG.BASE_URL}${finalEndpoint}`;
 };
