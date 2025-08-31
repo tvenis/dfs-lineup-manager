@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff, RotateCcw, Search, X, UserX } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, Search, X, UserX, User } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PlayerPoolPage() {
@@ -239,11 +239,14 @@ export default function PlayerPoolPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Player Pool</h1>
-          <p className="text-gray-600 mt-1">Managing player exclusions for Week {weeks.find(w => w.id === selectedWeek)?.week_number}</p>
-        </div>
+                       <div className="flex items-center justify-between">
+                   <div>
+                     <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                       <User className="h-8 w-8 text-blue-600" />
+                       Player Pool
+                     </h1>
+                     <p className="text-gray-600 mt-1">Managing player exclusions for Week {weeks.find(w => w.id === selectedWeek)?.week_number}</p>
+                   </div>
         <div className="flex items-center gap-3">
           <Button
             variant={hideExcluded ? "default" : "outline"}
