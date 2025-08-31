@@ -13,3 +13,4 @@ export default function HomePage() {
   );
 }
 // Vercel deployment test - Wed Aug 27 17:48:20 EDT 2025
+// Simplified Vercel config test - Sat Aug 30 20:08:40 EDT 2025
