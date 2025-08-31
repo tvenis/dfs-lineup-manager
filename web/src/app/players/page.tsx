@@ -180,17 +180,7 @@ export default function PlayerPoolPage() {
     });
   };
 
-  // Reset exclusions for a specific position
-  const resetExclusions = (position: string) => {
-    const allPlayersForPosition = getAllPlayersForPosition(position);
-    setExcludedPlayers(prev => {
-      const newSet = new Set(prev);
-      allPlayersForPosition.forEach(player => {
-        newSet.delete(player.id);
-      });
-      return newSet;
-    });
-  };
+               {/* Reset exclusions function removed to prevent accidental use */}
 
   // Reset all exclusions
   const resetAllExclusions = () => {
@@ -371,18 +361,9 @@ export default function PlayerPoolPage() {
                     )}
                   </div>
                   
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => resetExclusions(position)}
-                      disabled={excludedCount === 0}
-                      className="gap-2"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      Reset
-                    </Button>
-                  </div>
+                                               <div className="flex gap-2">
+                               {/* Reset button removed to prevent accidental use */}
+                             </div>
                 </div>
 
                 {/* Player Table */}
