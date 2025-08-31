@@ -6,78 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
 
-// Temporary mock interfaces to get build working
-interface PlayerPoolEntry {
-  id: string;
-  name: string;
-  team: string;
-  salary: number;
-  position: string;
-  status: string;
-  excluded: boolean;
-  projectedPoints?: number;
-  game_info?: string;
-  avg_points?: number;
-  entry_id: number;
-  opponentRank: { value: number; sortValue: number; quality: string };
-  player?: {
-    name: string;
-    team: string;
-    position: string;
-    player_dk_id: string;
-  };
-  draftStatAttributes?: {
-    value?: number;
-    quality?: string;
-  };
-}
-
-interface Week {
-  id: number;
-  week_number: number;
-  year: number;
-  start_date: string;
-  end_date: string;
-  game_count: number;
-  status: 'Completed' | 'Active' | 'Upcoming';
-  notes?: string;
-  imported_at: string;
-  created_at: string;
-  updated_at?: string;
-}
-
-interface PlayerPoolResponse {
-  entries: PlayerPoolEntry[];
-  total: number;
-  week_id: number;
-}
-
-
-
-// Temporary mock service
-class MockPlayerService {
-  static async getWeeks(): Promise<{ weeks: Week[]; total: number }> {
-    return { weeks: [], total: 0 };
-  }
-  
-  static async getPlayerPool(weekId: number): Promise<PlayerPoolResponse> {
-    return { entries: [], total: 0, week_id: weekId };
-  }
-
-  static async updatePlayerPoolEntry(): Promise<void> {
-    // Mock implementation
-  }
-
-  static async bulkUpdatePlayerPoolEntries(): Promise<void> {
-    // Mock implementation
-  }
-
-  static getWeekStatusColor(status: string): string {
-    if (status === 'Active') return 'bg-green-100 text-green-800 border-green-200';
-    if (status === 'Upcoming') return 'bg-blue-100 text-blue-800 border-blue-200';
-    return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-}
+import { PlayerService } from '@/lib/playerService';
+import type { PlayerPoolEntry, Week } from '@/types/prd';
+import type { PlayerPoolResponse } from '@/lib/playerService';
 
 export default function PlayerPoolPage() {
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -93,8 +24,8 @@ export default function PlayerPoolPage() {
   useEffect(() => {
     const fetchAvailableYears = async () => {
       try {
-        const weeksResponse = await MockPlayerService.getWeeks();
-        const years = [...new Set(weeksResponse.weeks.map(week => week.year))].sort((a, b) => b - a);
+        const weeksResponse = await PlayerService.getWeeks();
+        const years = [...new Set(weeksResponse.weeks.map((week: Week) => week.year))].sort((a: number, b: number) => b - a);
         setAvailableYears(years);
         
         // Set the first available year as default if current year is not available
@@ -114,12 +45,12 @@ export default function PlayerPoolPage() {
     const fetchWeeks = async () => {
       try {
         setLoading(true);
-        const weeksResponse = await MockPlayerService.getWeeks();
+        const weeksResponse = await PlayerService.getWeeks();
         setWeeks(weeksResponse.weeks);
         
         // Set the Active week as selected, or fall back to the first week if no Active week exists
         if (weeksResponse.weeks.length > 0) {
-          const activeWeek = weeksResponse.weeks.find(week => week.status === 'Active');
+          const activeWeek = weeksResponse.weeks.find((week: Week) => week.status === 'Active');
           if (activeWeek) {
             setSelectedWeek(activeWeek.id);
           } else {
@@ -145,7 +76,7 @@ export default function PlayerPoolPage() {
       try {
         setLoading(true);
         setError(null);
-        const poolResponse = await MockPlayerService.getPlayerPool(selectedWeek);
+        const poolResponse = await PlayerService.getPlayerPool(selectedWeek);
         setPlayerPool(poolResponse);
       } catch (err) {
         setError('Failed to fetch player pool');
@@ -161,16 +92,37 @@ export default function PlayerPoolPage() {
   // Mock data for testing
   const mockPlayerPool = useMemo<PlayerPoolEntry[]>(() => [
     {
-      id: "1",
-      name: "Patrick Mahomes",
-      team: "KC",
-      salary: 8500,
-      position: "QB",
-      status: "Active",
-      excluded: false,
+      id: 1,
+      week_id: 1,
+      draftGroup: "test",
+      playerDkId: 1,
       projectedPoints: 25.5,
-      entry_id: 1,
-      opponentRank: { value: 15, sortValue: 15, quality: "Good" }
+      salary: 8500,
+      status: "Active",
+      isDisabled: false,
+      excluded: false,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z",
+      week: {
+        id: 1,
+        week_number: 1,
+        year: 2024,
+        start_date: "2024-09-05",
+        end_date: "2024-09-09",
+        game_count: 16,
+        status: "Active",
+        imported_at: "2024-09-05T00:00:00Z",
+        created_at: "2024-09-05T00:00:00Z"
+      },
+      player: {
+        playerDkId: 1,
+        firstName: "Patrick",
+        lastName: "Mahomes",
+        displayName: "Patrick Mahomes",
+        position: "QB",
+        team: "KC",
+        created_at: "2024-01-01T00:00:00Z"
+      }
     }
   ], []);
 
@@ -273,9 +225,9 @@ export default function PlayerPoolPage() {
                 <TableBody>
                   {playerPool.entries.map((entry) => (
                     <TableRow key={entry.id}>
-                      <TableCell>{entry.name}</TableCell>
-                      <TableCell>{entry.team}</TableCell>
-                      <TableCell>{entry.position}</TableCell>
+                      <TableCell>{entry.player.displayName}</TableCell>
+                      <TableCell>{entry.player.team}</TableCell>
+                      <TableCell>{entry.player.position}</TableCell>
                       <TableCell>${entry.salary.toLocaleString()}</TableCell>
                       <TableCell>{entry.projectedPoints || 'N/A'}</TableCell>
                       <TableCell>
