@@ -280,22 +280,14 @@ export function LineupBuilder({
 
   const totalSalary = roster.reduce((sum, slot) => {
     if (!slot.player) return sum
-    // Check if player has salary directly (from direct API fetch)
-    if (slot.player.salary !== undefined) {
-      return sum + slot.player.salary
-    }
-    // Otherwise, look in player pool
+    // Look in player pool for salary
     const playerEntry = playerPool.find(entry => entry.player.playerDkId === slot.player!.playerDkId)
     return sum + (playerEntry?.salary || 0)
   }, 0)
   
   const totalProjected = roster.reduce((sum, slot) => {
     if (!slot.player) return sum
-    // Check if player has projected points directly (from direct API fetch)
-    if (slot.player.projectedPoints !== undefined) {
-      return sum + slot.player.projectedPoints
-    }
-    // Otherwise, look in player pool
+    // Look in player pool for projected points
     const playerEntry = playerPool.find(entry => entry.player.playerDkId === slot.player!.playerDkId)
     return sum + (playerEntry?.projectedPoints || 0)
   }, 0)

@@ -269,7 +269,10 @@ export class LineupService {
     try {
       // Use the new backend endpoint to export all lineups
       const params = weekId ? `?week_id=${weekId}` : '';
-      const response = await fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.LINEUPS)}/export-all/csv${params}`);
+      const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.LINEUPS);
+      // Remove trailing slash from baseUrl to avoid double slash
+      const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      const response = await fetch(`${cleanBaseUrl}/export-all/csv${params}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

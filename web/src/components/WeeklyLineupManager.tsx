@@ -7,19 +7,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Badge } from "./ui/badge";
 // import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Input } from "./ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
 // import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
 import { PlusCircle, Download, Edit, Trash2, Search, Filter, X } from "lucide-react";
 import { WeekService } from "@/lib/weekService";
 import { LineupService } from "@/lib/lineupService";
-import { Week, LineupDisplayData } from "@/types/prd";
+import { LineupDisplayData } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
 import { getPositionBadgeClasses } from "@/lib/positionColors";
 
 // Helper function to populate roster from lineup slots
 // Function to fetch player pool data and create a lookup map
-async function fetchPlayerPool(weekId: number): Promise<Map<number, any>> {
+async function fetchPlayerPool(weekId: number): Promise<Map<number, {
+  name: string;
+  team: string;
+  position: string;
+  salary: number;
+  projectedPoints: number;
+}>> {
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}/api/players/pool/${weekId}?excluded=false&limit=1000`);
     if (!response.ok) {
@@ -28,7 +34,16 @@ async function fetchPlayerPool(weekId: number): Promise<Map<number, any>> {
     const data = await response.json();
     
     const playerMap = new Map();
-    data.entries.forEach((entry: any) => {
+    data.entries.forEach((entry: {
+      playerDkId: number;
+      player: {
+        displayName: string;
+        team: string;
+        position: string;
+      };
+      salary: number;
+      projectedPoints?: number;
+    }) => {
       playerMap.set(entry.playerDkId, {
         name: entry.player.displayName,
         team: entry.player.team,
@@ -46,9 +61,27 @@ async function fetchPlayerPool(weekId: number): Promise<Map<number, any>> {
 }
 
 // Function to populate roster from real slots data
-function populateRosterFromSlots(slots: any, playerMap: Map<number, any>): any[] {
+function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<number, {
+  name: string;
+  team: string;
+  position: string;
+  salary: number;
+  projectedPoints: number;
+}>): Array<{
+  position: string;
+  name: string;
+  team: string;
+  salary: number;
+  projectedPoints: number;
+}> {
   console.log('🎯 populateRosterFromSlots called with slots:', slots, 'playerMap size:', playerMap.size);
-  const roster: any[] = [];
+  const roster: Array<{
+    position: string;
+    name: string;
+    team: string;
+    salary: number;
+    projectedPoints: number;
+  }> = [];
   
   // Define the order of positions to display
   const positionOrder = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DST'];
@@ -58,14 +91,26 @@ function populateRosterFromSlots(slots: any, playerMap: Map<number, any>): any[]
     console.log('🎯 Processing position:', position, 'playerId:', playerId);
     if (playerId && playerMap.has(playerId)) {
       const player = playerMap.get(playerId);
-      console.log('🎯 Found player for', position, ':', player.name);
-      roster.push({
-        position: position,
-        name: player.name,
-        team: player.team,
-        salary: player.salary,
-        projectedPoints: player.projectedPoints
-      });
+      if (player) {
+        console.log('🎯 Found player for', position, ':', player.name);
+        roster.push({
+          position: position,
+          name: player.name,
+          team: player.team,
+          salary: player.salary,
+          projectedPoints: player.projectedPoints
+        });
+      } else {
+        console.log('🎯 Player data is undefined for', position, 'playerId:', playerId);
+        // If player data is undefined, add placeholder
+        roster.push({
+          position: position,
+          name: "Unknown Player",
+          team: "N/A",
+          salary: 0,
+          projectedPoints: 0
+        });
+      }
     } else {
       console.log('🎯 Player not found for', position, 'playerId:', playerId);
       // If player not found, add placeholder
@@ -86,14 +131,12 @@ function populateRosterFromSlots(slots: any, playerMap: Map<number, any>): any[]
 export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedWeek?: string }) {
   const router = useRouter();
   const [lineups, setLineups] = useState<LineupDisplayData[]>([]);
-  const [weeks, setWeeks] = useState<Week[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [currentWeekId, setCurrentWeekId] = useState<number | null>(1); // Default to week 1
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<{ [key: string]: boolean }>({});
-  const [lineupToDelete, setLineupToDelete] = useState<string | null>(null);
 
   // Load weeks and lineups from API
   useEffect(() => {
@@ -118,7 +161,6 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
         // Load weeks
         const weeksResponse = await WeekService.getWeeks();
         console.log('🎯 Weeks API response:', weeksResponse);
-        setWeeks(weeksResponse.weeks);
         
         // Find and set the Active Week as default
         const activeWeek = weeksResponse.weeks.find(week => week.status === 'Active');
@@ -210,17 +252,6 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
           console.error('❌ Failed to load weeks from API:', error);
           console.log('🔄 Using fallback data...');
           // Fallback to mock data
-          setWeeks([{
-            id: 1,
-            week_number: 1,
-            year: 2025,
-            start_date: "2025-09-04",
-            end_date: "2025-09-08",
-            game_count: 0,
-            status: "Active",
-            imported_at: "2025-08-20T19:52:03",
-            created_at: "2025-08-20T19:52:03"
-          }]);
           setCurrentWeekId(1);
           // Add fallback lineup data with empty player map
           const emptyPlayerMap = new Map();
@@ -320,22 +351,19 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
         console.log('Deleted real lineup:', id);
       }
       
-      // Close the dialog and clear the lineup to delete
+      // Close the dialog
       setDeleteDialogOpen(prev => ({ ...prev, [id]: false }));
-      setLineupToDelete(null);
     } catch (error) {
       console.error('Failed to delete lineup:', error);
     }
   };
 
   const openDeleteDialog = (id: string) => {
-    setLineupToDelete(id);
     setDeleteDialogOpen(prev => ({ ...prev, [id]: true }));
   };
 
   const closeDeleteDialog = (id: string) => {
     setDeleteDialogOpen(prev => ({ ...prev, [id]: false }));
-    setLineupToDelete(null);
   };
 
   const handleExportLineup = async (lineup: LineupDisplayData) => {
@@ -351,6 +379,27 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to export lineup:', error);
+    }
+  };
+
+  const handleExportAllLineups = async () => {
+    if (!currentWeekId) {
+      console.error('No active week selected');
+      return;
+    }
+
+    try {
+      const blob = await LineupService.exportAllLineups(currentWeekId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `all-lineups-week-${currentWeekId}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export all lineups:', error);
     }
   };
 
@@ -405,7 +454,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
         
         <div className="flex gap-2">
 
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleExportAllLineups}>
             <Download className="w-4 h-4" />
             Export All
           </Button>
