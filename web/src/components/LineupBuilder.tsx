@@ -28,6 +28,7 @@ export function LineupBuilder({
 }: { 
   onPlayerSelect?: (player: Player) => void;
 }) {
+  console.log('🚀 LineupBuilder component rendered - NEW VERSION')
   const SALARY_CAP = 50000
   
   const [lineupName, setLineupName] = useState('')
