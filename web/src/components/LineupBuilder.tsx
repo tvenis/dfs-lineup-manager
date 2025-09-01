@@ -248,8 +248,23 @@ export function LineupBuilder({
       value: player.projectedPoints ? (player.projectedPoints / (player.salary / 1000)).toFixed(2) : '0.00',
       isUsed: usedPlayerIds.includes(player.player.playerDkId),
       canAfford: player.salary <= remainingSalary || usedPlayerIds.includes(player.player.playerDkId),
-      // Add opponent rank if available
-      oprk: player.player.opponentRank?.value || 0
+      // Add opponent rank if available - extract from draftStatAttributes where id = -2
+      oprk: (() => {
+        const draftStatAttributes = player.draftStatAttributes;
+        if (draftStatAttributes && Array.isArray(draftStatAttributes)) {
+          const opponentRankAttr = draftStatAttributes.find((attr: any) => attr.id === -2);
+          return opponentRankAttr?.value || 0;
+        }
+        return 0;
+      })(),
+      oprkQuality: (() => {
+        const draftStatAttributes = player.draftStatAttributes;
+        if (draftStatAttributes && Array.isArray(draftStatAttributes)) {
+          const opponentRankAttr = draftStatAttributes.find((attr: any) => attr.id === -2);
+          return opponentRankAttr?.quality || 'Medium';
+        }
+        return 'Medium';
+      })()
     }))
 
     console.log('getAllPlayers - final players count:', players.length)
@@ -647,9 +662,9 @@ export function LineupBuilder({
                           <TableCell>{player.projectedPoints || 'N/A'}</TableCell>
                           <TableCell>
                             <span className={`${
-                              player.oprk <= 10 ? 'text-green-600' : 
-                              player.oprk <= 20 ? 'text-yellow-600' : 
-                              'text-red-600'
+                              player.oprkQuality === 'High' ? 'text-green-600' : 
+                              player.oprkQuality === 'Low' ? 'text-red-600' : 
+                              'text-foreground'
                             }`}>
                               {player.oprk}
                             </span>

@@ -214,6 +214,15 @@ export default function PlayerPoolPage() {
                      aValue = a.projectedPoints || 0;
                      bValue = b.projectedPoints || 0;
                      break;
+                   case 'opponentRank':
+                     // Extract opponent rank sortValue from draftStatAttributes where id = -2
+                     const aDraftStats = Array.isArray(a.draftStatAttributes) ? a.draftStatAttributes : [];
+                     const bDraftStats = Array.isArray(b.draftStatAttributes) ? b.draftStatAttributes : [];
+                     const aOpponentRank = aDraftStats.find((attr: any) => attr.id === -2)?.sortValue || 0;
+                     const bOpponentRank = bDraftStats.find((attr: any) => attr.id === -2)?.sortValue || 0;
+                     aValue = typeof aOpponentRank === 'string' ? parseFloat(aOpponentRank) : aOpponentRank;
+                     bValue = typeof bOpponentRank === 'string' ? parseFloat(bOpponentRank) : bOpponentRank;
+                     break;
                    case 'value':
                      aValue = a.projectedPoints && a.salary ? (a.projectedPoints / a.salary) * 1000 : 0;
                      bValue = b.projectedPoints && b.salary ? (b.projectedPoints / b.salary) * 1000 : 0;
@@ -244,7 +253,12 @@ export default function PlayerPoolPage() {
                  setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                } else {
                  setSortField(field);
-                 setSortDirection('asc');
+                 // Set default sort direction based on field type
+                 if (field === 'opponentRank') {
+                   setSortDirection('asc'); // Lower opponent rank (better matchup) first
+                 } else {
+                   setSortDirection('asc');
+                 }
                }
              };
 
@@ -467,6 +481,17 @@ export default function PlayerPoolPage() {
                         </TableHead>
                         <TableHead 
                           className="w-20 text-right py-3 cursor-pointer hover:bg-muted/20 transition-colors"
+                          onClick={() => handleSort('opponentRank')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            OPRK
+                            {sortField === 'opponentRank' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="w-20 text-right py-3 cursor-pointer hover:bg-muted/20 transition-colors"
                           onClick={() => handleSort('value')}
                         >
                           <div className="flex items-center justify-end gap-2">
@@ -537,6 +562,28 @@ export default function PlayerPoolPage() {
                             </TableCell>
                             <TableCell className="py-3 text-right font-medium">
                               {player.projectedPoints || 'N/A'}
+                            </TableCell>
+                            <TableCell className="py-3 text-right font-medium">
+                              {(() => {
+                                // Extract opponent rank from draftStatAttributes where id = -2
+                                const draftStatAttributes = player.draftStatAttributes;
+                                if (draftStatAttributes && Array.isArray(draftStatAttributes)) {
+                                  const opponentRankAttr = draftStatAttributes.find(attr => attr.id === -2);
+                                  if (opponentRankAttr) {
+                                    const quality = opponentRankAttr.quality || 'Medium';
+                                    const value = opponentRankAttr.value || 0;
+                                    const colorClass = quality === 'High' ? 'text-green-600' : 
+                                                     quality === 'Low' ? 'text-red-600' : 
+                                                     'text-foreground';
+                                    return (
+                                      <span className={colorClass}>
+                                        {value}
+                                      </span>
+                                    );
+                                  }
+                                }
+                                return <span className="text-foreground">N/A</span>;
+                              })()}
                             </TableCell>
                             <TableCell className="py-3 text-right font-medium text-primary">
                               {player.projectedPoints && player.salary 
