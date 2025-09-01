@@ -53,7 +53,7 @@ class DraftKingsImportService:
             # Log error activity
             error_result = DraftKingsImportResponse(
                 players_added=0, players_updated=0, entries_added=0, entries_updated=0,
-                entries_skipped=0, errors=[str(e)], total_processed=0
+                entries_skipped=0, auto_excluded_count=0, status_updates=0, errors=[str(e)], total_processed=0
             )
             try:
                 await self._log_import_activity(week_id, draft_group, error_result)
@@ -94,6 +94,7 @@ class DraftKingsImportService:
         entries_updated = 0
         entries_skipped = 0
         auto_excluded_count = 0  # Counter for players auto-excluded due to zero/null projections
+        status_updates = 0  # Counter for status field updates
         errors = []
         
         # Extract the draftables array from the response
@@ -102,7 +103,7 @@ class DraftKingsImportService:
             errors.append("No draftables found in API response")
             return DraftKingsImportResponse(
                 players_added=0, players_updated=0, entries_added=0, entries_updated=0,
-                entries_skipped=0, errors=errors, total_processed=0
+                entries_skipped=0, auto_excluded_count=0, status_updates=0, errors=errors, total_processed=0
             )
         
         # Track processed players to avoid duplicates within this import
@@ -170,11 +171,15 @@ class DraftKingsImportService:
                     else:
                         # Process the pool entry
                         processed_pool_entries.add(pool_entry_key)
-                        entry_result = self._upsert_player_pool_entry_in_transaction(player_data['pool_entry'], week_id, draft_group, player_dk_id)
+                        entry_result, status_was_updated = self._upsert_player_pool_entry_in_transaction(player_data['pool_entry'], week_id, draft_group, player_dk_id)
                         
                         # Count auto-excluded players
                         if player_data['pool_entry'].get('auto_excluded', False):
                             auto_excluded_count += 1
+                        
+                        # Count status updates
+                        if status_was_updated:
+                            status_updates += 1
                         
                         if entry_result == "added":
                             entries_added += 1
@@ -197,6 +202,8 @@ class DraftKingsImportService:
             # Commit all changes at once
             self.db.commit()
             logger.info(f"Successfully committed import: {players_added} players added, {players_updated} updated, {entries_added} entries added, {entries_updated} updated")
+            if status_updates > 0:
+                logger.info(f"Status updates applied to {status_updates} players")
             if auto_excluded_count > 0:
                 logger.info(f"Players auto-excluded due to zero/null projections: {auto_excluded_count}")
                 logger.info("This is normal for players who are injured, suspended, or otherwise not expected to play")
@@ -230,6 +237,7 @@ class DraftKingsImportService:
             entries_updated=entries_updated,
             entries_skipped=entries_skipped,
             auto_excluded_count=auto_excluded_count,
+            status_updates=status_updates,
             errors=errors,
             total_processed=len(draftables)
         )
@@ -387,6 +395,9 @@ class DraftKingsImportService:
             if pool_entry_data['status'] == 'None' or pool_entry_data['status'] is None:
                 pool_entry_data['status'] = 'Available'
             
+            # Log status for debugging purposes
+            logger.debug(f"Player {player_data.get('displayName', 'Unknown')} status: {pool_entry_data['status']}")
+            
             # Ensure isDisabled is a boolean
             if pool_entry_data['isDisabled'] is None:
                 pool_entry_data['isDisabled'] = False
@@ -491,10 +502,10 @@ class DraftKingsImportService:
         week_id: int, 
         draft_group: str,
         player_dk_id: int
-    ) -> str:
+    ) -> Tuple[str, bool]:
         """
         Upsert player pool entry record within a transaction (no commit)
-        Returns: 'added', 'updated', or 'skipped'
+        Returns: ('added'/'updated'/'skipped', status_updated_boolean)
         """
         try:
             # Check if entry exists
@@ -516,6 +527,7 @@ class DraftKingsImportService:
                     'draftAlerts', 'externalRequirements'
                 ]
                 updated = False
+                status_updated = False
                 for key in updateable_fields:
                     if key in pool_entry_data and pool_entry_data[key] is not None:
                         current_value = getattr(existing_entry, key)
@@ -523,14 +535,19 @@ class DraftKingsImportService:
                         if current_value != new_value:
                             setattr(existing_entry, key, new_value)
                             updated = True
-                            logger.debug(f"Updated pool entry field {key}: {current_value} -> {new_value}")
+                            # Track status updates specifically
+                            if key == 'status':
+                                status_updated = True
+                                logger.info(f"Updated player {player_dk_id} status: {current_value} -> {new_value}")
+                            else:
+                                logger.debug(f"Updated pool entry field {key}: {current_value} -> {new_value}")
                 
                 if updated:
                     logger.debug(f"Updated existing pool entry for player {player_dk_id}")
                 else:
                     logger.debug(f"No changes needed for pool entry of player {player_dk_id}")
                 
-                return "updated"
+                return "updated", status_updated
             else:
                 # Create new entry
                 new_entry = PlayerPoolEntry(
@@ -554,12 +571,13 @@ class DraftKingsImportService:
                 )
                 self.db.add(new_entry)
                 logger.debug(f"Created new pool entry for player {player_dk_id}")
-                return "added"
+                # For new entries, status is always "new" so we don't count it as an update
+                return "added", False
                 
         except IntegrityError:
             # Handle duplicate key errors
             logger.warning(f"Integrity error for pool entry of player {player_dk_id}, skipping")
-            return "skipped"
+            return "skipped", False
         except Exception as e:
             logger.error(f"Error in _upsert_player_pool_entry_in_transaction: {str(e)}")
             raise e

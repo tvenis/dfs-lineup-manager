@@ -236,6 +236,7 @@ class DraftKingsImportResponse(BaseModel):
     entries_updated: int = Field(..., ge=0, description="Number of existing player pool entries updated")
     entries_skipped: int = Field(..., ge=0, description="Number of entries skipped due to duplicates")
     auto_excluded_count: int = Field(..., ge=0, description="Number of players auto-excluded due to zero/null projections")
+    status_updates: int = Field(..., ge=0, description="Number of player status updates applied")
     errors: List[str] = Field(default=[], description="List of error messages")
     total_processed: int = Field(..., ge=0, description="Total number of draftables processed")
 
@@ -313,3 +314,39 @@ class LineupValidationResponse(BaseModel):
     salary_used: int
     salary_remaining: int
     projected_points: Optional[float] = None
+
+# Optimization schemas
+class OptimizerSettings(BaseModel):
+    salaryCap: int = Field(50000, ge=1000, le=100000)
+    rosterSize: int = Field(9, ge=1, le=20)
+    qbMin: int = Field(1, ge=0, le=3)
+    rbMin: int = Field(2, ge=0, le=5)
+    wrMin: int = Field(3, ge=0, le=5)
+    teMin: int = Field(1, ge=0, le=3)
+    dstMin: int = Field(1, ge=0, le=3)
+    flexMin: int = Field(1, ge=0, le=5)
+    maxPerTeam: Optional[int] = Field(None, ge=1, le=8)
+    enforceQbStack: bool = Field(True)
+    enforceBringback: bool = Field(False)
+
+class OptimizedPlayer(BaseModel):
+    playerDkId: int
+    name: str
+    team: str
+    position: str
+    salary: int
+    projectedPoints: float
+
+class OptimizationRequest(BaseModel):
+    week_id: int
+    settings: OptimizerSettings
+
+class OptimizationResult(BaseModel):
+    success: bool
+    lineup: List[OptimizedPlayer] = []
+    totalSalary: int = 0
+    totalProjection: float = 0.0
+    salaryCap: int = 50000
+    weekId: int
+    settings: OptimizerSettings
+    error: Optional[str] = None
