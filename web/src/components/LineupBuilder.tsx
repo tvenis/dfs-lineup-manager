@@ -139,7 +139,7 @@ export function LineupBuilder({
       console.log('Loading player pool for weekId:', weekId)
       setLoading(true)
       try {
-        const response = await PlayerService.getPlayerPool(weekId)
+        const response = await PlayerService.getPlayerPool(weekId, { limit: 1000 })
         console.log('Player pool response:', response)
         console.log('Player pool entries count:', response.entries?.length || 0)
         console.log('Player pool entries sample:', response.entries?.slice(0, 3))
