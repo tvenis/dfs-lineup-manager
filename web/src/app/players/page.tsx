@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff, RotateCcw, Search, X, UserX, User } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, Search, X, UserX, User, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PlayerPoolPage() {
@@ -18,10 +18,12 @@ export default function PlayerPoolPage() {
   const [playerPool, setPlayerPool] = useState<PlayerPoolEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-               const [hideExcluded, setHideExcluded] = useState(true);
-  const [excludedPlayers, setExcludedPlayers] = useState<Set<number>>(new Set());
-  const [activeTab, setActiveTab] = useState<string>('QB');
+               const [searchTerm, setSearchTerm] = useState('');
+             const [hideExcluded, setHideExcluded] = useState(true);
+             const [excludedPlayers, setExcludedPlayers] = useState<Set<number>>(new Set());
+             const [activeTab, setActiveTab] = useState<string>('QB');
+             const [sortField, setSortField] = useState<string>('player');
+             const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Fetch data on component mount
   useEffect(() => {
@@ -164,8 +166,10 @@ export default function PlayerPoolPage() {
     players = players.filter(entry => !excludedPlayers.has(entry.id));
     console.log(`🎯 After user exclusion filter: ${beforeUserFilter} -> ${players.length} players`);
 
-    console.log(`🎯 Final filtered players for ${position}: ${players.length}`);
-    return players;
+                   console.log(`🎯 Final filtered players for ${position}: ${players.length}`);
+               
+               // Apply sorting
+               return sortPlayers(players);
   };
 
   // Handle player exclusion
@@ -202,6 +206,62 @@ export default function PlayerPoolPage() {
                    return 'bg-red-100 text-red-800 border-red-200';
                  default:
                    return 'bg-gray-100 text-gray-800 border-gray-200';
+               }
+             };
+
+             // Sort players
+             const sortPlayers = (players: PlayerPoolEntry[]) => {
+               return [...players].sort((a, b) => {
+                 let aValue: any, bValue: any;
+                 
+                 switch (sortField) {
+                   case 'player':
+                     aValue = a.player.displayName.toLowerCase();
+                     bValue = b.player.displayName.toLowerCase();
+                     break;
+                   case 'team':
+                     aValue = a.player.team.toLowerCase();
+                     bValue = b.player.team.toLowerCase();
+                     break;
+                   case 'salary':
+                     aValue = a.salary || 0;
+                     bValue = b.salary || 0;
+                     break;
+                   case 'projection':
+                     aValue = a.projectedPoints || 0;
+                     bValue = b.projectedPoints || 0;
+                     break;
+                   case 'value':
+                     aValue = a.projectedPoints && a.salary ? (a.projectedPoints / a.salary) * 1000 : 0;
+                     bValue = b.projectedPoints && b.salary ? (b.projectedPoints / b.salary) * 1000 : 0;
+                     break;
+                   case 'status':
+                     aValue = a.status?.toLowerCase() || '';
+                     bValue = b.status?.toLowerCase() || '';
+                     break;
+                   case 'exclude':
+                     aValue = a.excluded === true ? 1 : 0;
+                     bValue = b.excluded === true ? 1 : 0;
+                     break;
+                   default:
+                     return 0;
+                 }
+                 
+                 if (sortDirection === 'asc') {
+                   return aValue > bValue ? 1 : -1;
+                 } else {
+                   return aValue < bValue ? 1 : -1;
+                 }
+               });
+             };
+
+             // Handle column sorting
+             const handleSort = (field: string) => {
+               if (sortField === field) {
+                 setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+               } else {
+                 setSortField(field);
+                 setSortDirection('asc');
                }
              };
 
@@ -378,13 +438,83 @@ export default function PlayerPoolPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-b-0 bg-muted/10">
-                        <TableHead className="w-44 py-3">Player</TableHead>
-                        <TableHead className="w-16 py-3">Team</TableHead>
-                        <TableHead className="w-24 text-right py-3">Salary</TableHead>
-                        <TableHead className="w-20 text-right py-3">Projection</TableHead>
-                        <TableHead className="w-20 text-right py-3">Value</TableHead>
-                        <TableHead className="w-24 py-3">Status</TableHead>
-                        <TableHead className="w-16 py-3 text-muted-foreground">Exclude</TableHead>
+                        <TableHead 
+                          className="w-44 py-3 cursor-pointer hover:bg-muted/20 transition-colors"
+                          onClick={() => handleSort('player')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Player
+                            {sortField === 'player' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="w-16 py-3 cursor-pointer hover:bg-muted/20 transition-colors"
+                          onClick={() => handleSort('team')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Team
+                            {sortField === 'team' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="w-24 text-right py-3 cursor-pointer hover:bg-muted/20 transition-colors"
+                          onClick={() => handleSort('salary')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Salary
+                            {sortField === 'salary' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="w-20 text-right py-3 cursor-pointer hover:bg-muted/20 transition-colors"
+                          onClick={() => handleSort('projection')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Projection
+                            {sortField === 'projection' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="w-20 text-right py-3 cursor-pointer hover:bg-muted/20 transition-colors"
+                          onClick={() => handleSort('value')}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Value
+                            {sortField === 'value' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="w-24 py-3 cursor-pointer hover:bg-muted/20 transition-colors"
+                          onClick={() => handleSort('status')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Status
+                            {sortField === 'status' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="w-16 py-3 text-muted-foreground cursor-pointer hover:bg-muted/20 transition-colors"
+                          onClick={() => handleSort('exclude')}
+                        >
+                          <div className="flex items-center gap-2">
+                            Exclude
+                            {sortField === 'exclude' && (
+                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
