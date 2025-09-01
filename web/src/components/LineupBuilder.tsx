@@ -58,6 +58,9 @@ export function LineupBuilder({
   const weekId = useMemo(() => {
     const id = currentWeek?.id || 1
     console.log('🎯 weekId calculated:', id, 'from currentWeek:', currentWeek)
+    console.log('🎯 currentWeek.id:', currentWeek?.id)
+    console.log('🎯 currentWeek.status:', currentWeek?.status)
+    console.log('🎯 currentWeek.week_number:', currentWeek?.week_number)
     return id
   }, [currentWeek])
 
@@ -86,6 +89,8 @@ export function LineupBuilder({
             const current = activeWeek || directData.weeks[0]
             console.log('🎯 Active week found:', activeWeek)
             console.log('🎯 Setting currentWeek to:', current)
+            console.log('🎯 current.id:', current.id)
+            console.log('🎯 current.status:', current.status)
             setCurrentWeek(current)
             return
           }
