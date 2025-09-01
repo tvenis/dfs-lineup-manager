@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
-import { Button } from "./button"
+// import { Button } from "./button"
 
 // Inline cn utility to avoid module resolution issues
 function cn(...inputs: ClassValue[]) {

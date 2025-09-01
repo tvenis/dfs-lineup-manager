@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { X } from "lucide-react"
+// import { X } from "lucide-react"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -43,7 +43,7 @@ interface DialogTriggerProps {
   onClick?: () => void
 }
 
-const Dialog = ({ children, open, onOpenChange }: DialogProps) => {
+const Dialog = ({ children, open, onOpenChange: _onOpenChange }: DialogProps) => {
   // Only render children if open is true, or if there's no open prop (for uncontrolled dialogs)
   if (open === false) {
     return null

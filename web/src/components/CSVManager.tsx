@@ -16,7 +16,7 @@ interface ImportResult {
 
 // Mock CSV service
 class MockCSVImportService {
-  static async importCSV(file: File): Promise<ImportResult> {
+  static async importCSV(_file: File): Promise<ImportResult> {
     // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     

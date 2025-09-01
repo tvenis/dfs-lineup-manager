@@ -8,7 +8,11 @@ export default function HomePage() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">DFS Lineup Manager</h1>
-      <WeeklyLineupManager />
+      <div className="p-4 bg-blue-100">
+        <p>Test: This should show immediately</p>
+        <p>Current time: {new Date().toLocaleString()}</p>
+      </div>
+      <WeeklyLineupManager selectedWeek="1" />
     </div>
   );
 }

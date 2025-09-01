@@ -11,8 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Upload, Download, RefreshCw, Search } from "lucide-react";
 
 export function PlayersSettings() {
-  const [totalPlayers, setTotalPlayers] = useState(1250);
-  const [lastUpdated, setLastUpdated] = useState("2024-01-15");
+  const [totalPlayers] = useState(1250);
+  const [lastUpdated] = useState("2024-01-15");
 
   return (
     <div className="space-y-6">

@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { PlayerService } from "@/lib/playerService";
-import { PlayerPoolEntry, Player } from "@/types/prd";
+import { PlayerPoolEntry } from "@/types/prd";
 
 interface PlayerProfileProps {
   playerId: string;
@@ -147,7 +147,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
         </Card>
       </div>
 
-      {playerData.draftStatAttributes && playerData.draftStatAttributes.length > 0 && (
+      {playerData.draftStatAttributes && Object.keys(playerData.draftStatAttributes).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Advanced Stats</CardTitle>
@@ -155,13 +155,13 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {playerData.draftStatAttributes.map((stat, index) => (
+              {Object.entries(playerData.draftStatAttributes).map(([key, value], index) => (
                 <div key={index}>
                   <label className="text-sm font-medium text-muted-foreground">
-                    Stat {stat.id}
+                    {key}
                   </label>
                   <p className="text-lg">
-                    {stat.value !== undefined ? stat.value : stat.quality || 'N/A'}
+                    {typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value || 'N/A')}
                   </p>
                 </div>
               ))}

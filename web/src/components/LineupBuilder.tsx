@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { PlayerService } from '@/lib/playerService'
 import { LineupService } from '@/lib/lineupService'
 import { WeekService } from '@/lib/weekService'
+import { LineupDisplayData, LineupPlayer } from '@/types/prd'
 import { PlayerPoolEntry, Player, Week, LineupSlotId } from '@/types/prd'
 
 type RosterSlot = {
@@ -25,7 +26,7 @@ type SortField = 'name' | 'team' | 'opponent' | 'salary' | 'projectedPoints' | '
 type SortDirection = 'asc' | 'desc'
 
 export function LineupBuilder({ 
-  onPlayerSelect
+  onPlayerSelect: _onPlayerSelect
 }: { 
   onPlayerSelect?: (player: Player) => void;
 }) {
@@ -56,7 +57,7 @@ export function LineupBuilder({
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
-  const [savedLineup, setSavedLineup] = useState<any>(null)
+  const [savedLineup, setSavedLineup] = useState<LineupDisplayData | null>(null)
 
   // Always use the active week
   const weekId = useMemo(() => {
@@ -413,25 +414,26 @@ export function LineupBuilder({
         slots
       }
 
-      const savedLineupResponse = await LineupService.createLineup(lineupData)
+      await LineupService.createLineup(lineupData)
       
       // Store the saved lineup data for confirmation screen
-      const confirmationData = {
+      const confirmationData: LineupDisplayData = {
+        id: 'temp-' + Date.now(), // Temporary ID for display
         name: lineupName.trim(),
         tags: tags.split(',').map(t => t.trim()).filter(t => t.length > 0),
-        week: currentWeek,
+        salaryUsed: totalSalary,
+        salaryCap: SALARY_CAP,
+        projectedPoints: totalProjected,
         roster: roster.filter(slot => slot.player).map(slot => {
           const playerEntry = playerPool.find(entry => entry.player.playerDkId === slot.player!.playerDkId)
           return {
             position: slot.position,
-            player: slot.player,
+            name: slot.player!.displayName,
+            team: slot.player!.team,
             salary: playerEntry?.salary || 0,
             projectedPoints: playerEntry?.projectedPoints || 0
           }
-        }),
-        totalSalary,
-        totalProjected,
-        savedAt: new Date().toLocaleString()
+        })
       }
       
       setSavedLineup(confirmationData)
@@ -916,17 +918,17 @@ export function LineupBuilder({
                     <h4 className="font-medium mb-2">Lineup Details</h4>
                     <div className="space-y-1 text-sm">
                       <p><span className="font-medium">Name:</span> {savedLineup.name}</p>
-                      <p><span className="font-medium">Week:</span> Week {savedLineup.week.week_number} ({savedLineup.week.year})</p>
+                      <p><span className="font-medium">Week:</span> Week {currentWeek?.week_number} ({currentWeek?.year})</p>
                       <p><span className="font-medium">Tags:</span> {savedLineup.tags.join(', ')}</p>
-                      <p><span className="font-medium">Saved:</span> {savedLineup.savedAt}</p>
+                      <p><span className="font-medium">Saved:</span> {new Date().toLocaleString()}</p>
                     </div>
                   </div>
                   <div>
                     <h4 className="font-medium mb-2">Lineup Stats</h4>
                     <div className="space-y-1 text-sm">
-                      <p><span className="font-medium">Total Salary:</span> ${savedLineup.totalSalary.toLocaleString()}</p>
-                      <p><span className="font-medium">Remaining:</span> ${(SALARY_CAP - savedLineup.totalSalary).toLocaleString()}</p>
-                      <p><span className="font-medium">Projected Points:</span> {savedLineup.totalProjected.toFixed(1)}</p>
+                      <p><span className="font-medium">Total Salary:</span> ${savedLineup.salaryUsed.toLocaleString()}</p>
+                      <p><span className="font-medium">Remaining:</span> ${(savedLineup.salaryCap - savedLineup.salaryUsed).toLocaleString()}</p>
+                      <p><span className="font-medium">Projected Points:</span> {savedLineup.projectedPoints.toFixed(1)}</p>
                       <p><span className="font-medium">Players:</span> {savedLineup.roster.length}/9</p>
                     </div>
                   </div>
@@ -936,14 +938,14 @@ export function LineupBuilder({
                 <div>
                   <h4 className="font-medium mb-3">Roster</h4>
                   <div className="space-y-2">
-                    {savedLineup.roster.map((slot: any) => (
+                    {savedLineup.roster.map((slot: LineupPlayer) => (
                       <div key={slot.position} className="flex justify-between items-center p-2 bg-muted/30 rounded">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             {slot.position}
                           </Badge>
-                          <span className="font-medium">{slot.player.displayName}</span>
-                          <span className="text-muted-foreground">({slot.player.team})</span>
+                          <span className="font-medium">{slot.name}</span>
+                          <span className="text-muted-foreground">({slot.team})</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                           <span>${slot.salary.toLocaleString()}</span>

@@ -156,7 +156,7 @@ interface SidebarMenuItemProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const SidebarMenuItem = React.forwardRef<HTMLDivElement, SidebarMenuItemProps>(
-  ({ className, children, href, active, ...props }, ref) => (
+  ({ className, children, href: _href, active, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
