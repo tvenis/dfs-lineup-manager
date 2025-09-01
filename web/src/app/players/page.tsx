@@ -20,7 +20,7 @@ export default function PlayerPoolPage() {
   const [error, setError] = useState<string | null>(null);
                const [searchTerm, setSearchTerm] = useState('');
              const [hideExcluded, setHideExcluded] = useState(true);
-             const [excludedPlayers, setExcludedPlayers] = useState<Set<number>>(new Set());
+             // Removed excludedPlayers state since we're using database exclusions directly
              const [activeTab, setActiveTab] = useState<string>('QB');
              const [sortField, setSortField] = useState<string>('player');
              const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -161,10 +161,7 @@ export default function PlayerPoolPage() {
       console.log(`🎯 After search filter: ${players.length} players`);
     }
 
-    // Apply user exclusion filter (checkboxes)
-    const beforeUserFilter = players.length;
-    players = players.filter(entry => !excludedPlayers.has(entry.id));
-    console.log(`🎯 After user exclusion filter: ${beforeUserFilter} -> ${players.length} players`);
+                   {/* Removed user exclusion filter since we're using database exclusions directly */}
 
                    console.log(`🎯 Final filtered players for ${position}: ${players.length}`);
                
@@ -172,25 +169,11 @@ export default function PlayerPoolPage() {
                return sortPlayers(players);
   };
 
-  // Handle player exclusion
-  const togglePlayerExclusion = (playerId: number) => {
-    setExcludedPlayers(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(playerId)) {
-        newSet.delete(playerId);
-      } else {
-        newSet.add(playerId);
-      }
-      return newSet;
-    });
-  };
+               {/* Removed togglePlayerExclusion function since we're using database exclusions directly */}
 
                {/* Reset exclusions function removed to prevent accidental use */}
 
-  // Reset all exclusions
-  const resetAllExclusions = () => {
-    setExcludedPlayers(new Set());
-  };
+               {/* Removed resetAllExclusions function since we're using database exclusions directly */}
 
                // Get status color
              const getStatusColor = (status: string) => {
@@ -285,8 +268,8 @@ export default function PlayerPoolPage() {
     );
   }
 
-  const totalPlayers = playerPool.length;
-  const totalExcluded = excludedPlayers.size;
+               const totalPlayers = playerPool.length;
+             const totalExcluded = playerPool.filter(p => p.excluded === true).length;
 
   console.log('🎯 Rendering Player Pool page with:', {
     totalPlayers,
@@ -519,7 +502,6 @@ export default function PlayerPoolPage() {
                     </TableHeader>
                     <TableBody>
                                                        {filteredPlayers.map((player, index) => {
-                                   const isExcluded = excludedPlayers.has(player.id);
                                    return (
                                                                <TableRow 
                                        key={player.id}
@@ -573,7 +555,26 @@ export default function PlayerPoolPage() {
                                                                    <TableCell className="py-3">
                                          <Checkbox
                                            checked={player.excluded === true}
-                                           onCheckedChange={() => togglePlayerExclusion(player.id)}
+                                           onCheckedChange={(checked) => {
+                                             // Update the player's excluded status in the database
+                                             const newExcludedValue = checked === true;
+                                             // Call API to update the player pool entry
+                                             PlayerService.updatePlayerPoolEntry(player.id, { excluded: newExcludedValue })
+                                               .then(() => {
+                                                 // Update local state to reflect the change
+                                                 setPlayerPool(prev => 
+                                                   prev.map(p => 
+                                                     p.id === player.id 
+                                                       ? { ...p, excluded: newExcludedValue }
+                                                       : p
+                                                   )
+                                                 );
+                                               })
+                                               .catch(err => {
+                                                 console.error('Error updating player exclusion:', err);
+                                                 // Could add a toast notification here
+                                               });
+                                           }}
                                            className="opacity-60 hover:opacity-100"
                                          />
                                        </TableCell>
