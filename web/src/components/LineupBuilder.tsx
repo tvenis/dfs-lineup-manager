@@ -60,6 +60,7 @@ export function LineupBuilder({
 
   // Debug logging
   console.log('LineupBuilder - currentWeek:', currentWeek, 'weekId:', weekId)
+  console.log('LineupBuilder - playerPool length:', playerPool.length)
 
   // Load weeks and current week
   useEffect(() => {
@@ -80,7 +81,7 @@ export function LineupBuilder({
     }
     
     loadWeeks()
-  }, [weekId])
+  }, []) // No dependencies - only run once on mount
 
   // Load player pool for selected week
   useEffect(() => {
@@ -96,9 +97,11 @@ export function LineupBuilder({
         const response = await PlayerService.getPlayerPool(weekId)
         console.log('Player pool response:', response)
         console.log('Player pool entries count:', response.entries?.length || 0)
+        console.log('Player pool entries sample:', response.entries?.slice(0, 3))
         setPlayerPool(response.entries || [])
       } catch (error) {
         console.error('Error loading player pool:', error)
+        console.error('Error details:', error)
       } finally {
         setLoading(false)
       }
