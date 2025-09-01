@@ -493,6 +493,7 @@ export function LineupBuilder({
                 Player Pool
               </CardTitle>
               <CardDescription>Select players to add to your lineup</CardDescription>
+              <p className="text-sm text-muted-foreground mt-1">Note: Excluded players not available in Player Pool.</p>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Position Filters */}
