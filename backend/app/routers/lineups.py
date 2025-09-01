@@ -6,12 +6,16 @@ import uuid
 import csv
 import io
 import json
+import subprocess
+import tempfile
+import os
 
 from app.database import get_db
 from app.models import Lineup, Week, PlayerPoolEntry, Player
 from app.schemas import (
     LineupCreate, LineupUpdate, Lineup as LineupSchema,
-    LineupListResponse, LineupValidationRequest, LineupValidationResponse
+    LineupListResponse, LineupValidationRequest, LineupValidationResponse,
+    OptimizerSettings, OptimizationRequest, OptimizationResult
 )
 
 router = APIRouter()
@@ -554,3 +558,150 @@ def analyze_lineup(lineup_id: str, db: Session = Depends(get_db)):
         "created_at": lineup.created_at,
         "updated_at": lineup.updated_at
     }
+
+# Lineup optimization endpoint
+@router.post("/optimize", response_model=OptimizationResult)
+def optimize_lineup(
+    request: OptimizationRequest,
+    db: Session = Depends(get_db)
+):
+    """Optimize lineup using linear programming"""
+    try:
+        week_id = request.week_id
+        settings = request.settings
+        
+        # Get the active week
+        week = db.query(Week).filter(Week.id == week_id).first()
+        if not week:
+            raise HTTPException(status_code=404, detail="Week not found")
+        
+        # Get player pool entries for the week
+        player_pool = db.query(PlayerPoolEntry).filter(
+            PlayerPoolEntry.week_id == week_id,
+            PlayerPoolEntry.excluded == False
+        ).all()
+        
+        if not player_pool:
+            raise HTTPException(status_code=404, detail="No player pool data found for this week")
+        
+        # Debug: Log player pool info
+        print(f"DEBUG: Found {len(player_pool)} players in pool for week {week_id}")
+        if player_pool:
+            sample_player = player_pool[0]
+            print(f"DEBUG: Sample player: {sample_player.player.displayName}, salary: {sample_player.salary}, projected: {sample_player.projectedPoints}")
+        
+        # Create temporary CSV file with player data
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as csv_file:
+            writer = csv.writer(csv_file)
+            
+            # Write header
+            writer.writerow(['playerDkId', 'name', 'team', 'pos', 'salary', 'proj', 'game'])
+            
+            # Write player data
+            for entry in player_pool:
+                # Use the projectedPoints column directly
+                projected_points = entry.projectedPoints or 0.0
+                
+                # Get game info - we'll need to construct this from available data
+                game_info = f"{entry.player.team}@UNK"  # Placeholder
+                
+                writer.writerow([
+                    entry.player.playerDkId,
+                    entry.player.displayName,
+                    entry.player.team,
+                    entry.player.position,
+                    entry.salary,
+                    projected_points,
+                    game_info
+                ])
+            
+            csv_path = csv_file.name
+            print(f"DEBUG: Created CSV file: {csv_path}")
+        
+        try:
+            # Prepare configuration for Python script
+            config = {
+                'csvPath': csv_path,
+                'weekId': week_id,
+                'salaryCap': settings.salaryCap,
+                'rosterSize': settings.rosterSize,
+                'qbMin': settings.qbMin,
+                'rbMin': settings.rbMin,
+                'wrMin': settings.wrMin,
+                'teMin': settings.teMin,
+                'dstMin': settings.dstMin,
+                'flexMin': settings.flexMin,
+                'maxPerTeam': settings.maxPerTeam,
+                'enforceQbStack': settings.enforceQbStack,
+                'enforceBringback': settings.enforceBringback
+            }
+            
+            # Run the Python optimization script
+            script_path = os.path.join(os.path.dirname(__file__), '..', '..', 'optimize_lineup_simple.py')
+            
+            # Debug: Log the command being run
+            print(f"DEBUG: Running optimization script: {script_path}")
+            print(f"DEBUG: Config: {config}")
+            
+            # Use the virtual environment's Python interpreter
+            venv_python = os.path.join(os.path.dirname(__file__), '..', '..', 'venv', 'bin', 'python')
+            result = subprocess.run(
+                [venv_python, script_path, json.dumps(config)],
+                capture_output=True,
+                text=True,
+                timeout=30  # 30 second timeout
+            )
+            
+            # Debug: Log the result
+            print(f"DEBUG: Script return code: {result.returncode}")
+            print(f"DEBUG: Script stdout: {result.stdout}")
+            print(f"DEBUG: Script stderr: {result.stderr}")
+            
+            if result.returncode != 0:
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Optimization script failed (code {result.returncode}): {result.stderr}"
+                )
+            
+            # Parse the result
+            optimization_result = json.loads(result.stdout)
+            
+            if not optimization_result.get('success', False):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Optimization failed: {optimization_result.get('error', 'Unknown error')}"
+                )
+            
+            # Convert the result to our schema format
+            optimized_players = []
+            for player_data in optimization_result.get('lineup', []):
+                optimized_players.append({
+                    'playerDkId': player_data['playerDkId'],
+                    'name': player_data['name'],
+                    'team': player_data['team'],
+                    'position': player_data['position'],
+                    'salary': player_data['salary'],
+                    'projectedPoints': player_data['projectedPoints']
+                })
+            
+            return OptimizationResult(
+                success=True,
+                lineup=optimized_players,
+                totalSalary=optimization_result.get('totalSalary', 0),
+                totalProjection=optimization_result.get('totalProjection', 0.0),
+                salaryCap=settings.salaryCap,
+                weekId=week_id,
+                settings=settings
+            )
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists(csv_path):
+                os.unlink(csv_path)
+                
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Optimization timed out")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse optimization result: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Optimization error: {str(e)}")

@@ -150,7 +150,7 @@ export function LineupBuilder({
       console.log('Loading player pool for weekId:', weekId)
       setLoading(true)
       try {
-        const response = await PlayerService.getPlayerPool(weekId, { limit: 1000 })
+        const response = await PlayerService.getPlayerPool(weekId, { excluded: false, limit: 1000 })
         console.log('Player pool response:', response)
         console.log('Player pool entries count:', response.entries?.length || 0)
         console.log('Player pool entries sample:', response.entries?.slice(0, 3))
@@ -590,11 +590,160 @@ export function LineupBuilder({
     }
   }
 
-  const handleOptimize = (settings: any) => {
+  const handleOptimize = async (settings: any) => {
     console.log('Optimization settings received:', settings)
-    // TODO: Implement actual optimization logic
-    // For now, just log the settings and show a placeholder message
-    alert(`Optimization completed with settings: ${JSON.stringify(settings, null, 2)}`)
+    
+    try {
+      // Call the backend optimization endpoint
+      const response = await fetch('http://localhost:8000/api/lineups/optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          week_id: weekId,
+          settings: {
+            salaryCap: settings.salaryCapValue,
+            rosterSize: settings.rosterSize,
+            qbMin: settings.qbMin,
+            rbMin: settings.rbMin,
+            wrMin: settings.wrMin,
+            teMin: settings.teMin,
+            dstMin: settings.dstMin,
+            flexMin: settings.flexMin,
+            maxPerTeam: settings.maxFromSingleTeam,
+            enforceQbStack: settings.enforceQBStack,
+            enforceBringback: settings.enforceBringBack
+          }
+        })
+      })
+
+      if (!response.ok) {
+        let errorMessage = 'Optimization failed'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData)
+        } catch (e) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`
+        }
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+      console.log('Optimization result:', result)
+
+      if (result.success) {
+        // Populate the lineup with optimized players
+        await populateOptimizedLineup(result.lineup)
+        
+        // Show success message
+        alert(`Optimization completed! Generated lineup with ${result.totalProjection.toFixed(1)} projected points and $${result.totalSalary.toLocaleString()} salary.`)
+      } else {
+        throw new Error(result.error || 'Optimization failed')
+      }
+    } catch (error) {
+      console.error('Optimization error:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      alert(`Optimization failed: ${errorMessage}`)
+    }
+  }
+
+  const populateOptimizedLineup = async (optimizedPlayers: any[]) => {
+    // Create a map of position to player for easier lookup
+    const positionMap: Record<string, any> = {}
+    
+    // Group players by position
+    optimizedPlayers.forEach(player => {
+      const pos = player.position
+      if (!positionMap[pos]) {
+        positionMap[pos] = []
+      }
+      positionMap[pos].push(player)
+    })
+
+    // First pass: assign non-FLEX positions
+    const updatedRoster = roster.map(slot => {
+      const pos = slot.position
+      let selectedPlayer = null
+
+      // Handle position-specific logic (skip FLEX for now)
+      if (pos === 'QB' && positionMap['QB']?.[0]) {
+        selectedPlayer = positionMap['QB'][0]
+      } else if (pos === 'DST' && positionMap['DST']?.[0]) {
+        selectedPlayer = positionMap['DST'][0]
+      } else if (pos === 'TE' && positionMap['TE']?.[0]) {
+        selectedPlayer = positionMap['TE'][0]
+      } else if (pos.startsWith('RB')) {
+        const rbIndex = pos === 'RB1' ? 0 : 1
+        if (positionMap['RB']?.[rbIndex]) {
+          selectedPlayer = positionMap['RB'][rbIndex]
+        }
+      } else if (pos.startsWith('WR')) {
+        const wrIndex = pos === 'WR1' ? 0 : pos === 'WR2' ? 1 : 2
+        if (positionMap['WR']?.[wrIndex]) {
+          selectedPlayer = positionMap['WR'][wrIndex]
+        }
+      }
+
+      // Convert optimized player to our player format
+      if (selectedPlayer) {
+        return {
+          ...slot,
+          player: {
+            playerDkId: selectedPlayer.playerDkId,
+            displayName: selectedPlayer.name,
+            team: selectedPlayer.team,
+            position: selectedPlayer.position,
+            firstName: selectedPlayer.name.split(' ')[0],
+            lastName: selectedPlayer.name.split(' ').slice(1).join(' '),
+            shortName: selectedPlayer.name,
+            playerImage50: null,
+            playerImage160: null
+          }
+        }
+      }
+
+      return slot
+    })
+
+    // Second pass: handle FLEX position with used player tracking
+    const finalRoster = updatedRoster.map(slot => {
+      if (slot.position === 'FLEX') {
+        // Get all currently used player IDs
+        const usedPlayerIds = new Set(
+          updatedRoster
+            .filter(s => s.player?.playerDkId)
+            .map(s => s.player!.playerDkId)
+        )
+        
+        const flexCandidates = [
+          ...(positionMap['RB'] || []),
+          ...(positionMap['WR'] || []),
+          ...(positionMap['TE'] || [])
+        ].filter(p => !usedPlayerIds.has(p.playerDkId))
+        
+        if (flexCandidates.length > 0) {
+          const selectedPlayer = flexCandidates[0]
+          return {
+            ...slot,
+            player: {
+              playerDkId: selectedPlayer.playerDkId,
+              displayName: selectedPlayer.name,
+              team: selectedPlayer.team,
+              position: selectedPlayer.position,
+              firstName: selectedPlayer.name.split(' ')[0],
+              lastName: selectedPlayer.name.split(' ').slice(1).join(' '),
+              shortName: selectedPlayer.name,
+              playerImage50: null,
+              playerImage160: null
+            }
+          }
+        }
+      }
+      return slot
+    })
+
+    setRoster(finalRoster)
   }
 
   if (loading) {
@@ -960,12 +1109,15 @@ export function LineupBuilder({
                         {slot.position}
                       </span>
                       {slot.player ? (
-                        <Link
-                          href={`/profile/${slot.player.playerDkId}`}
-                          className="text-primary hover:underline truncate"
-                        >
-                          {slot.player.displayName}
-                        </Link>
+                        <div className="truncate">
+                          <Link
+                            href={`/profile/${slot.player.playerDkId}`}
+                            className="text-primary hover:underline"
+                          >
+                            {slot.player.displayName}
+                          </Link>
+                          <span className="text-muted-foreground ml-1">({slot.player.team})</span>
+                        </div>
                       ) : (
                         <span className="text-muted-foreground italic">
                           Empty

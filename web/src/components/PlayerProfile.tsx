@@ -23,7 +23,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
         
         // For now, we'll need to get the player from the current week's player pool
         // This is a simplified approach - in a real app, you'd have a dedicated player endpoint
-        const response = await PlayerService.getPlayerPool(1, { limit: 1000 });
+        const response = await PlayerService.getPlayerPool(1, { excluded: false, limit: 1000 });
         const player = response.entries?.find(entry => 
           entry.player.playerDkId.toString() === playerId
         );

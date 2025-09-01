@@ -50,7 +50,7 @@ export default function PlayerPoolPage() {
           console.log('🎯 Fetching player pool for week:', defaultWeek.id);
           console.log('🎯 PlayerService.getPlayerPool will be called with week ID:', defaultWeek.id);
 
-          const poolData = await PlayerService.getPlayerPool(defaultWeek.id, { limit: 1000 });
+          const poolData = await PlayerService.getPlayerPool(defaultWeek.id, { excluded: false, limit: 1000 });
           console.log('🎯 Player pool data received:', poolData);
           console.log('🎯 Pool data entries length:', poolData.entries?.length || 'undefined');
           console.log('🎯 Pool data total:', poolData.total || 'undefined');
@@ -81,7 +81,7 @@ export default function PlayerPoolPage() {
       try {
         setLoading(true);
         setError(null);
-        const poolData = await PlayerService.getPlayerPool(selectedWeek, { limit: 1000 });
+        const poolData = await PlayerService.getPlayerPool(selectedWeek, { excluded: false, limit: 1000 });
         setPlayerPool(poolData.entries || []);
       } catch (err: unknown) {
         console.error('Error fetching player pool:', err);

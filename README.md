@@ -12,6 +12,7 @@ A full-stack web application for managing Daily Fantasy Sports lineups, built wi
 ## 🚀 Features
 
 - **Lineup Builder**: Create and manage fantasy sports lineups
+- **Lineup Optimizer**: AI-powered lineup optimization with constraint settings
 - **Player Pool Management**: Import and manage player data
 - **Historical Analysis**: Track lineup performance over time
 - **Import/Export**: CSV support for DraftKings integration
