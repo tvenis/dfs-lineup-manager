@@ -276,7 +276,12 @@ export function LineupBuilder({
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
       setSortField(field)
-      setSortDirection('desc')
+      // Set default sort direction based on field type
+      if (field === 'oprk') {
+        setSortDirection('asc'); // Lower opponent rank (better matchup) first
+      } else {
+        setSortDirection('desc')
+      }
     }
   }
 
@@ -316,8 +321,13 @@ export function LineupBuilder({
     }
 
     if (sortField === 'oprk') {
-      aValue = a.oprk || 0
-      bValue = b.oprk || 0
+      // Extract opponent rank sortValue from draftStatAttributes where id = -2
+      const aDraftStats = Array.isArray(a.draftStatAttributes) ? a.draftStatAttributes : [];
+      const bDraftStats = Array.isArray(b.draftStatAttributes) ? b.draftStatAttributes : [];
+      const aOpponentRank = aDraftStats.find((attr: { id: number; sortValue?: number | string }) => attr.id === -2)?.sortValue || 0;
+      const bOpponentRank = bDraftStats.find((attr: { id: number; sortValue?: number | string }) => attr.id === -2)?.sortValue || 0;
+      aValue = typeof aOpponentRank === 'string' ? parseFloat(aOpponentRank) : aOpponentRank;
+      bValue = typeof bOpponentRank === 'string' ? parseFloat(bOpponentRank) : bOpponentRank;
     }
 
     if (typeof aValue === 'string' && typeof bValue === 'string') {
