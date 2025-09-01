@@ -547,11 +547,7 @@ export default function PlayerPoolPage() {
                                              </Link>
                                            </div>
                                            {player.excluded === true && <X className="w-4 h-4 text-destructive ml-1" />}
-                                           {position === 'FLEX' && (
-                                             <Badge variant="outline" className="text-xs ml-2">
-                                               {player.player.position}
-                                             </Badge>
-                                           )}
+
                                          </div>
                                        </TableCell>
                             <TableCell className="py-3 font-medium text-muted-foreground">
