@@ -29,6 +29,7 @@ export function LineupBuilder({
   onPlayerSelect?: (player: Player) => void;
 }) {
   console.log('🚀 LineupBuilder component rendered - NEW VERSION')
+  console.log('🔍 Component version check - should see this log')
   const SALARY_CAP = 50000
   
   const [lineupName, setLineupName] = useState('')
@@ -69,6 +70,7 @@ export function LineupBuilder({
   console.log('LineupBuilder - playerPool length:', playerPool.length)
 
   // Load weeks and current week
+  console.log('🔍 Defining useEffect for loadWeeks')
   useEffect(() => {
     console.log('🔄 useEffect for loadWeeks triggered')
     
