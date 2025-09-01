@@ -631,9 +631,9 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                             lineup.roster.map((player, index) => (
                               <div key={`${player.position}-${index}`} className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <Badge variant="outline" className={getPositionBadgeClasses(player.position)}>
+                                  <span className={getPositionBadgeClasses(player.position)}>
                                     {player.position}
-                                  </Badge>
+                                  </span>
                                   <div className="truncate">
                                     <span className="font-medium">{player.name}</span>
                                     <span className="text-muted-foreground ml-1">({player.team})</span>

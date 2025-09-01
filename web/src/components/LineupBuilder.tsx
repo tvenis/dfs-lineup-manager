@@ -846,9 +846,9 @@ export function LineupBuilder({
                                 {player.player.displayName}
                               </Link>
                               {selectedPosition === 'FLEX' && (
-                                <Badge variant="outline" className={getPositionBadgeClasses(player.player.position)}>
+                                <span className={getPositionBadgeClasses(player.player.position)}>
                                   {player.player.position}
-                                </Badge>
+                                </span>
                               )}
                             </div>
                           </TableCell>
@@ -940,9 +940,9 @@ export function LineupBuilder({
                 return (
                   <div key={slot.position} className="flex justify-between items-center text-sm">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Badge variant="outline" className={getPositionBadgeClasses(slot.position)}>
+                      <span className={getPositionBadgeClasses(slot.position)}>
                         {slot.position}
-                      </Badge>
+                      </span>
                       {slot.player ? (
                         <Link
                           href={`/profile/${slot.player.playerDkId}`}
@@ -1042,9 +1042,9 @@ export function LineupBuilder({
                     {savedLineup.roster.map((slot: LineupPlayer) => (
                       <div key={slot.position} className="flex justify-between items-center p-2 bg-muted/30 rounded">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={getPositionBadgeClasses(slot.position)}>
+                          <span className={getPositionBadgeClasses(slot.position)}>
                             {slot.position}
-                          </Badge>
+                          </span>
                           <span className="font-medium">{slot.name}</span>
                           <span className="text-muted-foreground">({slot.team})</span>
                         </div>
