@@ -27,9 +27,11 @@ type SortField = 'name' | 'team' | 'opponent' | 'salary' | 'projectedPoints' | '
 type SortDirection = 'asc' | 'desc'
 
 export function LineupBuilder({ 
-  onPlayerSelect: _onPlayerSelect
+  onPlayerSelect: _onPlayerSelect,
+  lineupId
 }: { 
   onPlayerSelect?: (player: Player) => void;
+  lineupId?: string;
 }) {
   console.log('🚀 LineupBuilder component rendered - NEW VERSION')
   console.log('🔍 Component version check - should see this log')
@@ -161,6 +163,53 @@ export function LineupBuilder({
     
     loadPlayerPool()
   }, [weekId])
+
+  // Load existing lineup if lineupId is provided
+  useEffect(() => {
+    const loadExistingLineup = async () => {
+      if (!lineupId) return;
+      
+      try {
+        console.log('🔄 Loading existing lineup:', lineupId);
+        const lineup = await LineupService.getLineup(lineupId);
+        console.log('✅ Loaded lineup:', lineup);
+        
+        // Set lineup name and tags
+        setLineupName(lineup.name || '');
+        setTags(lineup.tags?.join(', ') || '');
+        
+        // Parse slots and populate roster
+        if (lineup.slots) {
+          const slots = typeof lineup.slots === 'string' ? JSON.parse(lineup.slots) : lineup.slots;
+          console.log('🎯 Parsed slots:', slots);
+          
+          // Create a map of position to player
+          const slotMap = new Map();
+          Object.entries(slots).forEach(([position, playerData]: [string, any]) => {
+            if (playerData && playerData.playerDkId) {
+              slotMap.set(position, playerData);
+            }
+          });
+          
+          // Update roster with existing players
+          setRoster(prevRoster => prevRoster.map(slot => {
+            const existingPlayer = slotMap.get(slot.position);
+            if (existingPlayer) {
+              return {
+                ...slot,
+                player: existingPlayer
+              };
+            }
+            return slot;
+          }));
+        }
+      } catch (error) {
+        console.error('❌ Failed to load existing lineup:', error);
+      }
+    };
+    
+    loadExistingLineup();
+  }, [lineupId]);
 
   // Group players by position for easy access
   const availablePlayers = useMemo(() => {

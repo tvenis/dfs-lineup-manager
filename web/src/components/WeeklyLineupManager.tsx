@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -9,7 +10,7 @@ import { Input } from "./ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Separator } from "./ui/separator";
 // import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
-import { PlusCircle, Download, Edit, Trash2, Eye, Search, Filter, X } from "lucide-react";
+import { PlusCircle, Download, Edit, Trash2, Search, Filter, X } from "lucide-react";
 import { WeekService } from "@/lib/weekService";
 import { LineupService } from "@/lib/lineupService";
 import { Week, LineupDisplayData } from "@/types/prd";
@@ -83,6 +84,7 @@ function populateRosterFromSlots(slots: any, playerMap: Map<number, any>): any[]
 }
 
 export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedWeek?: string }) {
+  const router = useRouter();
   const [lineups, setLineups] = useState<LineupDisplayData[]>([]);
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [loading, setLoading] = useState(false);
@@ -510,10 +512,12 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">{lineup.name}</CardTitle>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="hover:bg-gray-100">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="hover:bg-gray-100">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="hover:bg-gray-100"
+                            onClick={() => router.push(`/builder?lineupId=${lineup.id}`)}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button variant="ghost" size="sm" className="hover:bg-red-50 hover:text-red-600" onClick={() => openDeleteDialog(lineup.id)}>
@@ -604,7 +608,11 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                         <Button variant="outline" size="sm" className="flex-1" onClick={() => handleExportLineup(lineup)}>
                           Export
                         </Button>
-                        <Button size="sm" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => router.push(`/builder?lineupId=${lineup.id}`)}
+                        >
                           Edit
                         </Button>
                       </div>
