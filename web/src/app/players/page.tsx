@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff, RotateCcw, Search, X, UserX, User, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, Search, X, UserX, User, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PlayerPoolPage() {
@@ -54,14 +54,15 @@ export default function PlayerPoolPage() {
           console.log('🎯 Pool data total:', poolData.total || 'undefined');
           setPlayerPool(poolData.entries || []);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('🎯 Error fetching data:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         console.error('🎯 Error details:', {
-          message: err.message,
-          stack: err.stack,
-          name: err.name
+          message: errorMessage,
+          stack: err instanceof Error ? err.stack : undefined,
+          name: err instanceof Error ? err.name : undefined
         });
-        setError(`Failed to fetch data: ${err.message}`);
+        setError(`Failed to fetch data: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
@@ -80,7 +81,7 @@ export default function PlayerPoolPage() {
                    setError(null);
                    const poolData = await PlayerService.getPlayerPool(selectedWeek, { limit: 1000 });
                    setPlayerPool(poolData.entries || []);
-                 } catch (err: any) {
+                 } catch (err: unknown) {
                    console.error('Error fetching player pool:', err);
                    setError('Failed to fetch player pool');
                  } finally {
@@ -195,7 +196,7 @@ export default function PlayerPoolPage() {
              // Sort players
              const sortPlayers = (players: PlayerPoolEntry[]) => {
                return [...players].sort((a, b) => {
-                 let aValue: any, bValue: any;
+                 let aValue: string | number, bValue: string | number;
                  
                  switch (sortField) {
                    case 'player':
@@ -218,8 +219,8 @@ export default function PlayerPoolPage() {
                      // Extract opponent rank sortValue from draftStatAttributes where id = -2
                      const aDraftStats = Array.isArray(a.draftStatAttributes) ? a.draftStatAttributes : [];
                      const bDraftStats = Array.isArray(b.draftStatAttributes) ? b.draftStatAttributes : [];
-                     const aOpponentRank = aDraftStats.find((attr: any) => attr.id === -2)?.sortValue || 0;
-                     const bOpponentRank = bDraftStats.find((attr: any) => attr.id === -2)?.sortValue || 0;
+                     const aOpponentRank = aDraftStats.find((attr: { id: number; sortValue?: number | string }) => attr.id === -2)?.sortValue || 0;
+                     const bOpponentRank = bDraftStats.find((attr: { id: number; sortValue?: number | string }) => attr.id === -2)?.sortValue || 0;
                      aValue = typeof aOpponentRank === 'string' ? parseFloat(aOpponentRank) : aOpponentRank;
                      bValue = typeof bOpponentRank === 'string' ? parseFloat(bOpponentRank) : bOpponentRank;
                      break;

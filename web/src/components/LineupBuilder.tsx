@@ -87,7 +87,7 @@ export function LineupBuilder({
           // If direct fetch works, use that data instead
           if (directData && directData.weeks) {
             console.log('🎯 Using direct fetch data')
-            const activeWeek = directData.weeks.find((w: any) => w.status === 'Active')
+            const activeWeek = directData.weeks.find((w: { status: string }) => w.status === 'Active')
             const current = activeWeek || directData.weeks[0]
             console.log('🎯 Active week found:', activeWeek)
             console.log('🎯 Setting currentWeek to:', current)
@@ -252,7 +252,7 @@ export function LineupBuilder({
       oprk: (() => {
         const draftStatAttributes = player.draftStatAttributes;
         if (draftStatAttributes && Array.isArray(draftStatAttributes)) {
-          const opponentRankAttr = draftStatAttributes.find((attr: any) => attr.id === -2);
+          const opponentRankAttr = draftStatAttributes.find((attr: { id: number; value?: number; quality?: string }) => attr.id === -2);
           return opponentRankAttr?.value || 0;
         }
         return 0;
@@ -260,7 +260,7 @@ export function LineupBuilder({
       oprkQuality: (() => {
         const draftStatAttributes = player.draftStatAttributes;
         if (draftStatAttributes && Array.isArray(draftStatAttributes)) {
-          const opponentRankAttr = draftStatAttributes.find((attr: any) => attr.id === -2);
+          const opponentRankAttr = draftStatAttributes.find((attr: { id: number; value?: number; quality?: string }) => attr.id === -2);
           return opponentRankAttr?.quality || 'Medium';
         }
         return 'Medium';
