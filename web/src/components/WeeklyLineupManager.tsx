@@ -458,7 +458,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
             <Download className="w-4 h-4" />
             Export All
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => router.push('/builder')}>
             <PlusCircle className="w-4 h-4" />
             Create New Lineup
           </Button>
@@ -681,7 +681,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                 <h3>No lineups yet</h3>
                 <p className="text-muted-foreground">Create your first lineup to get started with your weekly strategy.</p>
               </div>
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={() => router.push('/builder')}>
                 <PlusCircle className="w-4 h-4" />
                 Create Your First Lineup
               </Button>
