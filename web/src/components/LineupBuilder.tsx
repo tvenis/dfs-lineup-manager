@@ -55,7 +55,9 @@ export function LineupBuilder({
 
   // Always use the active week
   const weekId = useMemo(() => {
-    return currentWeek?.id || 1
+    const id = currentWeek?.id || 1
+    console.log('🎯 weekId calculated:', id, 'from currentWeek:', currentWeek)
+    return id
   }, [currentWeek])
 
   // Debug logging
@@ -64,45 +66,56 @@ export function LineupBuilder({
 
   // Load weeks and current week
   useEffect(() => {
+    console.log('🔄 useEffect for loadWeeks triggered')
+    
     const loadWeeks = async () => {
+      console.log('🚀 loadWeeks function started')
       try {
-        console.log('Loading weeks...')
-        console.log('WeekService.getWeeks() called...')
-        
-        // Test direct fetch first
-        console.log('Testing direct fetch to backend...')
+        console.log('📡 Testing direct fetch to backend...')
         try {
           const directResponse = await fetch('http://localhost:8000/api/weeks/')
-          console.log('Direct fetch response status:', directResponse.status)
+          console.log('✅ Direct fetch response status:', directResponse.status)
           const directData = await directResponse.json()
-          console.log('Direct fetch data:', directData)
+          console.log('✅ Direct fetch data:', directData)
+          
+          // If direct fetch works, use that data instead
+          if (directData && directData.weeks) {
+            console.log('🎯 Using direct fetch data')
+            const activeWeek = directData.weeks.find((w: any) => w.status === 'Active')
+            const current = activeWeek || directData.weeks[0]
+            console.log('🎯 Active week found:', activeWeek)
+            console.log('🎯 Setting currentWeek to:', current)
+            setCurrentWeek(current)
+            return
+          }
         } catch (directError) {
-          console.error('Direct fetch failed:', directError)
+          console.error('❌ Direct fetch failed:', directError)
         }
         
+        console.log('📡 Trying WeekService.getWeeks()...')
         const weeksResponse = await WeekService.getWeeks()
-        console.log('Weeks response received:', weeksResponse)
-        console.log('Weeks response.weeks:', weeksResponse.weeks)
-        console.log('Weeks response.weeks.length:', weeksResponse.weeks?.length)
+        console.log('✅ Weeks response received:', weeksResponse)
+        console.log('✅ Weeks response.weeks:', weeksResponse.weeks)
+        console.log('✅ Weeks response.weeks.length:', weeksResponse.weeks?.length)
         
         if (!weeksResponse || !weeksResponse.weeks) {
-          console.error('Invalid weeks response structure:', weeksResponse)
+          console.error('❌ Invalid weeks response structure:', weeksResponse)
           return
         }
         
         // Find the active week (status = 'Active')
         const activeWeek = weeksResponse.weeks.find(w => w.status === 'Active')
-        console.log('Active week found:', activeWeek)
-        console.log('All weeks statuses:', weeksResponse.weeks?.map(w => ({ id: w.id, status: w.status })))
+        console.log('🎯 Active week found:', activeWeek)
+        console.log('🎯 All weeks statuses:', weeksResponse.weeks?.map(w => ({ id: w.id, status: w.status })))
         
         const current = activeWeek || weeksResponse.weeks[0]
-        console.log('Active week:', activeWeek, 'Current week:', current)
-        console.log('Setting currentWeek to:', current)
+        console.log('🎯 Active week:', activeWeek, 'Current week:', current)
+        console.log('🎯 Setting currentWeek to:', current)
         setCurrentWeek(current)
       } catch (error) {
-        console.error('Error loading weeks:', error)
-        console.error('Error details:', error)
-        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+        console.error('❌ Error loading weeks:', error)
+        console.error('❌ Error details:', error)
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace')
       }
     }
     
