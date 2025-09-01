@@ -15,6 +15,7 @@ import { LineupService } from '@/lib/lineupService'
 import { WeekService } from '@/lib/weekService'
 import { LineupDisplayData, LineupPlayer } from '@/types/prd'
 import { PlayerPoolEntry, Player, Week, LineupSlotId } from '@/types/prd'
+import { getPositionBadgeClasses } from '@/lib/positionColors'
 
 type RosterSlot = {
   position: LineupSlotId
@@ -745,7 +746,7 @@ export function LineupBuilder({
                                 {player.player.displayName}
                               </Link>
                               {selectedPosition === 'FLEX' && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" className={getPositionBadgeClasses(player.player.position)}>
                                   {player.player.position}
                                 </Badge>
                               )}
@@ -839,7 +840,7 @@ export function LineupBuilder({
                 return (
                   <div key={slot.position} className="flex justify-between items-center text-sm">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className={getPositionBadgeClasses(slot.position)}>
                         {slot.position}
                       </Badge>
                       {slot.player ? (
@@ -941,7 +942,7 @@ export function LineupBuilder({
                     {savedLineup.roster.map((slot: LineupPlayer) => (
                       <div key={slot.position} className="flex justify-between items-center p-2 bg-muted/30 rounded">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className={getPositionBadgeClasses(slot.position)}>
                             {slot.position}
                           </Badge>
                           <span className="font-medium">{slot.name}</span>

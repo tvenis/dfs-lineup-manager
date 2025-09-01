@@ -14,6 +14,73 @@ import { WeekService } from "@/lib/weekService";
 import { LineupService } from "@/lib/lineupService";
 import { Week, LineupDisplayData } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
+import { getPositionBadgeClasses } from "@/lib/positionColors";
+
+// Helper function to populate roster from lineup slots
+// Function to fetch player pool data and create a lookup map
+async function fetchPlayerPool(weekId: number): Promise<Map<number, any>> {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/players/pool/${weekId}?excluded=false&limit=1000`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch player pool: ${response.status}`);
+    }
+    const data = await response.json();
+    
+    const playerMap = new Map();
+    data.entries.forEach((entry: any) => {
+      playerMap.set(entry.playerDkId, {
+        name: entry.player.displayName,
+        team: entry.player.team,
+        position: entry.player.position,
+        salary: entry.salary,
+        projectedPoints: entry.projectedPoints || 0
+      });
+    });
+    
+    return playerMap;
+  } catch (error) {
+    console.error('Error fetching player pool:', error);
+    return new Map();
+  }
+}
+
+// Function to populate roster from real slots data
+function populateRosterFromSlots(slots: any, playerMap: Map<number, any>): any[] {
+  console.log('🎯 populateRosterFromSlots called with slots:', slots, 'playerMap size:', playerMap.size);
+  const roster: any[] = [];
+  
+  // Define the order of positions to display
+  const positionOrder = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DST'];
+  
+  positionOrder.forEach(position => {
+    const playerId = slots[position];
+    console.log('🎯 Processing position:', position, 'playerId:', playerId);
+    if (playerId && playerMap.has(playerId)) {
+      const player = playerMap.get(playerId);
+      console.log('🎯 Found player for', position, ':', player.name);
+      roster.push({
+        position: position,
+        name: player.name,
+        team: player.team,
+        salary: player.salary,
+        projectedPoints: player.projectedPoints
+      });
+    } else {
+      console.log('🎯 Player not found for', position, 'playerId:', playerId);
+      // If player not found, add placeholder
+      roster.push({
+        position: position,
+        name: "Unknown Player",
+        team: "N/A",
+        salary: 0,
+        projectedPoints: 0
+      });
+    }
+  });
+  
+  console.log('🎯 populateRosterFromSlots returning roster with', roster.length, 'players');
+  return roster;
+}
 
 export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedWeek?: string }) {
   const [lineups, setLineups] = useState<LineupDisplayData[]>([]);
@@ -36,6 +103,16 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
         console.log('🎯 Loading weeks from API...');
         console.log('🎯 API URL:', buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS));
         
+        // Test API connectivity first
+        console.log('🎯 Testing API connectivity...');
+        const testResponse = await fetch(`${API_CONFIG.BASE_URL}/api/weeks/?skip=0&limit=100`);
+        console.log('🎯 Test API response status:', testResponse.status);
+        if (!testResponse.ok) {
+          throw new Error(`API test failed: ${testResponse.status}`);
+        }
+        
+
+        
         // Load weeks
         const weeksResponse = await WeekService.getWeeks();
         console.log('🎯 Weeks API response:', weeksResponse);
@@ -52,19 +129,38 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
             console.log('🎯 Loading lineups for week:', activeWeek.id);
             const lineupsResponse = await LineupService.getLineups(activeWeek.id);
             console.log('🎯 Lineups API response:', lineupsResponse);
-            // Convert LineupListResponse to LineupDisplayData format
-            const displayLineups = lineupsResponse.lineups.map(lineup => ({
-              id: lineup.id,
-              name: lineup.name,
-              tags: lineup.tags || [],
-              salaryUsed: lineup.salary_used,
-              salaryCap: 50000,
-              projectedPoints: 0, // Will be calculated later
-              roster: [] // Will be populated later
-            }));
+            
+            // Fetch player pool data for this week
+            console.log('🎯 Fetching player pool for week:', activeWeek.id);
+            const playerMap = await fetchPlayerPool(activeWeek.id);
+            console.log('🎯 Player pool loaded, found', playerMap.size, 'players');
+            
+            // Convert LineupListResponse to LineupDisplayData format with real player data
+            console.log('🎯 Processing lineups:', lineupsResponse.lineups.length);
+            const displayLineups = lineupsResponse.lineups.map(lineup => {
+              console.log('🎯 Processing lineup:', lineup.name, 'with slots:', lineup.slots);
+              const roster = populateRosterFromSlots(lineup.slots, playerMap);
+              console.log('🎯 Generated roster for', lineup.name, ':', roster.length, 'players');
+              const totalProjectedPoints = roster.reduce((sum, player) => sum + player.projectedPoints, 0);
+              
+              const displayLineup = {
+                id: lineup.id,
+                name: lineup.name,
+                tags: lineup.tags || [],
+                salaryUsed: lineup.salary_used,
+                salaryCap: 50000,
+                projectedPoints: totalProjectedPoints,
+                roster: roster
+              };
+              console.log('🎯 Created display lineup:', displayLineup.name);
+              return displayLineup;
+            });
+            console.log('🎯 Setting lineups state with', displayLineups.length, 'lineups');
             setLineups(displayLineups);
+            console.log('🎯 Lineups state set successfully');
           } catch (lineupError) {
             console.error('❌ Failed to load lineups:', lineupError);
+            console.error('❌ Lineup error details:', lineupError);
             setLineups([]);
           }
         } else if (weeksResponse.weeks.length > 0) {
@@ -76,16 +172,27 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
           // Load lineups for the first week
           try {
             const lineupsResponse = await LineupService.getLineups(firstWeek.id);
-            // Convert LineupListResponse to LineupDisplayData format
-            const displayLineups = lineupsResponse.lineups.map(lineup => ({
-              id: lineup.id,
-              name: lineup.name,
-              tags: lineup.tags || [],
-              salaryUsed: lineup.salary_used,
-              salaryCap: 50000,
-              projectedPoints: 0, // Will be calculated later
-              roster: [] // Will be populated later
-            }));
+            
+            // Fetch player pool data for this week
+            console.log('🎯 Fetching player pool for first week:', firstWeek.id);
+            const playerMap = await fetchPlayerPool(firstWeek.id);
+            console.log('🎯 Player pool loaded, found', playerMap.size, 'players');
+            
+            // Convert LineupListResponse to LineupDisplayData format with real player data
+            const displayLineups = lineupsResponse.lineups.map(lineup => {
+              const roster = populateRosterFromSlots(lineup.slots, playerMap);
+              const totalProjectedPoints = roster.reduce((sum, player) => sum + player.projectedPoints, 0);
+              
+              return {
+                id: lineup.id,
+                name: lineup.name,
+                tags: lineup.tags || [],
+                salaryUsed: lineup.salary_used,
+                salaryCap: 50000,
+                projectedPoints: totalProjectedPoints,
+                roster: roster
+              };
+            });
             setLineups(displayLineups);
           } catch (lineupError) {
             console.error('❌ Failed to load lineups:', lineupError);
@@ -98,23 +205,71 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
           setLineups([]);
         }
       } catch (error) {
-        console.error('❌ Failed to load weeks from API:', error);
-        console.log('🔄 Using fallback data...');
-        // Fallback to mock data
-        setWeeks([{
-          id: 1,
-          week_number: 1,
-          year: 2025,
-          start_date: "2025-09-04",
-          end_date: "2025-09-08",
-          game_count: 0,
-          status: "Active",
-          imported_at: "2025-08-20T19:52:03",
-          created_at: "2025-08-20T19:52:03"
-        }]);
-        setCurrentWeekId(1);
-        setLineups([]);
-      } finally {
+          console.error('❌ Failed to load weeks from API:', error);
+          console.log('🔄 Using fallback data...');
+          // Fallback to mock data
+          setWeeks([{
+            id: 1,
+            week_number: 1,
+            year: 2025,
+            start_date: "2025-09-04",
+            end_date: "2025-09-08",
+            game_count: 0,
+            status: "Active",
+            imported_at: "2025-08-20T19:52:03",
+            created_at: "2025-08-20T19:52:03"
+          }]);
+          setCurrentWeekId(1);
+          // Add fallback lineup data with empty player map
+          const emptyPlayerMap = new Map();
+          setLineups([
+            {
+              id: "fallback-1",
+              name: "Lineup 8/26/2025",
+              tags: ["Cash"],
+              salaryUsed: 50000,
+              salaryCap: 50000,
+              projectedPoints: 125.4,
+              roster: populateRosterFromSlots({}, emptyPlayerMap)
+            },
+            {
+              id: "fallback-2",
+              name: "Lineup 9/1/2025",
+              tags: ["GPP"],
+              salaryUsed: 49900,
+              salaryCap: 50000,
+              projectedPoints: 130.2,
+              roster: populateRosterFromSlots({}, emptyPlayerMap)
+            },
+            {
+              id: "fallback-3",
+              name: "OPRK Based Lineup",
+              tags: ["H2H"],
+              salaryUsed: 49600,
+              salaryCap: 50000,
+              projectedPoints: 128.7,
+              roster: populateRosterFromSlots({}, emptyPlayerMap)
+            },
+            {
+              id: "fallback-4",
+              name: "OPRK Based Lineup",
+              tags: ["H2H"],
+              salaryUsed: 49600,
+              salaryCap: 50000,
+              projectedPoints: 128.7,
+              roster: populateRosterFromSlots({}, emptyPlayerMap)
+            },
+            {
+              id: "fallback-5",
+              name: "Projection Based Lineup",
+              tags: ["Cash"],
+              salaryUsed: 50000,
+              salaryCap: 50000,
+              projectedPoints: 132.1,
+              roster: populateRosterFromSlots({}, emptyPlayerMap)
+            }
+          ]);
+        } finally {
         setLoading(false);
       }
     };
@@ -151,8 +306,18 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
 
   const handleDeleteLineup = async (id: string) => {
     try {
-      await LineupService.deleteLineup(id);
-      setLineups(prev => prev.filter(lineup => lineup.id !== id));
+      // Check if this is a mock/debug lineup
+      if (id.startsWith('debug-') || id.startsWith('fallback-') || id.startsWith('test-')) {
+        // For mock data, just remove from state without API call
+        setLineups(prev => prev.filter(lineup => lineup.id !== id));
+        console.log('Deleted mock lineup:', id);
+      } else {
+        // For real lineups, make API call
+        await LineupService.deleteLineup(id);
+        setLineups(prev => prev.filter(lineup => lineup.id !== id));
+        console.log('Deleted real lineup:', id);
+      }
+      
       // Close the dialog and clear the lineup to delete
       setDeleteDialogOpen(prev => ({ ...prev, [id]: false }));
       setLineupToDelete(null);
@@ -200,17 +365,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
     setSelectedTags([]);
   };
 
-  const getPositionColor = (position: string) => {
-    switch (position) {
-      case 'QB': return 'bg-blue-100 text-blue-800';
-      case 'RB': return 'bg-green-100 text-green-800';
-      case 'WR': return 'bg-purple-100 text-purple-800';
-      case 'TE': return 'bg-orange-100 text-orange-800';
-      case 'FLEX': return 'bg-gray-100 text-gray-800';
-      case 'DST': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+
 
 
 
@@ -355,22 +510,20 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">{lineup.name}</CardTitle>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" className="hover:bg-gray-100">
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" className="hover:bg-gray-100">
                             <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="hover:bg-red-50 hover:text-red-600" onClick={() => openDeleteDialog(lineup.id)}>
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                           <Dialog open={deleteDialogOpen[lineup.id] || false} onOpenChange={(open) => {
                             if (!open) {
                               closeDeleteDialog(lineup.id);
                             }
                           }}>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(lineup.id)}>
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </DialogTrigger>
                             <DialogContent>
                               <DialogHeader>
                                 <DialogTitle>Delete Lineup</DialogTitle>
@@ -419,25 +572,31 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                       
                       {/* Full Roster Display */}
                       <div className="space-y-3">
-                        <div className="text-sm">Full Roster</div>
+                        <div className="text-sm font-medium">Full Roster</div>
                         <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {lineup.roster.map((player, index) => (
-                            <div key={`${player.position}-${index}`} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <Badge variant="outline" className={`text-xs px-1.5 py-0.5 ${getPositionColor(player.position)} border-0`}>
-                                  {player.position}
-                                </Badge>
-                                <div className="truncate">
-                                  <span>{player.name}</span>
-                                  <span className="text-muted-foreground ml-1">({player.team})</span>
+                          {lineup.roster && lineup.roster.length > 0 ? (
+                            lineup.roster.map((player, index) => (
+                              <div key={`${player.position}-${index}`} className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <Badge variant="outline" className={getPositionBadgeClasses(player.position)}>
+                                    {player.position}
+                                  </Badge>
+                                  <div className="truncate">
+                                    <span className="font-medium">{player.name}</span>
+                                    <span className="text-muted-foreground ml-1">({player.team})</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span>${player.salary.toLocaleString()}</span>
+                                  <span>{player.projectedPoints}pts</span>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span>${player.salary.toLocaleString()}</span>
-                                <span>{player.projectedPoints}pts</span>
-                              </div>
+                            ))
+                          ) : (
+                            <div className="text-sm text-muted-foreground text-center py-4">
+                              No roster data available
                             </div>
-                          ))}
+                          )}
                         </div>
                       </div>
 
