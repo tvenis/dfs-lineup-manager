@@ -197,22 +197,47 @@ export function LineupBuilder({
           console.log('🎯 Available player IDs:', Array.from(playerMap.keys()).slice(0, 10));
           
           // Update roster with existing players
-          setRoster(prevRoster => prevRoster.map(slot => {
+          const loadPlayerDetails = async (playerId: number) => {
+            try {
+              const response = await fetch(`http://localhost:8000/api/players/${playerId}`);
+              if (response.ok) {
+                const player = await response.json();
+                console.log(`✅ Fetched player details for ${playerId}:`, player.displayName);
+                return player;
+              }
+            } catch (error) {
+              console.error(`❌ Failed to fetch player ${playerId}:`, error);
+            }
+            return null;
+          };
+
+          // Process each slot
+          const updatedRoster = await Promise.all(roster.map(async (slot) => {
             const playerId = slots[slot.position];
             console.log(`🎯 Checking ${slot.position} for player ID: ${playerId}`);
             
             if (playerId && playerMap.has(playerId)) {
               const player = playerMap.get(playerId);
-              console.log(`✅ Mapping ${slot.position} to player:`, player?.displayName);
+              console.log(`✅ Mapping ${slot.position} to player from pool:`, player?.displayName);
               return {
                 ...slot,
                 player: player
               };
             } else if (playerId) {
-              console.log(`❌ Player ID ${playerId} not found in player pool for ${slot.position}`);
+              console.log(`❌ Player ID ${playerId} not found in player pool for ${slot.position}, fetching directly...`);
+              const player = await loadPlayerDetails(playerId);
+              if (player) {
+                console.log(`✅ Mapping ${slot.position} to player from direct fetch:`, player.displayName);
+                return {
+                  ...slot,
+                  player: player
+                };
+              }
             }
             return slot;
           }));
+
+          setRoster(updatedRoster);
         }
       } catch (error) {
         console.error('❌ Failed to load existing lineup:', error);
