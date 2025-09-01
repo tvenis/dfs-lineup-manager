@@ -6,7 +6,7 @@ import { Input } from './ui/input'
 import { Badge } from './ui/badge'
 import { Label } from './ui/label'
 import { Separator } from './ui/separator'
-import { Save, Trash2, Download, RotateCcw, User, DollarSign, ArrowUpDown, Plus } from 'lucide-react'
+import { Save, Trash2, Download, RotateCcw, User, DollarSign, ArrowUpDown, Plus, Zap } from 'lucide-react'
 import { Progress } from './ui/progress'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
@@ -613,6 +613,13 @@ export function LineupBuilder({
         </div>
         
         <div className="flex gap-2">
+          <Button 
+            onClick={() => console.log('Lineup Optimizer clicked')}
+            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Zap className="w-4 h-4" />
+            Lineup Optimizer
+          </Button>
           <Button variant="outline" onClick={clearLineup} className="gap-2">
             <RotateCcw className="w-4 h-4" />
             Clear Lineup
