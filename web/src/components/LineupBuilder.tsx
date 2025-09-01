@@ -16,6 +16,7 @@ import { WeekService } from '@/lib/weekService'
 import { LineupDisplayData, LineupPlayer } from '@/types/prd'
 import { PlayerPoolEntry, Player, Week, LineupSlotId } from '@/types/prd'
 import { getPositionBadgeClasses } from '@/lib/positionColors'
+import { LineupOptimizer } from './LineupOptimizer'
 
 type RosterSlot = {
   position: LineupSlotId
@@ -61,6 +62,7 @@ export function LineupBuilder({
   const [saving, setSaving] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [savedLineup, setSavedLineup] = useState<LineupDisplayData | null>(null)
+  const [showOptimizer, setShowOptimizer] = useState(false)
 
   // Always use the active week
   const weekId = useMemo(() => {
@@ -588,6 +590,13 @@ export function LineupBuilder({
     }
   }
 
+  const handleOptimize = (settings: any) => {
+    console.log('Optimization settings received:', settings)
+    // TODO: Implement actual optimization logic
+    // For now, just log the settings and show a placeholder message
+    alert(`Optimization completed with settings: ${JSON.stringify(settings, null, 2)}`)
+  }
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
@@ -614,7 +623,7 @@ export function LineupBuilder({
         
         <div className="flex gap-2">
           <Button 
-            onClick={() => console.log('Lineup Optimizer clicked')}
+            onClick={() => setShowOptimizer(true)}
             className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Zap className="w-4 h-4" />
@@ -1078,6 +1087,13 @@ export function LineupBuilder({
           </Card>
         </div>
       )}
+
+      {/* Lineup Optimizer Dialog */}
+      <LineupOptimizer
+        isOpen={showOptimizer}
+        onClose={() => setShowOptimizer(false)}
+        onOptimize={handleOptimize}
+      />
     </div>
   )
 }

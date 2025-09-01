@@ -147,10 +147,29 @@ const DialogTrigger = React.forwardRef<HTMLButtonElement, DialogTriggerProps>(
 )
 DialogTrigger.displayName = "DialogTrigger"
 
+interface DialogFooterProps {
+  children: React.ReactNode
+  className?: string
+}
+
+const DialogFooter = React.forwardRef<HTMLDivElement, DialogFooterProps>(
+  ({ children, className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+)
+DialogFooter.displayName = "DialogFooter"
+
 export {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
