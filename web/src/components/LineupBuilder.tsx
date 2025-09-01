@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -653,12 +654,12 @@ export function LineupBuilder({
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => onPlayerSelect?.(player.player)}
+                              <Link
+                                href={`/profile/${player.player.playerDkId}`}
                                 className="text-primary hover:underline text-left"
                               >
                                 {player.player.displayName}
-                              </button>
+                              </Link>
                               {selectedPosition === 'FLEX' && (
                                 <Badge variant="outline" className="text-xs">
                                   {player.player.position}
@@ -744,49 +745,58 @@ export function LineupBuilder({
           </Card>
 
           {/* Lineup Summary */}
-          {filledSlots > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Current Lineup</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {roster
-                  .filter(slot => slot.player)
-                  .map((slot) => {
-                    const originalIndex = roster.findIndex(r => r === slot)
-                    const playerEntry = playerPool.find(entry => entry.player.playerDkId === slot.player!.playerDkId)
-                    return (
-                      <div key={slot.position} className="flex justify-between items-center text-sm">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Badge variant="outline" className="text-xs">
-                            {slot.position}
-                          </Badge>
-                          <button
-                            onClick={() => onPlayerSelect?.(slot.player!)}
-                            className="text-primary hover:underline truncate"
-                          >
-                            {slot.player!.displayName}
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Current Lineup</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {roster.map((slot, index) => {
+                const playerEntry = slot.player ? playerPool.find(entry => entry.player.playerDkId === slot.player!.playerDkId) : null
+                return (
+                  <div key={slot.position} className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Badge variant="outline" className="text-xs">
+                        {slot.position}
+                      </Badge>
+                      {slot.player ? (
+                        <Link
+                          href={`/profile/${slot.player.playerDkId}`}
+                          className="text-primary hover:underline truncate"
+                        >
+                          {slot.player.displayName}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground italic">
+                          Empty
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {slot.player ? (
+                        <>
                           <span className="text-muted-foreground">
                             ${playerEntry?.salary.toLocaleString() || '0'}
                           </span>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handlePlayerSelect(originalIndex, 'none')}
+                            onClick={() => handlePlayerSelect(index, 'none')}
                             className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
-              </CardContent>
-            </Card>
-          )}
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          Select player
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
 
           {/* Quick Tips */}
           <Card>
