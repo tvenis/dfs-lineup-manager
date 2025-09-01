@@ -203,7 +203,20 @@ export function LineupBuilder({
               if (response.ok) {
                 const player = await response.json();
                 console.log(`✅ Fetched player details for ${playerId}:`, player.displayName);
-                return player;
+                
+                // Try to find salary from player pool if available
+                const playerEntry = playerPool.find(entry => entry.player.playerDkId === playerId);
+                if (playerEntry) {
+                  console.log(`✅ Found salary ${playerEntry.salary} for ${player.displayName} in player pool`);
+                  return {
+                    ...player,
+                    salary: playerEntry.salary,
+                    projectedPoints: playerEntry.projectedPoints
+                  };
+                } else {
+                  console.log(`⚠️ No salary found for ${player.displayName} in player pool`);
+                  return player;
+                }
               }
             } catch (error) {
               console.error(`❌ Failed to fetch player ${playerId}:`, error);
@@ -267,12 +280,22 @@ export function LineupBuilder({
 
   const totalSalary = roster.reduce((sum, slot) => {
     if (!slot.player) return sum
+    // Check if player has salary directly (from direct API fetch)
+    if (slot.player.salary !== undefined) {
+      return sum + slot.player.salary
+    }
+    // Otherwise, look in player pool
     const playerEntry = playerPool.find(entry => entry.player.playerDkId === slot.player!.playerDkId)
     return sum + (playerEntry?.salary || 0)
   }, 0)
   
   const totalProjected = roster.reduce((sum, slot) => {
     if (!slot.player) return sum
+    // Check if player has projected points directly (from direct API fetch)
+    if (slot.player.projectedPoints !== undefined) {
+      return sum + slot.player.projectedPoints
+    }
+    // Otherwise, look in player pool
     const playerEntry = playerPool.find(entry => entry.player.playerDkId === slot.player!.playerDkId)
     return sum + (playerEntry?.projectedPoints || 0)
   }, 0)
