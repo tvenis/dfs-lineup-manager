@@ -212,7 +212,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
     }
   };
 
-  console.log('🎯 WeeklyLineupManager render - currentWeekId:', currentWeekId, 'loading:', loading, 'lineups:', lineups.length);
+
 
   // Remove mounted check since we're using timeout instead
 
@@ -242,22 +242,12 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                 currentWeekId ? `Week ${currentWeekId}` : "Loading..."
               }
             </p>
-            <p className="text-xs text-gray-500">
-              Debug: currentWeekId={currentWeekId}, loading={loading ? 'true' : 'false'}
-            </p>
+
           </div>
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => {
-            console.log('🎯 Manual API test...');
-            fetch('http://localhost:8000/api/weeks/')
-              .then(response => response.json())
-              .then(data => console.log('🎯 Manual API response:', data))
-              .catch(error => console.error('🎯 Manual API error:', error));
-          }}>
-            Test API
-          </Button>
+
           <Button variant="outline" className="gap-2">
             <Download className="w-4 h-4" />
             Export All
