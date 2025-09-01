@@ -164,10 +164,13 @@ export function LineupBuilder({
     loadPlayerPool()
   }, [weekId])
 
-  // Load existing lineup if lineupId is provided
+  // Load existing lineup if lineupId is provided (after player pool is loaded)
   useEffect(() => {
     const loadExistingLineup = async () => {
-      if (!lineupId) return;
+      if (!lineupId || playerPool.length === 0) {
+        console.log('⏳ Waiting for lineupId or player pool to load...', { lineupId, playerPoolLength: playerPool.length });
+        return;
+      }
       
       try {
         console.log('🔄 Loading existing lineup:', lineupId);
@@ -183,22 +186,30 @@ export function LineupBuilder({
           const slots = typeof lineup.slots === 'string' ? JSON.parse(lineup.slots) : lineup.slots;
           console.log('🎯 Parsed slots:', slots);
           
-          // Create a map of position to player
-          const slotMap = new Map();
-          Object.entries(slots).forEach(([position, playerData]: [string, any]) => {
-            if (playerData && playerData.playerDkId) {
-              slotMap.set(position, playerData);
-            }
+          // Create a map of player ID to player object from player pool
+          const playerMap = new Map();
+          playerPool.forEach(entry => {
+            playerMap.set(entry.player.playerDkId, entry.player);
           });
+          
+          console.log('🎯 Player pool size:', playerPool.length);
+          console.log('🎯 Player map size:', playerMap.size);
+          console.log('🎯 Available player IDs:', Array.from(playerMap.keys()).slice(0, 10));
           
           // Update roster with existing players
           setRoster(prevRoster => prevRoster.map(slot => {
-            const existingPlayer = slotMap.get(slot.position);
-            if (existingPlayer) {
+            const playerId = slots[slot.position];
+            console.log(`🎯 Checking ${slot.position} for player ID: ${playerId}`);
+            
+            if (playerId && playerMap.has(playerId)) {
+              const player = playerMap.get(playerId);
+              console.log(`✅ Mapping ${slot.position} to player:`, player?.displayName);
               return {
                 ...slot,
-                player: existingPlayer
+                player: player
               };
+            } else if (playerId) {
+              console.log(`❌ Player ID ${playerId} not found in player pool for ${slot.position}`);
             }
             return slot;
           }));
@@ -209,7 +220,7 @@ export function LineupBuilder({
     };
     
     loadExistingLineup();
-  }, [lineupId]);
+  }, [lineupId, playerPool]);
 
   // Group players by position for easy access
   const availablePlayers = useMemo(() => {
