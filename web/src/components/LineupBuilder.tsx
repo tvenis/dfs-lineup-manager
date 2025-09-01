@@ -55,6 +55,8 @@ export function LineupBuilder({
   const [currentWeek, setCurrentWeek] = useState<Week | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [savedLineup, setSavedLineup] = useState<any>(null)
 
   // Always use the active week
   const weekId = useMemo(() => {
@@ -221,8 +223,19 @@ export function LineupBuilder({
     setTags('')
   }
 
+  const handleCloseConfirmation = () => {
+    setShowConfirmation(false)
+    setSavedLineup(null)
+    clearLineup()
+  }
+
   const isLineupComplete = roster.every(slot => slot.player !== null)
   const isOverSalaryCap = totalSalary > SALARY_CAP
+  
+  // Validation logic for lineup name and tags
+  const hasLineupName = lineupName.trim().length > 0
+  const hasTags = tags.trim().length > 0
+  const isLineupValid = isLineupComplete && !isOverSalaryCap && hasLineupName && hasTags
 
   // Get all players for table display
   const getAllPlayers = () => {
@@ -357,7 +370,31 @@ export function LineupBuilder({
   }
 
   const handleSaveLineup = async () => {
-    if (!isLineupComplete || isOverSalaryCap || !currentWeek) return
+    // Validate all requirements before saving
+    if (!currentWeek) {
+      console.error("No week selected")
+      return
+    }
+    
+    if (!isLineupComplete) {
+      console.error("Lineup is not complete")
+      return
+    }
+    
+    if (isOverSalaryCap) {
+      console.error("Lineup is over salary cap")
+      return
+    }
+    
+    if (!hasLineupName) {
+      console.error("Lineup name is required")
+      return
+    }
+    
+    if (!hasTags) {
+      console.error("At least one tag is required")
+      return
+    }
     
     setSaving(true)
     try {
@@ -371,17 +408,35 @@ export function LineupBuilder({
 
       const lineupData = {
         week_id: currentWeek.id,
-        name: lineupName || `Lineup ${new Date().toLocaleDateString()}`,
-        tags: tags ? tags.split(',').map(t => t.trim()) : [],
+        name: lineupName.trim(),
+        tags: tags.split(',').map(t => t.trim()).filter(t => t.length > 0),
         slots
       }
 
-      await LineupService.createLineup(lineupData)
+      const savedLineupResponse = await LineupService.createLineup(lineupData)
       
-      // Clear the form after successful save
-      clearLineup()
+      // Store the saved lineup data for confirmation screen
+      const confirmationData = {
+        name: lineupName.trim(),
+        tags: tags.split(',').map(t => t.trim()).filter(t => t.length > 0),
+        week: currentWeek,
+        roster: roster.filter(slot => slot.player).map(slot => {
+          const playerEntry = playerPool.find(entry => entry.player.playerDkId === slot.player!.playerDkId)
+          return {
+            position: slot.position,
+            player: slot.player,
+            salary: playerEntry?.salary || 0,
+            projectedPoints: playerEntry?.projectedPoints || 0
+          }
+        }),
+        totalSalary,
+        totalProjected,
+        savedAt: new Date().toLocaleString()
+      }
       
-      // You could add a success notification here
+      setSavedLineup(confirmationData)
+      setShowConfirmation(true)
+      
       console.log('Lineup saved successfully!')
     } catch (error) {
       console.error('Error saving lineup:', error)
@@ -464,12 +519,13 @@ export function LineupBuilder({
             disabled={!isLineupComplete} 
             onClick={handleExportLineup}
             className="gap-2"
+            title="Export lineup to CSV (doesn't require name/tags)"
           >
             <Download className="w-4 h-4" />
             Export
           </Button>
           <Button 
-            disabled={!isLineupComplete || isOverSalaryCap || saving} 
+            disabled={!isLineupValid || saving} 
             onClick={handleSaveLineup}
             className="gap-2"
           >
@@ -490,24 +546,50 @@ export function LineupBuilder({
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="lineup-name">Lineup Name</Label>
+                  <Label htmlFor="lineup-name">Lineup Name *</Label>
                   <Input
                     id="lineup-name"
                     placeholder="Enter lineup name..."
                     value={lineupName}
                     onChange={(e) => setLineupName(e.target.value)}
+                    className={!hasLineupName && lineupName.length > 0 ? 'border-destructive' : ''}
                   />
+                  {!hasLineupName && lineupName.length > 0 && (
+                    <p className="text-sm text-destructive">Lineup name is required</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">Give your lineup a descriptive name</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tags">Tags (comma separated)</Label>
+                  <Label htmlFor="tags">Tags (comma separated) *</Label>
                   <Input
                     id="tags"
                     placeholder="GPP, Cash, Stack..."
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
+                    className={!hasTags && tags.length > 0 ? 'border-destructive' : ''}
                   />
+                  {!hasTags && tags.length > 0 && (
+                    <p className="text-sm text-destructive">At least one tag is required</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">Use tags like GPP, Cash, Stack, etc.</p>
                 </div>
               </div>
+              
+              {/* Validation Summary */}
+              {!isLineupValid && (
+                <div className="p-3 bg-muted/50 border rounded-lg">
+                  <p className="text-sm font-medium mb-2">Required to save lineup:</p>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {!isLineupComplete && <li>• Complete all roster positions</li>}
+                    {isOverSalaryCap && <li>• Stay under $50,000 salary cap</li>}
+                    {!hasLineupName && <li>• Enter a lineup name</li>}
+                    {!hasTags && <li>• Add at least one tag</li>}
+                  </ul>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Note: You can still export your lineup without saving
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -812,6 +894,80 @@ export function LineupBuilder({
           </Card>
         </div>
       </div>
+
+      {/* Confirmation Screen */}
+      {showConfirmation && savedLineup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Save className="w-5 h-5 text-green-600" />
+                Lineup Saved Successfully!
+              </CardTitle>
+              <CardDescription>
+                Your lineup has been saved and is ready to use.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Lineup Summary */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Lineup Details</h4>
+                    <div className="space-y-1 text-sm">
+                      <p><span className="font-medium">Name:</span> {savedLineup.name}</p>
+                      <p><span className="font-medium">Week:</span> Week {savedLineup.week.week_number} ({savedLineup.week.year})</p>
+                      <p><span className="font-medium">Tags:</span> {savedLineup.tags.join(', ')}</p>
+                      <p><span className="font-medium">Saved:</span> {savedLineup.savedAt}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">Lineup Stats</h4>
+                    <div className="space-y-1 text-sm">
+                      <p><span className="font-medium">Total Salary:</span> ${savedLineup.totalSalary.toLocaleString()}</p>
+                      <p><span className="font-medium">Remaining:</span> ${(SALARY_CAP - savedLineup.totalSalary).toLocaleString()}</p>
+                      <p><span className="font-medium">Projected Points:</span> {savedLineup.totalProjected.toFixed(1)}</p>
+                      <p><span className="font-medium">Players:</span> {savedLineup.roster.length}/9</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Roster */}
+                <div>
+                  <h4 className="font-medium mb-3">Roster</h4>
+                  <div className="space-y-2">
+                    {savedLineup.roster.map((slot: any) => (
+                      <div key={slot.position} className="flex justify-between items-center p-2 bg-muted/30 rounded">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {slot.position}
+                          </Badge>
+                          <span className="font-medium">{slot.player.displayName}</span>
+                          <span className="text-muted-foreground">({slot.player.team})</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span>${slot.salary.toLocaleString()}</span>
+                          <span className="text-muted-foreground">{slot.projectedPoints.toFixed(1)} pts</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setShowConfirmation(false)} className="flex-1">
+                  Edit Current Lineup
+                </Button>
+                <Button onClick={handleCloseConfirmation} className="flex-1">
+                  Create Another Lineup
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
