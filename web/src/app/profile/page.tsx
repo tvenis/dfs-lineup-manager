@@ -126,7 +126,7 @@ export default function PlayerProfilePage() {
   };
 
   const getTeamOptions = () => {
-    const teams = ['All', ...Array.from(new Set(players.map(p => p.team)))];
+    const teams = ['All', ...Array.from(new Set(players.map(p => p.team))).sort()];
     return teams;
   };
 
@@ -205,7 +205,14 @@ export default function PlayerProfilePage() {
       {/* Player Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredPlayers.map((player) => (
-          <Card key={player.playerDkId} className="hover:shadow-lg transition-shadow">
+          <Card 
+            key={player.playerDkId} 
+            className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-[1.02]"
+            onClick={() => {
+              // Navigate to player detail page
+              window.location.href = `/profile/${player.playerDkId}`;
+            }}
+          >
             <CardContent className="p-6">
               {/* Player Header */}
               <div className="flex items-start justify-between mb-4">
@@ -270,16 +277,10 @@ export default function PlayerProfilePage() {
                 </div>
               )}
 
-              {/* View Profile Button */}
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => {
-                  // Navigate to player detail page
-                  window.location.href = `/profile/${player.playerDkId}`;
-                }}
-              >
-                View Full Profile
-              </Button>
+              {/* Click indicator */}
+              <div className="text-center">
+                <p className="text-sm text-blue-600 font-medium">Click to view full profile</p>
+              </div>
             </CardContent>
           </Card>
         ))}

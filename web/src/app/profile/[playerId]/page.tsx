@@ -3,9 +3,12 @@
 import { useParams } from "next/navigation";
 import { PlayerProfile } from "@/components/PlayerProfile";
 
-export default function PlayerProfilePage() {
-  const params = useParams();
-  const playerId = params.playerId as string;
+interface PageProps {
+  params: Promise<{ playerId: string }>;
+}
+
+export default async function PlayerProfilePage({ params }: PageProps) {
+  const { playerId } = await params;
 
   return (
     <div className="p-6">
