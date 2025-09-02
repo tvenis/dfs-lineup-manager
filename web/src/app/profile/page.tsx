@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Search, TrendingUp, TrendingDown, Minus, Eye, EyeOff } from 'lucide-react';
 import { PlayerService } from '@/lib/playerService';
 import type { Player } from '@/types/prd';
 
@@ -16,6 +18,7 @@ interface PlayerProfile {
   team: string;
   position: string;
   playerImage50?: string;
+  hidden: boolean;
   currentWeekProj?: number;
   currentWeekSalary?: number;
   consistency?: number;
@@ -33,13 +36,14 @@ export default function PlayerProfilePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [positionFilter, setPositionFilter] = useState<string>('QB');
   const [teamFilter, setTeamFilter] = useState<string>('All');
+  const [showHidden, setShowHidden] = useState<boolean>(false);
 
   // Fetch players from API
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
         setLoading(true);
-        const data = await PlayerService.getPlayerProfiles({ limit: 1000 });
+        const data = await PlayerService.getPlayerProfiles({ limit: 1000, show_hidden: showHidden });
         
         // Transform the data to match our PlayerProfile interface
         const transformedPlayers: PlayerProfile[] = data.players.map((player: Player) => ({
@@ -48,6 +52,7 @@ export default function PlayerProfilePage() {
           team: player.team,
           position: player.position,
           playerImage50: player.playerImage50,
+          hidden: player.hidden,
           // Mock data for demonstration - in real implementation, these would come from current week data
           currentWeekProj: Math.random() * 10 + 15, // 15-25 range
           currentWeekSalary: Math.floor(Math.random() * 3000) + 5000, // 5000-8000 range
@@ -69,7 +74,7 @@ export default function PlayerProfilePage() {
     };
 
     fetchPlayers();
-  }, []);
+  }, [showHidden]);
 
   // Filter players based on search and filters
   useEffect(() => {
@@ -195,6 +200,19 @@ export default function PlayerProfilePage() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Show Hidden Players Toggle */}
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="show-hidden"
+            checked={showHidden}
+            onCheckedChange={setShowHidden}
+          />
+          <Label htmlFor="show-hidden" className="flex items-center gap-2 text-sm">
+            {showHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            Show Hidden
+          </Label>
+        </div>
       </div>
 
       {/* Player Count */}
@@ -235,11 +253,19 @@ export default function PlayerProfilePage() {
                   <div>
                     <h3 className="font-bold text-lg">{player.displayName}</h3>
                     <p className="text-gray-600 text-sm">{player.team}</p>
-                    {player.badge && (
-                      <Badge variant="secondary" className="mt-1 text-xs">
-                        {player.badge}
-                      </Badge>
-                    )}
+                    <div className="flex gap-1 mt-1">
+                      {player.badge && (
+                        <Badge variant="secondary" className="text-xs">
+                          {player.badge}
+                        </Badge>
+                      )}
+                      {player.hidden && (
+                        <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                          <EyeOff className="w-3 h-3 mr-1" />
+                          Hidden
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

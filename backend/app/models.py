@@ -40,6 +40,7 @@ class Player(Base):
     team = Column(String(10), ForeignKey("teams.abbreviation"), nullable=False)  # team abbreviation
     playerImage50 = Column(String(500))  # URL to 50x50 player image
     playerImage160 = Column(String(500))  # URL to 160x160 player image
+    hidden = Column(Boolean, default=False)  # Whether to hide player from Player Profile list
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

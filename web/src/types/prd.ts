@@ -85,6 +85,7 @@ export interface Player {
   team: string; // team abbreviation
   playerImage50?: string;  // URL to 50x50 player image
   playerImage160?: string; // URL to 160x160 player image
+  hidden: boolean; // Whether to hide player from Player Profile list
   opponentRank?: { value: number; sortValue: number; quality: string };  // Opponent rank value, sortValue, and quality from draftStatAttributes
   created_at: string;
   updated_at?: string;

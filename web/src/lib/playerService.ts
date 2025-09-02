@@ -189,6 +189,7 @@ export class PlayerService {
     search?: string;
     skip?: number;
     limit?: number;
+    show_hidden?: boolean;
   } = {}): Promise<PlayerListResponse> {
     try {
       const params = new URLSearchParams();
@@ -198,6 +199,7 @@ export class PlayerService {
       if (filters.search) params.append('search', filters.search);
       if (filters.skip !== undefined) params.append('skip', filters.skip.toString());
       if (filters.limit !== undefined) params.append('limit', filters.limit.toString());
+      if (filters.show_hidden !== undefined) params.append('show_hidden', filters.show_hidden.toString());
 
       const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
       const url = `${baseUrl.slice(0, -1)}/profiles?${params.toString()}`;

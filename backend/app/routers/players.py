@@ -71,6 +71,7 @@ def get_player_profiles(
     position: Optional[str] = Query(None),
     team_id: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    show_hidden: bool = Query(False, description="Whether to include hidden players"),
     db: Session = Depends(get_db)
 ):
     """Get players for profile view with filtering and pagination"""
@@ -84,6 +85,10 @@ def get_player_profiles(
     
     if search:
         query = query.filter(Player.displayName.ilike(f"%{search}%"))
+    
+    # Filter out hidden players unless show_hidden is True
+    if not show_hidden:
+        query = query.filter(Player.hidden == False)
     
     total = query.count()
     players = query.offset(skip).limit(limit).all()

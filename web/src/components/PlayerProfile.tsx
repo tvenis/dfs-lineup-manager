@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Separator } from "./ui/separator";
 import { PlayerService } from "@/lib/playerService";
 import { Player } from "@/types/prd";
+import { buildApiUrl, API_CONFIG } from "@/config/api";
 
 interface PlayerProfileProps {
   playerId: string;
@@ -53,6 +54,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const [newComment, setNewComment] = useState('');
   const [editingComment, setEditingComment] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
+  const [isHiding, setIsHiding] = useState(false);
 
   // Simple test to see if component is working
   console.log("PlayerProfile component rendered with playerId:", playerId);
@@ -124,6 +126,38 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     setComments(comments.filter(comment => comment.id !== id));
   };
 
+  const handleToggleHide = async () => {
+    if (!playerData) return;
+    
+    try {
+      setIsHiding(true);
+      const newHiddenStatus = !playerData.hidden;
+      
+      // Call API to update player hidden status
+      const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
+      const url = `${baseUrl.slice(0, -1)}/${playerData.playerDkId}`;
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ hidden: newHiddenStatus }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update player status');
+      }
+      
+      // Update local state
+      setPlayerData({ ...playerData, hidden: newHiddenStatus });
+    } catch (error) {
+      console.error('Error updating player hide status:', error);
+      // You could add a toast notification here
+    } finally {
+      setIsHiding(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -169,7 +203,6 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const currentWeekSalary = Math.floor(Math.random() * 3000) + 5000;
   const currentWeekProj = Math.random() * 10 + 15;
   const status = 'active';
-  const excluded = false;
   
   return (
     <div className="p-6 space-y-6">
@@ -231,9 +264,9 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">Excluded</div>
-                  <Badge variant={excluded ? "destructive" : "secondary"}>
-                    {excluded ? "Yes" : "No"}
+                  <div className="text-sm text-muted-foreground">Hidden</div>
+                  <Badge variant={playerData?.hidden ? "destructive" : "secondary"}>
+                    {playerData?.hidden ? "Yes" : "No"}
                   </Badge>
                 </div>
               </div>
@@ -413,10 +446,12 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                 Injury History
               </Button>
               <Button 
-                variant={excluded ? "default" : "destructive"} 
+                variant={playerData?.hidden ? "default" : "destructive"} 
                 className="w-full justify-start"
+                onClick={handleToggleHide}
+                disabled={isHiding}
               >
-                {excluded ? "Include Player" : "Exclude Player"}
+                {isHiding ? "Updating..." : (playerData?.hidden ? "Show Player" : "Hide Player")}
               </Button>
             </CardContent>
           </Card>

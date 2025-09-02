@@ -32,6 +32,7 @@ class PlayerBase(BaseModel):
     team: str = Field(..., min_length=1, max_length=10)  # team abbreviation
     playerImage50: Optional[str] = Field(None, max_length=500, description="URL to 50x50 player image")
     playerImage160: Optional[str] = Field(None, max_length=500, description="URL to 160x160 player image")
+    hidden: bool = Field(default=False, description="Whether to hide player from Player Profile list")
 
 class PlayerCreate(PlayerBase):
     pass
@@ -45,6 +46,7 @@ class PlayerUpdate(BaseModel):
     team: Optional[str] = Field(None, min_length=1, max_length=10)
     playerImage50: Optional[str] = Field(None, max_length=500)
     playerImage160: Optional[str] = Field(None, max_length=500)
+    hidden: Optional[bool] = Field(None, description="Whether to hide player from Player Profile list")
 
 class Player(PlayerBase):
     created_at: datetime
