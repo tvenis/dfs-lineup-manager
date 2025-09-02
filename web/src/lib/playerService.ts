@@ -1,4 +1,4 @@
-import { PlayerPoolEntry } from '@/types/prd';
+import { PlayerPoolEntry, Player } from '@/types/prd';
 import { buildApiUrl, API_CONFIG } from '@/config/api';
 
 export interface PlayerPoolFilters {
@@ -33,6 +33,13 @@ export interface Week {
 export interface WeekListResponse {
   weeks: Week[];
   total: number;
+}
+
+export interface PlayerListResponse {
+  players: Player[];
+  total: number;
+  page: number;
+  size: number;
 }
 
 export interface WeekFilters {
@@ -172,6 +179,36 @@ export class PlayerService {
       return await response.json();
     } catch (error) {
       console.error('Error fetching player:', error);
+      throw error;
+    }
+  }
+
+  static async getPlayerProfiles(filters: {
+    position?: string;
+    team_id?: string;
+    search?: string;
+    skip?: number;
+    limit?: number;
+  } = {}): Promise<PlayerListResponse> {
+    try {
+      const params = new URLSearchParams();
+      
+      if (filters.position) params.append('position', filters.position);
+      if (filters.team_id) params.append('team_id', filters.team_id);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.skip !== undefined) params.append('skip', filters.skip.toString());
+      if (filters.limit !== undefined) params.append('limit', filters.limit.toString());
+
+      const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
+      const url = `${baseUrl.slice(0, -1)}/profiles?${params.toString()}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching player profiles:', error);
       throw error;
     }
   }

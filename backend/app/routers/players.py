@@ -64,6 +64,37 @@ def get_players(
         size=limit
     )
 
+@router.get("/profiles", response_model=PlayerListResponse)
+def get_player_profiles(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    position: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Get players for profile view with filtering and pagination"""
+    query = db.query(Player)
+    
+    if position and position != "All":
+        query = query.filter(Player.position == position)
+    
+    if team_id and team_id != "All":
+        query = query.filter(Player.team == team_id)
+    
+    if search:
+        query = query.filter(Player.displayName.ilike(f"%{search}%"))
+    
+    total = query.count()
+    players = query.offset(skip).limit(limit).all()
+    
+    return PlayerListResponse(
+        players=players,
+        total=total,
+        page=skip // limit + 1,
+        size=limit
+    )
+
 @router.get("/{player_id}", response_model=PlayerSchema)
 def get_player(player_id: int, db: Session = Depends(get_db)):
     """Get a specific player by DraftKings ID"""
