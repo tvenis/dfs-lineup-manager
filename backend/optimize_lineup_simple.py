@@ -23,7 +23,8 @@ def optimize_lineup_greedy(
     flex_min: int = 1,
     max_per_team: Optional[int] = None,
     enforce_qb_stack: bool = True,
-    enforce_bringback: bool = False
+    enforce_bringback: bool = False,
+    default_players: List[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Optimize lineup using greedy algorithm
@@ -69,14 +70,26 @@ def optimize_lineup_greedy(
         # Track filled positions
         filled_positions = {pos: 0 for pos in position_requirements}
         flex_filled = 0
-        
-        # First pass: Fill QB position first (needed for stacking logic)
         qb_selected = None
-        for _, player in df.iterrows():
-            if player['pos'] == 'QB' and filled_positions['QB'] < position_requirements['QB']:
-                player_id = player['playerDkId']
+        
+        # Handle default players first
+        if default_players:
+            for default_player in default_players:
+                position = default_player['position']
+                player_id = default_player['playerId']
                 
-                # Skip if over salary cap
+                # Find the player in the dataframe
+                player_row = df[df['playerDkId'] == player_id]
+                if player_row.empty:
+                    continue
+                    
+                player = player_row.iloc[0]
+                
+                # Check if player is already used
+                if player_id in used_players:
+                    continue
+                    
+                # Check salary cap
                 if total_salary + player['salary'] > salary_cap:
                     continue
                     
@@ -84,14 +97,49 @@ def optimize_lineup_greedy(
                 if max_per_team and used_teams.get(player['team'], 0) >= max_per_team:
                     continue
                 
+                # Add player to lineup
                 lineup.append(player)
                 used_players.add(player_id)
                 used_teams[player['team']] = used_teams.get(player['team'], 0) + 1
                 total_salary += player['salary']
                 total_proj += player['proj']
-                filled_positions['QB'] += 1
-                qb_selected = player
-                break
+                
+                # Update position tracking
+                if position in ['RB1', 'RB2']:
+                    filled_positions['RB'] += 1
+                elif position in ['WR1', 'WR2', 'WR3']:
+                    filled_positions['WR'] += 1
+                elif position == 'FLEX':
+                    flex_filled += 1
+                else:
+                    filled_positions[position] += 1
+                
+                # Set QB for stacking logic if it's a QB
+                if position == 'QB':
+                    qb_selected = player
+        
+        # First pass: Fill QB position first (needed for stacking logic)
+        if qb_selected is None:
+            for _, player in df.iterrows():
+                if player['pos'] == 'QB' and filled_positions['QB'] < position_requirements['QB']:
+                    player_id = player['playerDkId']
+                    
+                    # Skip if over salary cap
+                    if total_salary + player['salary'] > salary_cap:
+                        continue
+                        
+                    # Check team limits
+                    if max_per_team and used_teams.get(player['team'], 0) >= max_per_team:
+                        continue
+                    
+                    lineup.append(player)
+                    used_players.add(player_id)
+                    used_teams[player['team']] = used_teams.get(player['team'], 0) + 1
+                    total_salary += player['salary']
+                    total_proj += player['proj']
+                    filled_positions['QB'] += 1
+                    qb_selected = player
+                    break
         
         # Second pass: Fill other required positions
         for _, player in df.iterrows():
@@ -313,7 +361,8 @@ def main():
             flex_min=config.get('flexMin', 1),
             max_per_team=config.get('maxPerTeam'),
             enforce_qb_stack=config.get('enforceQbStack', True),
-            enforce_bringback=config.get('enforceBringback', False)
+            enforce_bringback=config.get('enforceBringback', False),
+            default_players=config.get('defaultPlayers', [])
         )
         
         print(json.dumps(result, indent=2))

@@ -6,7 +6,7 @@ import { Input } from './ui/input'
 import { Badge } from './ui/badge'
 import { Label } from './ui/label'
 import { Separator } from './ui/separator'
-import { Save, Trash2, Download, RotateCcw, User, DollarSign, ArrowUpDown, Plus, Zap } from 'lucide-react'
+import { Save, Trash2, Download, RotateCcw, User, DollarSign, ArrowUpDown, Plus, Zap, X } from 'lucide-react'
 import { Progress } from './ui/progress'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
@@ -77,6 +77,37 @@ export function LineupBuilder({
   // Debug logging
   console.log('LineupBuilder - currentWeek:', currentWeek, 'weekId:', weekId)
   console.log('LineupBuilder - playerPool length:', playerPool.length)
+
+  // Transform player pool data for the LineupOptimizer
+  const optimizerAvailablePlayers = useMemo(() => {
+    const players: any = {
+      QB: [],
+      RB: [],
+      WR: [],
+      TE: [],
+      DST: []
+    }
+
+    playerPool.forEach(entry => {
+      const player = {
+        id: entry.player.playerDkId,
+        name: entry.player.displayName,
+        team: entry.player.team,
+        opponent: entry.player.opponent || '',
+        salary: entry.salary,
+        projectedPoints: entry.projectedPoints || 0,
+        oprk: entry.oprk || 0,
+        excluded: entry.excluded || false
+      }
+
+      const position = entry.player.position
+      if (players[position]) {
+        players[position].push(player)
+      }
+    })
+
+    return players
+  }, [playerPool])
 
   // Load weeks and current week
   console.log('🔍 Defining useEffect for loadWeeks')
@@ -594,6 +625,14 @@ export function LineupBuilder({
     console.log('Optimization settings received:', settings)
     
     try {
+      // Transform default players to the format expected by the backend
+      const defaultPlayers = Object.entries(settings.defaultPlayers)
+        .filter(([_, player]) => player !== null)
+        .map(([position, player]) => ({
+          position: position,
+          playerId: (player as any).id
+        }))
+
       // Call the backend optimization endpoint
       const response = await fetch('http://localhost:8000/api/lineups/optimize', {
         method: 'POST',
@@ -613,7 +652,8 @@ export function LineupBuilder({
             flexMin: settings.flexMin,
             maxPerTeam: settings.maxFromSingleTeam,
             enforceQbStack: settings.enforceQBStack,
-            enforceBringback: settings.enforceBringBack
+            enforceBringback: settings.enforceBringBack,
+            defaultPlayers: defaultPlayers
           }
         })
       })
@@ -1170,8 +1210,16 @@ export function LineupBuilder({
       {showConfirmation && savedLineup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-4 top-4 h-8 w-8 p-0"
+                onClick={() => setShowConfirmation(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <CardTitle className="flex items-center gap-2 pr-8">
                 <Save className="w-5 h-5 text-green-600" />
                 Lineup Saved Successfully!
               </CardTitle>
@@ -1245,6 +1293,7 @@ export function LineupBuilder({
         isOpen={showOptimizer}
         onClose={() => setShowOptimizer(false)}
         onOptimize={handleOptimize}
+        availablePlayers={optimizerAvailablePlayers}
       />
     </div>
   )

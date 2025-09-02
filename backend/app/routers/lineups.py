@@ -633,7 +633,8 @@ def optimize_lineup(
                 'flexMin': settings.flexMin,
                 'maxPerTeam': settings.maxPerTeam,
                 'enforceQbStack': settings.enforceQbStack,
-                'enforceBringback': settings.enforceBringback
+                'enforceBringback': settings.enforceBringback,
+                'defaultPlayers': [{'position': dp.position, 'playerId': dp.playerId} for dp in settings.defaultPlayers]
             }
             
             # Run the Python optimization script

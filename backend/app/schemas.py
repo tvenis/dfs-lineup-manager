@@ -316,6 +316,10 @@ class LineupValidationResponse(BaseModel):
     projected_points: Optional[float] = None
 
 # Optimization schemas
+class DefaultPlayer(BaseModel):
+    position: str
+    playerId: int
+
 class OptimizerSettings(BaseModel):
     salaryCap: int = Field(50000, ge=1000, le=100000)
     rosterSize: int = Field(9, ge=1, le=20)
@@ -328,6 +332,7 @@ class OptimizerSettings(BaseModel):
     maxPerTeam: Optional[int] = Field(None, ge=1, le=8)
     enforceQbStack: bool = Field(True)
     enforceBringback: bool = Field(False)
+    defaultPlayers: List[DefaultPlayer] = Field(default_factory=list)
 
 class OptimizedPlayer(BaseModel):
     playerDkId: int
