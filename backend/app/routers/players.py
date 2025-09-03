@@ -312,6 +312,8 @@ def bulk_update_player_pool_entries(
             db_entry.status = update_data['status']
         if 'isDisabled' in update_data:
             db_entry.isDisabled = update_data['isDisabled']
+        if 'tier' in update_data:
+            db_entry.tier = update_data['tier']
         
         updated_entries.append(db_entry)
     

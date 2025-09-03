@@ -101,6 +101,7 @@ class PlayerPoolEntryBase(BaseModel):
     status: str = Field(default="Available", max_length=20)
     isDisabled: bool = Field(default=False)
     excluded: bool = Field(default=False, description="Whether player is excluded from this week")
+    tier: int = Field(default=4, ge=1, le=4, description="DFS tier: 1=Core/Cash, 2=Strong Plays, 3=GPP/Ceiling, 4=Avoids/Thin")
     playerGameHash: Optional[str] = Field(None, max_length=100)
     
     # JSON blobs for complex DraftKings data
@@ -122,6 +123,7 @@ class PlayerPoolEntryUpdate(BaseModel):
     status: Optional[str] = Field(None, max_length=20)
     isDisabled: Optional[bool] = None
     excluded: Optional[bool] = None
+    tier: Optional[int] = Field(None, ge=1, le=4, description="DFS tier: 1=Core/Cash, 2=Strong Plays, 3=GPP/Ceiling, 4=Avoids/Thin")
     playerGameHash: Optional[str] = Field(None, max_length=100)
     competitions: Optional[Union[Dict[str, Any], List[Any]]] = None
     draftStatAttributes: Optional[Union[Dict[str, Any], List[Any]]] = None

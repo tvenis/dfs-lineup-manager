@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff, Search, X, UserX, User, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, EyeOff, Search, X, UserX, User, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 
 export default function PlayerPoolPage() {
@@ -24,6 +25,7 @@ export default function PlayerPoolPage() {
   const [activeTab, setActiveTab] = useState<string>('QB');
   const [sortField, setSortField] = useState<string>('player');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [tierFilter, setTierFilter] = useState<number | 'all'>('all');
 
   // Fetch data on component mount
   useEffect(() => {
@@ -164,10 +166,16 @@ export default function PlayerPoolPage() {
       console.log(`🎯 After search filter: ${players.length} players`);
     }
 
+    // Apply tier filter
+    if (tierFilter !== 'all') {
+      players = players.filter(entry => entry.tier === tierFilter);
+      console.log(`🎯 After tier filter: ${players.length} players`);
+    }
+
     console.log(`🎯 Final filtered players for ${position}: ${players.length}`);
     
-    // Apply sorting
-    return sortPlayers(players);
+    // Return unsorted players - sorting will be applied within tier groups
+    return players;
   };
 
   // Get status color
@@ -184,6 +192,57 @@ export default function PlayerPoolPage() {
         return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Get tier configuration
+  const getTierConfig = (tier: number) => {
+    switch (tier) {
+      case 1:
+        return {
+          label: 'Core/Cash',
+          description: 'Must-have foundational plays',
+          color: 'bg-blue-100 text-blue-800 border-blue-300',
+          icon: '⭐',
+          headerColor: 'bg-blue-50/80 border-b border-blue-200',
+          headerTextColor: 'text-blue-800'
+        };
+      case 2:
+        return {
+          label: 'Strong Plays',
+          description: 'Solid complementary pieces',
+          color: 'bg-green-100 text-green-800 border-green-300',
+          icon: '💪',
+          headerColor: 'bg-green-50/80 border-b border-green-200',
+          headerTextColor: 'text-green-800'
+        };
+      case 3:
+        return {
+          label: 'GPP/Ceiling',
+          description: 'High-variance leverage plays',
+          color: 'bg-purple-100 text-purple-800 border-purple-300',
+          icon: '🚀',
+          headerColor: 'bg-purple-50/80 border-b border-purple-200',
+          headerTextColor: 'text-purple-800'
+        };
+      case 4:
+        return {
+          label: 'Avoids/Thin',
+          description: 'Rarely played options',
+          color: 'bg-red-100 text-red-800 border-red-300',
+          icon: '⚠️',
+          headerColor: 'bg-red-50/80 border-b border-red-200',
+          headerTextColor: 'text-red-800'
+        };
+      default:
+        return {
+          label: 'Unknown',
+          description: 'Unknown tier',
+          color: 'bg-gray-100 text-gray-800 border-gray-300',
+          icon: '❓',
+          headerColor: 'bg-gray-50/80 border-b border-gray-200',
+          headerTextColor: 'text-gray-800'
+        };
     }
   };
 
@@ -227,6 +286,10 @@ export default function PlayerPoolPage() {
           aValue = a.status?.toLowerCase() || '';
           bValue = b.status?.toLowerCase() || '';
           break;
+        case 'tier':
+          aValue = a.tier || 4;
+          bValue = b.tier || 4;
+          break;
         case 'exclude':
           aValue = a.excluded === true ? 1 : 0;
           bValue = b.excluded === true ? 1 : 0;
@@ -256,6 +319,17 @@ export default function PlayerPoolPage() {
         setSortDirection('asc');
       }
     }
+  };
+
+  // Calculate tier statistics for current position
+  const getTierStats = (position: string) => {
+    const players = getAllPlayersForPosition(position);
+    return {
+      tier1: players.filter(player => player.tier === 1).length,
+      tier2: players.filter(player => player.tier === 2).length,
+      tier3: players.filter(player => player.tier === 3).length,
+      tier4: players.filter(player => player.tier === 4).length
+    };
   };
 
   if (loading) {
@@ -403,12 +477,119 @@ export default function PlayerPoolPage() {
           {(['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'] as string[]).map((position) => {
             const filteredPlayers = getFilteredPlayers(position);
             const excludedCount = filteredPlayers.filter(player => player.excluded === true).length;
+            const tierStats = getTierStats(position);
 
             return (
               <TabsContent key={position} value={position} className="m-0 border-t">
                 {/* Tab Actions */}
                 <div className="flex items-center justify-between px-6 py-4 bg-muted/20 border-b">
                   <div className="flex items-center gap-3">
+                    {/* Tier Distribution - Interactive Filters */}
+                    <div className="flex items-center gap-2">
+                      {tierStats.tier1 > 0 && (
+                        <button
+                          onClick={() => setTierFilter(tierFilter === 1 ? 'all' : 1)}
+                          className={`transition-all hover:scale-105 ${
+                            tierFilter === 1 
+                              ? 'ring-2 ring-blue-400 shadow-md' 
+                              : 'hover:shadow-sm'
+                          }`}
+                        >
+                          <Badge 
+                            variant="outline" 
+                            className={`gap-1 cursor-pointer ${
+                              tierFilter === 1 
+                                ? 'bg-blue-100 text-blue-900 border-blue-300' 
+                                : 'bg-blue-50 text-blue-800 border-blue-200'
+                            }`}
+                          >
+                            <span>⭐</span>
+                            {tierStats.tier1}
+                          </Badge>
+                        </button>
+                      )}
+                      {tierStats.tier2 > 0 && (
+                        <button
+                          onClick={() => setTierFilter(tierFilter === 2 ? 'all' : 2)}
+                          className={`transition-all hover:scale-105 ${
+                            tierFilter === 2 
+                              ? 'ring-2 ring-green-400 shadow-md' 
+                              : 'hover:shadow-sm'
+                          }`}
+                        >
+                          <Badge 
+                            variant="outline" 
+                            className={`gap-1 cursor-pointer ${
+                              tierFilter === 2 
+                                ? 'bg-green-100 text-green-900 border-green-300' 
+                                : 'bg-green-50 text-green-800 border-green-200'
+                            }`}
+                          >
+                            <span>💪</span>
+                            {tierStats.tier2}
+                          </Badge>
+                        </button>
+                      )}
+                      {tierStats.tier3 > 0 && (
+                        <button
+                          onClick={() => setTierFilter(tierFilter === 3 ? 'all' : 3)}
+                          className={`transition-all hover:scale-105 ${
+                            tierFilter === 3 
+                              ? 'ring-2 ring-purple-400 shadow-md' 
+                              : 'hover:shadow-sm'
+                          }`}
+                        >
+                          <Badge 
+                            variant="outline" 
+                            className={`gap-1 cursor-pointer ${
+                              tierFilter === 3 
+                                ? 'bg-purple-100 text-purple-900 border-purple-300' 
+                                : 'bg-purple-50 text-purple-800 border-purple-200'
+                            }`}
+                          >
+                            <span>🚀</span>
+                            {tierStats.tier3}
+                          </Badge>
+                        </button>
+                      )}
+                      {tierStats.tier4 > 0 && (
+                        <button
+                          onClick={() => setTierFilter(tierFilter === 4 ? 'all' : 4)}
+                          className={`transition-all hover:scale-105 ${
+                            tierFilter === 4 
+                              ? 'ring-2 ring-red-400 shadow-md' 
+                              : 'hover:shadow-sm'
+                          }`}
+                        >
+                          <Badge 
+                            variant="outline" 
+                            className={`gap-1 cursor-pointer ${
+                              tierFilter === 4 
+                                ? 'bg-red-100 text-red-900 border-red-300' 
+                                : 'bg-red-50 text-red-800 border-red-200'
+                            }`}
+                          >
+                            <span>⚠️</span>
+                            {tierStats.tier4}
+                          </Badge>
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="w-px h-4 bg-border"></div>
+                    
+                    {tierFilter !== 'all' && (
+                      <Badge variant="secondary" className="gap-1">
+                        <span>Filtered to Tier {tierFilter}</span>
+                        <button 
+                          onClick={() => setTierFilter('all')}
+                          className="ml-1 hover:bg-destructive/20 rounded-full w-4 h-4 flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    )}
+                    
                     <Badge variant="outline" className="gap-1">
                       <span className="w-2 h-2 rounded-full bg-muted-foreground"></span>
                       {excludedCount} of {filteredPlayers.length} excluded
@@ -422,171 +603,169 @@ export default function PlayerPoolPage() {
                   </div>
                 </div>
 
-                {/* Player Table */}
+                {/* Players Grouped by Tier */}
                 <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b-0 bg-muted/10">
-                        <TableHead 
-                          className="w-44 py-3 cursor-pointer hover:bg-muted/20 transition-colors"
-                          onClick={() => handleSort('player')}
-                        >
-                          <div className="flex items-center gap-2">
-                            Player
-                            {sortField === 'player' && (
-                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="w-16 py-3 cursor-pointer hover:bg-muted/20 transition-colors"
-                          onClick={() => handleSort('team')}
-                        >
-                          <div className="flex items-center gap-2">
-                            Team
-                            {sortField === 'team' && (
-                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="w-24 text-right py-3 cursor-pointer hover:bg-muted/20 transition-colors"
-                          onClick={() => handleSort('salary')}
-                        >
-                          <div className="flex items-center justify-end gap-2">
-                            Salary
-                            {sortField === 'salary' && (
-                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="w-20 text-right py-3 cursor-pointer hover:bg-muted/20 transition-colors"
-                          onClick={() => handleSort('projection')}
-                        >
-                          <div className="flex items-center justify-end gap-2">
-                            Projection
-                            {sortField === 'projection' && (
-                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="w-20 text-right py-3 cursor-pointer hover:bg-muted/20 transition-colors"
-                          onClick={() => handleSort('opponentRank')}
-                        >
-                          <div className="flex items-center justify-end gap-2">
-                            OPRK
-                            {sortField === 'opponentRank' && (
-                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="w-20 text-right py-3 cursor-pointer hover:bg-muted/20 transition-colors"
-                          onClick={() => handleSort('value')}
-                        >
-                          <div className="flex items-center justify-end gap-2">
-                            Value
-                            {sortField === 'value' && (
-                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="w-24 py-3 cursor-pointer hover:bg-muted/20 transition-colors"
-                          onClick={() => handleSort('status')}
-                        >
-                          <div className="flex items-center gap-2">
-                            Status
-                            {sortField === 'status' && (
-                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="w-16 py-3 text-muted-foreground cursor-pointer hover:bg-muted/20 transition-colors"
-                          onClick={() => handleSort('exclude')}
-                        >
-                          <div className="flex items-center gap-2">
-                            Exclude
-                            {sortField === 'exclude' && (
-                              sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                            )}
-                          </div>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPlayers.map((player, index) => {
-                        return (
-                          <TableRow 
+                  {/* Table Header */}
+                  <div className="bg-muted/10 border-b">
+                    <div className="grid grid-cols-12 gap-4 px-6 py-3 text-sm font-medium text-muted-foreground">
+                      <div 
+                        className="col-span-5 cursor-pointer hover:bg-muted/20 transition-colors flex items-center gap-1"
+                        onClick={() => handleSort('player')}
+                      >
+                        PLAYER NAME
+                        {sortField === 'player' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="col-span-1 text-center">TEAM</div>
+                      <div 
+                        className="col-span-1 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
+                        onClick={() => handleSort('salary')}
+                      >
+                        SALARY
+                        {sortField === 'salary' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div 
+                        className="col-span-1 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
+                        onClick={() => handleSort('projection')}
+                      >
+                        PROJECTION
+                        {sortField === 'projection' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div 
+                        className="col-span-1 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
+                        onClick={() => handleSort('value')}
+                      >
+                        VALUE
+                        {sortField === 'value' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="col-span-1 text-center">STATUS</div>
+                      <div className="col-span-1 text-center">TIER</div>
+                      <div className="col-span-1 text-center">EXCLUDE</div>
+                    </div>
+                  </div>
+
+                  {/* Tier Groups */}
+                  {[1, 2, 3, 4].map(tier => {
+                    const tieredPlayers = sortPlayers(filteredPlayers.filter(player => player.tier === tier))
+                    if (tieredPlayers.length === 0) return null
+
+                    return (
+                      <div key={tier} className="border-b">
+                        {/* Tier Header */}
+                        <div className={`${getTierConfig(tier).headerColor} ${getTierConfig(tier).headerTextColor} px-6 py-3 flex items-center gap-3`}>
+                          <span className="text-xl">{getTierConfig(tier).icon}</span>
+                          <span className="font-medium">Tier {tier}</span>
+                          <span className="opacity-90 text-sm">
+                            {getTierConfig(tier).label} - {getTierConfig(tier).description}
+                          </span>
+                        </div>
+
+                        {/* Players in this tier */}
+                        {tieredPlayers.map((player, index) => (
+                          <div
                             key={player.id}
                             className={`
+                              grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/50 last:border-b-0
                               ${player.excluded === true ? 'opacity-50 bg-muted/30' : ''} 
                               hover:bg-muted/50 transition-colors
-                              ${index !== filteredPlayers.length - 1 ? 'border-b' : 'border-b-0'}
                             `}
                           >
-                            <TableCell className="py-3">
+                            <div className="col-span-5">
                               <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 text-left">
+                                <button
+                                  onClick={() => {/* onPlayerSelect(player) */}}
+                                  className="flex items-center gap-2 text-left hover:text-primary transition-colors group"
+                                >
                                   <Link 
                                     href={`/profile/${player.player.playerDkId}`}
-                                    className={`${player.excluded === true ? 'line-through' : ''} hover:text-blue-600 hover:underline transition-colors`}
+                                    className={`text-sm font-medium ${player.excluded === true ? 'line-through' : ''} group-hover:underline`}
                                   >
                                     {player.player.displayName}
                                   </Link>
-                                </div>
+                                  <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
                                 {player.excluded === true && <X className="w-4 h-4 text-destructive ml-1" />}
+                                {position === 'FLEX' && (
+                                  <Badge variant="outline" className="text-xs ml-2">
+                                    {player.player.position}
+                                  </Badge>
+                                )}
                               </div>
-                            </TableCell>
-                            <TableCell className="py-3 font-medium text-muted-foreground">
+                            </div>
+
+                            <div className="col-span-1 text-center text-sm font-medium text-muted-foreground">
                               {player.player.team}
-                            </TableCell>
-                            <TableCell className="py-3 text-right font-medium">
+                            </div>
+
+                            <div className="col-span-1 text-right text-sm font-medium">
                               ${player.salary?.toLocaleString() || 'N/A'}
-                            </TableCell>
-                            <TableCell className="py-3 text-right font-medium">
+                            </div>
+
+                            <div className="col-span-1 text-right text-sm font-medium">
                               {player.projectedPoints || 'N/A'}
-                            </TableCell>
-                            <TableCell className="py-3 text-right font-medium">
-                              {(() => {
-                                // Extract opponent rank from draftStatAttributes where id = -2
-                                const draftStatAttributes = player.draftStatAttributes;
-                                if (draftStatAttributes && Array.isArray(draftStatAttributes)) {
-                                  const opponentRankAttr = draftStatAttributes.find(attr => attr.id === -2);
-                                  if (opponentRankAttr) {
-                                    const quality = opponentRankAttr.quality || 'Medium';
-                                    const value = opponentRankAttr.value || 0;
-                                    const colorClass = quality === 'High' ? 'text-green-600' : 
-                                                     quality === 'Low' ? 'text-red-600' : 
-                                                     'text-foreground';
-                                    return (
-                                      <span className={colorClass}>
-                                        {value}
-                                      </span>
-                                    );
-                                  }
-                                }
-                                return <span className="text-foreground">N/A</span>;
-                              })()}
-                            </TableCell>
-                            <TableCell className="py-3 text-right font-medium text-primary">
+                            </div>
+
+                            <div className="col-span-1 text-right text-sm font-medium text-primary">
                               {player.projectedPoints && player.salary 
                                 ? ((player.projectedPoints / player.salary) * 1000).toFixed(1)
                                 : 'N/A'
                               }
-                            </TableCell>
-                            <TableCell className="py-3">
+                            </div>
+
+                            <div className="col-span-1 text-center">
                               <Badge 
                                 variant="outline" 
                                 className={`${getStatusColor(player.status)} text-xs font-medium`}
                               >
                                 {player.status || 'Active'}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="py-3">
+                            </div>
+
+                            <div className="col-span-1 text-center">
+                              <Select 
+                                value={player.tier?.toString() || '4'} 
+                                onValueChange={(value: string) => {
+                                  const newTierValue = parseInt(value);
+                                  // Call API to update the player pool entry
+                                  PlayerService.updatePlayerPoolEntry(player.id, { tier: newTierValue })
+                                    .then(() => {
+                                      // Update local state to reflect the change
+                                      setPlayerPool(prev => 
+                                        prev.map(p => 
+                                          p.id === player.id 
+                                            ? { ...p, tier: newTierValue }
+                                            : p
+                                        )
+                                      );
+                                    })
+                                    .catch(err => {
+                                      console.error('Error updating player tier:', err);
+                                      // Could add a toast notification here
+                                    });
+                                }}
+                              >
+                                <SelectTrigger className="w-full h-8 text-xs">
+                                  <SelectValue>
+                                    <span className="font-medium">{player.tier || 4}</span>
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1">1</SelectItem>
+                                  <SelectItem value="2">2</SelectItem>
+                                  <SelectItem value="3">3</SelectItem>
+                                  <SelectItem value="4">4</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="col-span-1 text-center">
                               <Checkbox
                                 checked={player.excluded === true}
                                 onCheckedChange={(checked) => {
@@ -609,14 +788,14 @@ export default function PlayerPoolPage() {
                                       // Could add a toast notification here
                                     });
                                 }}
-                                className="opacity-60 hover:opacity-100"
+                                className="w-4 h-4"
                               />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
                 </div>
 
                 {filteredPlayers.length === 0 && (

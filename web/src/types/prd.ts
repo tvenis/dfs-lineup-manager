@@ -116,6 +116,7 @@ export interface PlayerPoolEntry {
   status: string;
   isDisabled: boolean;
   excluded: boolean;
+  tier: number;
   playerGameHash?: string;
   competitions?: Record<string, unknown>;
   draftStatAttributes?: Record<string, unknown>;

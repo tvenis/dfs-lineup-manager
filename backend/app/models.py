@@ -80,6 +80,7 @@ class PlayerPoolEntry(Base):
     status = Column(String(20), default="Available")  # player status
     isDisabled = Column(Boolean, default=False)  # if player is disabled
     excluded = Column(Boolean, default=False)  # if player is excluded from this week
+    tier = Column(Integer, default=4)  # DFS tier: 1=Core/Cash, 2=Strong Plays, 3=GPP/Ceiling, 4=Avoids/Thin
     playerGameHash = Column(String(100))  # game identifier hash
     
     # JSON blobs for complex DraftKings data

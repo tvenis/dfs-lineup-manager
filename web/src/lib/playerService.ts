@@ -119,6 +119,7 @@ export class PlayerService {
       excluded?: boolean;
       status?: string;
       isDisabled?: boolean;
+      tier?: number;
     }
   ): Promise<PlayerPoolEntry> {
     try {
