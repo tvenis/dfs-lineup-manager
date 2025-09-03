@@ -132,9 +132,9 @@ export function LineupOptimizer({ isOpen, onClose, onOptimize, availablePlayers 
   const totalPositionsRequired = settings.qbMin + settings.rbMin + settings.wrMin + settings.teMin + settings.dstMin + settings.flexMin
   const isValidRoster = totalPositionsRequired === settings.rosterSize
 
-  // Get available players for each position, filtering out excluded players
+  // Get available players for each position, filtering out excluded players and sorting by name
   const getPlayersForPosition = (position: keyof AvailablePlayers) => {
-    return availablePlayers[position]?.filter(p => !p.excluded) || []
+    return availablePlayers[position]?.filter(p => !p.excluded).sort((a, b) => a.name.localeCompare(b.name)) || []
   }
 
   // Get FLEX eligible players (RB, WR, TE)

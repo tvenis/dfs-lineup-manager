@@ -139,6 +139,30 @@ class Lineup(Base):
     # Relationships
     week = relationship("Week", back_populates="lineups")
 
+class Projection(Base):
+    __tablename__ = "projections"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
+    playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=False)
+    position = Column(String(10), nullable=False)  # Position from CSV file
+    projStats = Column(JSON)  # Proj Stats as JSON (ignored for now)
+    actualStats = Column(JSON)  # Actual Stats as JSON
+    pprProjection = Column(Float)  # PPR Projections
+    actuals = Column(Float)  # Actuals
+    source = Column(String(100), nullable=False)  # Source column as text value
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    week = relationship("Week")
+    player = relationship("Player")
+    
+    # Composite unique index on (week_id, playerDkId, source) for upserts
+    __table_args__ = (
+        Index('idx_week_player_source', 'week_id', 'playerDkId', 'source', unique=True),
+    )
+
 class Comment(Base):
     __tablename__ = "comments"
     

@@ -357,3 +357,57 @@ class OptimizationResult(BaseModel):
     weekId: int
     settings: OptimizerSettings
     error: Optional[str] = None
+
+# Projection schemas
+class ProjectionBase(BaseModel):
+    week_id: int = Field(..., description="Week ID from weeks table")
+    playerDkId: int = Field(..., description="DraftKings player ID")
+    position: str = Field(..., min_length=1, max_length=10, description="Position from CSV file")
+    projStats: Optional[float] = Field(None, description="Proj Stats from CSV")
+    actualStats: Optional[float] = Field(None, description="Actual Stats from CSV")
+    date: Optional[str] = Field(None, max_length=50, description="Date from CSV")
+    pprProjection: Optional[float] = Field(None, description="PPR Projections")
+    hpprProjection: Optional[float] = Field(None, description="HPPR Projections (ignored)")
+    stdProjection: Optional[float] = Field(None, description="STD Projections")
+    actuals: Optional[float] = Field(None, description="Actuals")
+    source: str = Field(..., min_length=1, max_length=100, description="Source column as text value")
+
+class ProjectionCreate(ProjectionBase):
+    pass
+
+class ProjectionUpdate(BaseModel):
+    position: Optional[str] = Field(None, min_length=1, max_length=10)
+    projStats: Optional[float] = None
+    actualStats: Optional[float] = None
+    date: Optional[str] = Field(None, max_length=50)
+    pprProjection: Optional[float] = None
+    hpprProjection: Optional[float] = None
+    stdProjection: Optional[float] = None
+    actuals: Optional[float] = None
+    source: Optional[str] = Field(None, min_length=1, max_length=100)
+
+class Projection(ProjectionBase):
+    id: int
+    week: Week
+    player: Player
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+# Projection import schemas
+class ProjectionImportRequest(BaseModel):
+    week_id: int = Field(..., description="Week ID from weeks table")
+    projection_source: str = Field(..., min_length=1, max_length=100, description="Source name for projections")
+    csv_data: List[Dict[str, Any]] = Field(..., description="Parsed CSV data")
+
+class ProjectionImportResponse(BaseModel):
+    total_processed: int = Field(..., ge=0, description="Total number of records processed")
+    successful_matches: int = Field(..., ge=0, description="Number of successful player matches")
+    failed_matches: int = Field(..., ge=0, description="Number of failed player matches")
+    projections_created: int = Field(..., ge=0, description="Number of new projections created")
+    projections_updated: int = Field(..., ge=0, description="Number of existing projections updated")
+    player_pool_updated: int = Field(..., ge=0, description="Number of player pool entries updated")
+    errors: List[str] = Field(default=[], description="List of error messages")
+    unmatched_players: List[Dict[str, Any]] = Field(default=[], description="List of unmatched players for manual review")
