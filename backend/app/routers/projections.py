@@ -343,9 +343,14 @@ def process_matched_players(db: Session, week_id: int, projection_source: str, m
             ppr_projection = float(player_data.get('pprProjection', 0))
             actuals = float(player_data.get('actuals', 0))
             
+            # Get the JSON fields
+            proj_stats_json = player_data.get('projStatsJson')
+            actual_stats_json = player_data.get('actualStatsJson')
+            
             if i < 3:  # Debug first 3 players
                 print(f"DEBUG: Player {i+1}: Available fields: {list(player_data.keys())}")
                 print(f"DEBUG: Player {i+1}: pprProjection = {ppr_projection}, actuals = {actuals}")
+                print(f"DEBUG: Player {i+1}: projStatsJson = {proj_stats_json is not None}, actualStatsJson = {actual_stats_json is not None}")
             
             # Skip if we've already processed this player
             if playerDkId in processed_players:
@@ -372,21 +377,21 @@ def process_matched_players(db: Session, week_id: int, projection_source: str, m
             if existing_projection:
                 # Update existing projection
                 existing_projection.position = player_data['position']
-                existing_projection.projStats = None  # JSON field, ignore for now
-                existing_projection.actualStats = None  # JSON field
+                existing_projection.projStats = proj_stats_json  # JSON field from CSV
+                existing_projection.actualStats = actual_stats_json  # JSON field from CSV
                 existing_projection.pprProjection = ppr_projection  # Use PPR Projections from CSV
                 existing_projection.actuals = actuals  # Use Actuals from CSV
                 projections_updated += 1
                 if i < 3:
-                    print(f"DEBUG: Player {i+1}: UPDATED existing projection (PPR: {ppr_projection}, Actuals: {actuals})")
+                    print(f"DEBUG: Player {i+1}: UPDATED existing projection (PPR: {ppr_projection}, Actuals: {actuals}, ProjStats: {proj_stats_json is not None}, ActualStats: {actual_stats_json is not None})")
             else:
                 # Create new projection
                 new_projection = Projection(
                     week_id=week_id,
                     playerDkId=playerDkId,
                     position=player_data['position'],
-                    projStats=None,  # JSON field, ignore for now
-                    actualStats=None,  # JSON field
+                    projStats=proj_stats_json,  # JSON field from CSV
+                    actualStats=actual_stats_json,  # JSON field from CSV
                     pprProjection=ppr_projection,  # Use PPR Projections from CSV
                     actuals=actuals,  # Use Actuals from CSV
                     source=projection_source
@@ -394,7 +399,7 @@ def process_matched_players(db: Session, week_id: int, projection_source: str, m
                 db.add(new_projection)
                 projections_created += 1
                 if i < 3:
-                    print(f"DEBUG: Player {i+1}: CREATED new projection (PPR: {ppr_projection}, Actuals: {actuals})")
+                    print(f"DEBUG: Player {i+1}: CREATED new projection (PPR: {ppr_projection}, Actuals: {actuals}, ProjStats: {proj_stats_json is not None}, ActualStats: {actual_stats_json is not None})")
             
             # Update player pool entry if it exists
             pool_entry = db.query(PlayerPoolEntry).filter(

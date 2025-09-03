@@ -103,11 +103,27 @@ export default function ImportReviewPage() {
     setIsImporting(true)
     
     try {
-      console.log('Starting import with data:', importData)
-      
+            console.log('Starting import with data:', importData)
+
       // Send matched players directly instead of reconstructing CSV
       const matchedPlayersToImport = matchedPlayers.filter(p => p.matchedPlayerId)
       console.log(`Sending ${matchedPlayersToImport.length} matched players to backend`)
+      
+                  // Debug: Check if JSON fields are present in the first few players
+            console.log('First player JSON fields:', {
+                name: matchedPlayersToImport[0]?.name,
+                projStatsJson: matchedPlayersToImport[0]?.projStatsJson,
+                actualStatsJson: matchedPlayersToImport[0]?.actualStatsJson,
+                projStatsType: typeof matchedPlayersToImport[0]?.projStatsJson,
+                actualStatsType: typeof matchedPlayersToImport[0]?.actualStatsJson
+            })
+            
+            // Debug: Show first few players' data being sent
+            console.log('First 3 players data being sent:', matchedPlayersToImport.slice(0, 3).map(p => ({
+                name: p.name,
+                projStatsJson: p.projStatsJson,
+                actualStatsJson: p.actualStatsJson
+            })))
       
       const response = await fetch('http://localhost:8000/api/projections/import-matched', {
         method: 'POST',
@@ -127,7 +143,10 @@ export default function ImportReviewPage() {
             // Add the actual projection values from the CSV
             // CSV structure: name, position, proj stats, date, PPR Projections, HPPR Projections, STD Projections, Actuals
             pprProjection: p.pprProjection || p.selectedProjection || 0,
-            actuals: p.actuals || 0
+            actuals: p.actuals || 0,
+            // Add the JSON fields
+            projStatsJson: p.projStatsJson,
+            actualStatsJson: p.actualStatsJson
           }))
         })
       })

@@ -45,6 +45,8 @@ interface CSVPlayer {
   pprProjection?: number
   hpprProjection?: number
   stdProjection?: number
+  projStatsJson?: any
+  actualStatsJson?: any
 }
 
 interface MatchedPlayer extends CSVPlayer {
@@ -213,6 +215,10 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
         console.log('First line values:', firstLineValues)
         console.log('PPR value at index', pprIndex, ':', firstLineValues[pprIndex])
         console.log('Actuals value at index', actualsIndex, ':', firstLineValues[actualsIndex])
+        console.log('ProjStats value at index', projStatsIndex, ':', firstLineValues[projStatsIndex])
+        console.log('ActualStats value at index', actualStatsIndex, ':', firstLineValues[actualStatsIndex])
+        console.log('ProjStats raw length:', firstLineValues[projStatsIndex]?.length)
+        console.log('ActualStats raw length:', firstLineValues[actualStatsIndex]?.length)
       }
       
       for (let i = 1; i < lines.length; i++) {
@@ -232,10 +238,59 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
           const team = isTeamCode ? possibleTeam : ''
           
           // Parse projection values
-          const projStats = projStatsIndex >= 0 ? parseFloat(values[projStatsIndex]) || 0 : 0
+          const projStatsRaw = projStatsIndex >= 0 ? values[projStatsIndex] : ''
+          const actualStatsRaw = actualStatsIndex >= 0 ? values[actualStatsIndex] : ''
           const pprProjection = pprIndex >= 0 ? parseFloat(values[pprIndex]) || 0 : 0
           const hpprProjection = hpprIndex >= 0 ? parseFloat(values[hpprIndex]) || 0 : 0
           const stdProjection = stdIndex >= 0 ? parseFloat(values[stdIndex]) || 0 : 0
+          
+          // Parse JSON fields
+          let projStatsJson = null
+          let actualStatsJson = null
+          
+          try {
+            if (projStatsRaw && projStatsRaw.trim() !== '') {
+              // Convert Python dictionary format to JSON format
+              // Replace single quotes with double quotes, but be careful with apostrophes in strings
+              let jsonString = projStatsRaw
+                .replace(/'/g, '"')  // Replace all single quotes with double quotes
+                .replace(/True/g, 'true')  // Convert Python boolean
+                .replace(/False/g, 'false')  // Convert Python boolean
+                .replace(/None/g, 'null')  // Convert Python None to JSON null
+              
+              projStatsJson = JSON.parse(jsonString)
+              if (i < 3) { // Debug first 3 players
+                console.log(`DEBUG: Player ${i+1} (${playerName}) - ProjStats JSON parsed successfully:`, projStatsJson)
+              }
+            }
+          } catch (e) {
+            console.warn(`Failed to parse projStats JSON for ${playerName}:`, e)
+            console.log(`DEBUG: Player ${i+1} (${playerName}) - ProjStats raw data:`, JSON.stringify(projStatsRaw))
+            console.log(`DEBUG: Player ${i+1} (${playerName}) - ProjStats raw data length:`, projStatsRaw?.length)
+            console.log(`DEBUG: Player ${i+1} (${playerName}) - ProjStats raw data first 100 chars:`, projStatsRaw?.substring(0, 100))
+          }
+          
+          try {
+            if (actualStatsRaw && actualStatsRaw.trim() !== '') {
+              // Convert Python dictionary format to JSON format
+              // Replace single quotes with double quotes, but be careful with apostrophes in strings
+              let jsonString = actualStatsRaw
+                .replace(/'/g, '"')  // Replace all single quotes with double quotes
+                .replace(/True/g, 'true')  // Convert Python boolean
+                .replace(/False/g, 'false')  // Convert Python boolean
+                .replace(/None/g, 'null')  // Convert Python None to JSON null
+              
+              actualStatsJson = JSON.parse(jsonString)
+              if (i < 3) { // Debug first 3 players
+                console.log(`DEBUG: Player ${i+1} (${playerName}) - ActualStats JSON parsed successfully:`, actualStatsJson)
+              }
+            }
+          } catch (e) {
+            console.warn(`Failed to parse actualStats JSON for ${playerName}:`, e)
+            console.log(`DEBUG: Player ${i+1} (${playerName}) - ActualStats raw data:`, JSON.stringify(actualStatsRaw))
+            console.log(`DEBUG: Player ${i+1} (${playerName}) - ActualStats raw data length:`, actualStatsRaw?.length)
+            console.log(`DEBUG: Player ${i+1} (${playerName}) - ActualStats raw data first 100 chars:`, actualStatsRaw?.substring(0, 100))
+          }
           
           // Legacy projection support
           const dkmProjection = dkmIndex >= 0 ? parseFloat(values[dkmIndex]) || 0 : 0
@@ -317,7 +372,10 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
             // Add the individual projection values for debugging
             pprProjection: pprProjection,
             hpprProjection: hpprProjection,
-            stdProjection: stdProjection
+            stdProjection: stdProjection,
+            // Add the parsed JSON fields
+            projStatsJson: projStatsJson,
+            actualStatsJson: actualStatsJson
           }
           
           if (player.name && player.position && selectedProjection > 0) {
