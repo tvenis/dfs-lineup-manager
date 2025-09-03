@@ -22,11 +22,13 @@ class JSONString(TypeDecorator):
 class Team(Base):
     __tablename__ = "teams"
     
-    id = Column(String(10), primary_key=True)  # e.g., 'NE', 'DAL'
-    name = Column(String(100), nullable=False)  # full team name
+    id = Column(Integer, primary_key=True, autoincrement=True)  # sequential integer starting at 1
+    full_name = Column(String(100), nullable=False)  # full team name
     abbreviation = Column(String(10), nullable=False, unique=True)  # short code
+    mascat = Column(String(50))  # team mascot/category
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    odds_api_id = Column(String(50))  # Odds API team ID for external API integration
 
 class Player(Base):
     __tablename__ = "players"
@@ -162,6 +164,32 @@ class Projection(Base):
     # Composite unique index on (week_id, playerDkId, source) for upserts
     __table_args__ = (
         Index('idx_week_player_source', 'week_id', 'playerDkId', 'source', unique=True),
+    )
+
+class Game(Base):
+    __tablename__ = "games"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)  # unique sequential integer starting at 1
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)  # foreign key to week table
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)  # foreign key to teams table
+    homeoraway = Column(String(1), nullable=False)  # 'H' for home, 'A' for away, 'N' for neutral site
+    proj_spread = Column(Float)  # projected spread (can be positive or negative)
+    proj_total = Column(Float)  # projected total
+    implied_team_total = Column(Float)  # implied team total
+    money_line = Column(Float)  # money line
+    actual_spread = Column(Float)  # actual spread
+    actual_total = Column(Float)  # actual total
+    odds_api_gameid = Column(String(50))  # Odds API game ID for external API integration
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    week = relationship("Week")
+    team = relationship("Team")
+    
+    # Constraints
+    __table_args__ = (
+        Index('idx_week_team', 'week_id', 'team_id', unique=True),  # Each team can only have one game per week
     )
 
 class Comment(Base):

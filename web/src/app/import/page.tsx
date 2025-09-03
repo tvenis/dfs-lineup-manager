@@ -1,9 +1,9 @@
 "use client";
 
-import { ImportExportManager } from "@/components/ImportExportManager";
+import { ImportManager } from "@/components/ImportManager";
 
 export default function ImportPage() {
-  return <ImportExportManager />;
+  return <ImportManager />;
 }
 
 

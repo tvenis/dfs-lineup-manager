@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,9 +27,13 @@ interface MatchedPlayer {
   matchedPlayerId?: number
   matchConfidence?: 'exact' | 'partial' | 'none'
   possibleMatches?: Player[]
+  projStatsJson?: Record<string, unknown>
+  actualStatsJson?: Record<string, unknown>
+  pprProjection?: number
+  actuals?: number
 }
 
-export default function ImportReviewPage() {
+function ImportReviewContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [matchedPlayers, setMatchedPlayers] = useState<MatchedPlayer[]>([])
@@ -70,7 +74,7 @@ export default function ImportReviewPage() {
   const handleManualMatch = (csvIndex: number, playerId: number | null) => {
     setMatchedPlayers(prev => prev.map(p => 
       p.csvIndex === csvIndex 
-        ? { ...p, matchedPlayerId: playerId, matchConfidence: playerId ? 'exact' : 'none' }
+        ? { ...p, matchedPlayerId: playerId || undefined, matchConfidence: playerId ? 'exact' : 'none' }
         : p
     ))
   }
@@ -370,5 +374,13 @@ export default function ImportReviewPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+export default function ImportReviewPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ImportReviewContent />
+    </Suspense>
   )
 }

@@ -20,6 +20,7 @@ import {
   PlusCircle,
   History,
   Upload,
+  Download,
   Settings,
   User,
 } from "lucide-react";
@@ -56,10 +57,16 @@ const navigationItems = [
     href: "/history",
   },
   {
-    id: "csv",
-    label: "CSV Import/Export",
+    id: "import",
+    label: "Import",
     icon: Upload,
     href: "/import",
+  },
+  {
+    id: "export",
+    label: "Export",
+    icon: Download,
+    href: "/export",
   },
 ];
 

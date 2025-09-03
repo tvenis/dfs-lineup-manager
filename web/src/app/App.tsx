@@ -21,6 +21,7 @@ import {
   PlusCircle,
   History,
   Upload,
+  Download,
   Settings,
   User,
 } from "lucide-react";
@@ -64,10 +65,16 @@ export default function App({ children }: { children: React.ReactNode }) {
       href: "/profile",
     },
     {
-      id: "import-export",
-      label: "Import/Export",
+      id: "import",
+      label: "Import",
       icon: Upload,
       href: "/import",
+    },
+    {
+      id: "export",
+      label: "Export",
+      icon: Download,
+      href: "/export",
     },
     {
       id: "settings",

@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Label } from './ui/label'
 import { Input } from './ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
-import { Upload, Download, FileText, CheckCircle, XCircle, Eye, FileJson, RefreshCw, Database } from 'lucide-react'
+import { Upload, FileText, CheckCircle, XCircle, Eye, RefreshCw, Database } from 'lucide-react'
 import { ImportPlayerProjections } from './ImportPlayerProjections'
 
 // Types for API responses
@@ -44,13 +43,13 @@ interface RecentActivity {
   details: unknown
 }
 
-export function ImportExportManager({ selectedWeek = '1' }: { selectedWeek?: string }) {
+export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string }) {
   const [history, setHistory] = useState<RecentActivity[]>([])
   const [weeks, setWeeks] = useState<Week[]>([])
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null)
   const [draftGroup, setDraftGroup] = useState<string>('')
   const [isImporting, setIsImporting] = useState(false)
-  const [lastImportResult, setLastImportResult] = useState<DraftKingsImportResponse | null>(null)
+  const [, setLastImportResult] = useState<DraftKingsImportResponse | null>(null)
 
   // Check for success parameter from review page
   useEffect(() => {
@@ -163,16 +162,28 @@ export function ImportExportManager({ selectedWeek = '1' }: { selectedWeek?: str
     return week ? week.label : `Week ID: ${weekId}`
   }
 
-  const handleProjectionImportComplete = (importData: any) => {
-    const newHistoryItem = {
+  const handleProjectionImportComplete = (importData: {
+    filename: string;
+    timestamp: string;
+    failedImports: number;
+    successfulImports: number;
+    projectionSource: string;
+    week: number;
+  }) => {
+    const newHistoryItem: RecentActivity = {
       id: Date.now(),
-      type: 'import' as const,
-      filename: importData.filename,
-      format: 'CSV',
       timestamp: importData.timestamp,
-      status: importData.failedImports > 0 ? 'warning' as const : 'success' as const,
-      details: `${importData.successfulImports} ${importData.projectionSource} projections imported successfully${importData.failedImports > 0 ? `, ${importData.failedImports} failed to match` : ''}`,
-      week: `Week ${importData.week}`
+      action: 'import',
+      fileType: 'CSV',
+      fileName: importData.filename,
+      week_id: importData.week,
+      draftGroup: importData.projectionSource,
+      recordsAdded: importData.successfulImports,
+      recordsUpdated: 0,
+      recordsSkipped: importData.failedImports,
+      errors: importData.failedImports > 0 ? [`${importData.failedImports} failed to match`] : [],
+      user: null,
+      details: null
     }
     
     setHistory(prev => [newHistoryItem, ...prev])
@@ -182,15 +193,15 @@ export function ImportExportManager({ selectedWeek = '1' }: { selectedWeek?: str
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="space-y-1">
-        <h2>Import/Export</h2>
+        <h2>Import Data</h2>
         <p className="text-muted-foreground">
-          Import player data from DraftKings API or CSV files, and export lineups in various formats
+          Import player data from DraftKings API or CSV files
         </p>
       </div>
 
-      {/* Import/Export Tabs */}
+      {/* Import Tabs */}
       <Tabs defaultValue="import-pool" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="import-pool" className="gap-2">
             <Database className="w-4 h-4" />
             Import Player Pool
@@ -198,10 +209,6 @@ export function ImportExportManager({ selectedWeek = '1' }: { selectedWeek?: str
           <TabsTrigger value="import-projections" className="gap-2">
             <FileText className="w-4 h-4" />
             Import Projections
-          </TabsTrigger>
-          <TabsTrigger value="export" className="gap-2">
-            <Download className="w-4 h-4" />
-            Export Data
           </TabsTrigger>
         </TabsList>
 
@@ -314,117 +321,69 @@ export function ImportExportManager({ selectedWeek = '1' }: { selectedWeek?: str
         <TabsContent value="import-projections">
           <ImportPlayerProjections onImportComplete={handleProjectionImportComplete} />
         </TabsContent>
-
-        <TabsContent value="export">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Download className="w-5 h-5" />
-                Export Data
-              </CardTitle>
-              <CardDescription>
-                Download lineups and data in your preferred format
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button className="gap-2">
-                    <FileText className="w-4 h-4" />
-                    Export CSV
-                  </Button>
-                  <Button variant="outline" className="gap-2">
-                    <FileJson className="w-4 h-4" />
-                    Export JSON
-                  </Button>
-                </div>
-                
-                <div className="space-y-2">
-                  <Button variant="outline" className="w-full gap-2">
-                    <Download className="w-4 h-4" />
-                    Export Current Week
-                  </Button>
-                  <Button variant="outline" className="w-full gap-2">
-                    <Download className="w-4 h-4" />
-                    Export All Data
-                  </Button>
-                  <Button variant="outline" className="w-full gap-2">
-                    <Download className="w-4 h-4" />
-                    Export Selected Week...
-                  </Button>
-                </div>
-              </div>
-
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  CSV files are ready for DraftKings contests. JSON files include complete data with projections and settings.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
-      {/* Import/Export History */}
+      {/* Import History */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Your recent import and export operations</CardDescription>
+          <CardTitle>Recent Import Activity</CardTitle>
+          <CardDescription>Your recent import operations</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {history.length === 0 ? (
+            {history.filter(item => item.action === 'import').length === 0 ? (
               <div className="text-center text-gray-500 py-8">
-                No recent activity found
+                No recent import activity found
               </div>
             ) : (
-              history.map((item, index) => (
-                <div key={`${item.draftGroup}-${item.id}-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {(item.errors && item.errors.length > 0) ? (
-                      <XCircle className="w-4 h-4 text-red-600" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    )}
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{item.fileName || `${item.action} for ${getWeekLabel(item.week_id)}`}</span>
-                        <span className="text-xs bg-muted px-2 py-1 rounded">
-                          {item.fileType}
-                        </span>
-                        <span className="text-xs bg-muted px-2 py-1 rounded">
-                          {getWeekLabel(item.week_id)}
-                        </span>
-                        <span className="text-xs bg-muted px-2 py-1 rounded">
-                          {item.draftGroup}
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          (item.errors && item.errors.length > 0) ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
-                        }`}>
-                          {(item.errors && item.errors.length > 0) ? 'Error' : 'Success'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {item.recordsAdded} added, {item.recordsUpdated} updated, {item.recordsSkipped} skipped
-                      </p>
-                      {item.errors && item.errors.length > 0 && (
-                        <p className="text-sm text-red-600">
-                          Errors: {item.errors.join(', ')}
-                        </p>
+              history
+                .filter(item => item.action === 'import')
+                .map((item, index) => (
+                  <div key={`${item.draftGroup}-${item.id}-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {(item.errors && item.errors.length > 0) ? (
+                        <XCircle className="w-4 h-4 text-red-600" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4 text-green-600" />
                       )}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{item.fileName || `${item.action} for ${getWeekLabel(item.week_id)}`}</span>
+                          <span className="text-xs bg-muted px-2 py-1 rounded">
+                            {item.fileType}
+                          </span>
+                          <span className="text-xs bg-muted px-2 py-1 rounded">
+                            {getWeekLabel(item.week_id)}
+                          </span>
+                          <span className="text-xs bg-muted px-2 py-1 rounded">
+                            {item.draftGroup}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            (item.errors && item.errors.length > 0) ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
+                          }`}>
+                            {(item.errors && item.errors.length > 0) ? 'Error' : 'Success'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {item.recordsAdded} added, {item.recordsUpdated} updated, {item.recordsSkipped} skipped
+                        </p>
+                        {item.errors && item.errors.length > 0 && (
+                          <p className="text-sm text-red-600">
+                            Errors: {item.errors.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(item.timestamp).toLocaleString()}
+                      </span>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(item.timestamp).toLocaleString()}
-                    </span>
-                    <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
+                ))
             )}
           </div>
         </CardContent>
@@ -432,5 +391,3 @@ export function ImportExportManager({ selectedWeek = '1' }: { selectedWeek?: str
     </div>
   )
 }
-
-

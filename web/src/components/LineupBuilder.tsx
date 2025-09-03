@@ -144,10 +144,10 @@ export function LineupBuilder({
         id: entry.player.playerDkId,
         name: entry.player.displayName,
         team: entry.player.team,
-        opponent: entry.player.opponent || '',
+        opponent: '',
         salary: entry.salary,
         projectedPoints: entry.projectedPoints || 0,
-        oprk: entry.oprk || 0,
+        oprk: 0,
         excluded: entry.excluded || false
       }
 
@@ -788,8 +788,11 @@ export function LineupBuilder({
             firstName: selectedPlayer.name.split(' ')[0],
             lastName: selectedPlayer.name.split(' ').slice(1).join(' '),
             shortName: selectedPlayer.name,
-            playerImage50: null,
-            playerImage160: null
+            playerImage50: undefined,
+            playerImage160: undefined,
+            hidden: false,
+            created_at: new Date().toISOString(),
+            updated_at: undefined
           }
         }
       }
@@ -825,8 +828,11 @@ export function LineupBuilder({
               firstName: selectedPlayer.name.split(' ')[0],
               lastName: selectedPlayer.name.split(' ').slice(1).join(' '),
               shortName: selectedPlayer.name,
-              playerImage50: null,
-              playerImage160: null
+              playerImage50: undefined,
+              playerImage160: undefined,
+              hidden: false,
+              created_at: new Date().toISOString(),
+              updated_at: undefined
             }
           }
         }

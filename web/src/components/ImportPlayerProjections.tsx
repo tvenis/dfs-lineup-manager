@@ -10,7 +10,14 @@ import { Badge } from './ui/badge'
 import { Upload, FileText, RefreshCw } from 'lucide-react'
 
 interface ImportPlayerProjectionsProps {
-  onImportComplete: (importData: any) => void
+  onImportComplete: (importData: {
+    filename: string;
+    timestamp: string;
+    failedImports: number;
+    successfulImports: number;
+    projectionSource: string;
+    week: number;
+  }) => void
 }
 
 interface Week {
@@ -45,8 +52,8 @@ interface CSVPlayer {
   pprProjection?: number
   hpprProjection?: number
   stdProjection?: number
-  projStatsJson?: any
-  actualStatsJson?: any
+  projStatsJson?: Record<string, unknown>
+  actualStatsJson?: Record<string, unknown>
 }
 
 interface MatchedPlayer extends CSVPlayer {
@@ -56,13 +63,13 @@ interface MatchedPlayer extends CSVPlayer {
   possibleMatches?: Player[]
 }
 
-export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjectionsProps) {
+export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
   const router = useRouter()
   const [weeks, setWeeks] = useState<Week[]>([])
   const [selectedWeek, setSelectedWeek] = useState<string>('')
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [csvData, setCsvData] = useState<CSVPlayer[]>([])
-  const [matchedPlayers, setMatchedPlayers] = useState<MatchedPlayer[]>([])
+  const [, setMatchedPlayers] = useState<MatchedPlayer[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
   const [projectionSource, setProjectionSource] = useState<string>('')
@@ -252,7 +259,7 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
             if (projStatsRaw && projStatsRaw.trim() !== '') {
               // Convert Python dictionary format to JSON format
               // Replace single quotes with double quotes, but be careful with apostrophes in strings
-              let jsonString = projStatsRaw
+              const jsonString = projStatsRaw
                 .replace(/'/g, '"')  // Replace all single quotes with double quotes
                 .replace(/True/g, 'true')  // Convert Python boolean
                 .replace(/False/g, 'false')  // Convert Python boolean
@@ -274,7 +281,7 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
             if (actualStatsRaw && actualStatsRaw.trim() !== '') {
               // Convert Python dictionary format to JSON format
               // Replace single quotes with double quotes, but be careful with apostrophes in strings
-              let jsonString = actualStatsRaw
+              const jsonString = actualStatsRaw
                 .replace(/'/g, '"')  // Replace all single quotes with double quotes
                 .replace(/True/g, 'true')  // Convert Python boolean
                 .replace(/False/g, 'false')  // Convert Python boolean
@@ -308,8 +315,8 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
             selectedProjection = pprProjection
           } else if (sourceLower.includes('std') && stdProjection > 0) {
             selectedProjection = stdProjection
-          } else if (sourceLower.includes('proj') && projStats > 0) {
-            selectedProjection = projStats
+          } else if (sourceLower.includes('proj') && projStatsRaw && projStatsRaw.trim() !== '') {
+            selectedProjection = parseFloat(projStatsRaw) || 0
           } else if (sourceLower.includes('dkm') && dkmProjection > 0) {
             selectedProjection = dkmProjection
           } else if (sourceLower.includes('dfs') && dfsProjection > 0) {
@@ -326,8 +333,8 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
             } else if (stdProjection > 0) {
               selectedProjection = stdProjection
               source = projectionSource || 'STD Projections'
-            } else if (projStats > 0) {
-              selectedProjection = projStats
+            } else if (projStatsRaw && projStatsRaw.trim() !== '') {
+              selectedProjection = parseFloat(projStatsRaw) || 0
               source = projectionSource || 'Proj Stats'
             } else if (dfsProjection > 0) {
               selectedProjection = dfsProjection
@@ -550,7 +557,7 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
               <br />
               <strong>Example:</strong> Josh Allen BUF, QB, 24.2, 24.1, 2024-01-15, 24.5, 24.3, 24.0, 26.3
               <br />
-              <em>Player names can include team codes (e.g., "Josh Allen BUF") or be separate columns. The system will automatically detect and use the best matching projection column based on your source name. HPPR Projections are ignored as requested.</em>
+              <em>Player names can include team codes (e.g., &quot;Josh Allen BUF&quot;) or be separate columns. The system will automatically detect and use the best matching projection column based on your source name. HPPR Projections are ignored as requested.</em>
               <br />
               <br />
               <strong>Download CSV files:</strong> Visit{' '}
