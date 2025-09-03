@@ -321,9 +321,9 @@ export default function PlayerPoolPage() {
     }
   };
 
-  // Calculate tier statistics for current position
+  // Calculate tier statistics for current position (excluding excluded players)
   const getTierStats = (position: string) => {
-    const players = getAllPlayersForPosition(position);
+    const players = getAllPlayersForPosition(position).filter(player => !player.excluded);
     return {
       tier1: players.filter(player => player.tier === 1).length,
       tier2: players.filter(player => player.tier === 2).length,
