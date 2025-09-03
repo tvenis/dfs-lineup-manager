@@ -18,6 +18,57 @@ import { PlayerPoolEntry, Player, Week, LineupSlotId } from '@/types/prd'
 import { getPositionBadgeClasses } from '@/lib/positionColors'
 import { LineupOptimizer } from './LineupOptimizer'
 
+// Get tier configuration
+const getTierConfig = (tier: number) => {
+  switch (tier) {
+    case 1:
+      return {
+        label: 'Core/Cash',
+        description: 'Must-have foundational plays',
+        color: 'bg-blue-100 text-blue-800 border-blue-300',
+        icon: '⭐',
+        headerColor: 'bg-blue-50/80 border-b border-blue-200',
+        headerTextColor: 'text-blue-800'
+      };
+    case 2:
+      return {
+        label: 'Strong Plays',
+        description: 'Solid complementary pieces',
+        color: 'bg-green-100 text-green-800 border-green-300',
+        icon: '💪',
+        headerColor: 'bg-green-50/80 border-b border-green-200',
+        headerTextColor: 'text-green-800'
+      };
+    case 3:
+      return {
+        label: 'GPP/Ceiling',
+        description: 'High-variance leverage plays',
+        color: 'bg-purple-100 text-purple-800 border-purple-300',
+        icon: '🚀',
+        headerColor: 'bg-purple-50/80 border-b border-purple-200',
+        headerTextColor: 'text-purple-800'
+      };
+    case 4:
+      return {
+        label: 'Avoids/Thin',
+        description: 'Rarely played options',
+        color: 'bg-red-100 text-red-800 border-red-300',
+        icon: '⚠️',
+        headerColor: 'bg-red-50/80 border-b border-red-200',
+        headerTextColor: 'text-red-800'
+      };
+    default:
+      return {
+        label: 'Unknown',
+        description: 'Unknown tier',
+        color: 'bg-gray-100 text-gray-800 border-gray-300',
+        icon: '❓',
+        headerColor: 'bg-gray-50/80 border-b border-gray-200',
+        headerTextColor: 'text-gray-800'
+      };
+  }
+};
+
 type RosterSlot = {
   position: LineupSlotId
   player: Player | null
@@ -953,128 +1004,111 @@ export function LineupBuilder({
                     )}
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[40px]"></TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('name')}
-                        >
-                          <div className="flex items-center gap-1">
-                            Player
-                            <ArrowUpDown className="w-3 h-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('team')}
-                        >
-                          <div className="flex items-center gap-1">
-                            Team
-                            <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('opponent')}
-                        >
-                          <div className="flex items-center gap-1">
-                            Position
-                            <ArrowUpDown className="w-3 h-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('salary')}
-                        >
-                          <div className="flex items-center gap-1">
-                            Salary
-                            <ArrowUpDown className="w-3 h-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('projectedPoints')}
-                        >
-                          <div className="flex items-center gap-1">
-                            Projection
-                            <ArrowUpDown className="w-3 h-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('oprk')}
-                        >
-                          <div className="flex items-center gap-1">
-                            OPRK
-                            <ArrowUpDown className="w-3 h-3" />
-                          </div>
-                        </TableHead>
-                        <TableHead 
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleSort('value')}
-                        >
-                          <div className="flex items-center gap-1">
-                            Value
-                            <ArrowUpDown className="w-3 h-3" />
-                          </div>
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortedPlayers.map((player) => (
-                        <TableRow 
-                          key={player.id} 
-                          className={`
-                            ${player.isUsed ? 'bg-muted/50' : ''} 
-                            ${!player.canAfford ? 'opacity-50' : ''}
-                          `}
-                        >
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleAddPlayer(player)}
-                              disabled={player.isUsed || !player.canAfford}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Link
-                                href={`/profile/${player.player.playerDkId}`}
-                                className="text-primary hover:underline text-left"
-                              >
-                                {player.player.displayName}
-                              </Link>
-                              {selectedPosition === 'FLEX' && (
-                                <span className={getPositionBadgeClasses(player.player.position)}>
-                                  {player.player.position}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>{player.player.team}</TableCell>
-                          <TableCell>{player.player.position}</TableCell>
-                          <TableCell>${player.salary.toLocaleString()}</TableCell>
-                          <TableCell>{player.projectedPoints || 'N/A'}</TableCell>
-                          <TableCell>
-                            <span className={`${
-                              player.oprkQuality === 'High' ? 'text-green-600' : 
-                              player.oprkQuality === 'Low' ? 'text-red-600' : 
-                              'text-foreground'
-                            }`}>
-                              {player.oprk}
+                  <div className="overflow-x-auto">
+                    {/* Table Header */}
+                    <div className="bg-muted/10 border-b">
+                      <div className="grid grid-cols-9 gap-4 px-6 py-3 text-sm font-medium text-muted-foreground">
+                        <div className="col-span-1"></div>
+                        <div className="col-span-2">PLAYER NAME</div>
+                        <div className="col-span-1 text-center">TEAM</div>
+                        <div className="col-span-1 text-center">POS</div>
+                        <div className="col-span-1 text-right">SALARY</div>
+                        <div className="col-span-1 text-right">PROJECTION</div>
+                        <div className="col-span-1 text-center">OPRK</div>
+                        <div className="col-span-1 text-right">VALUE</div>
+                      </div>
+                    </div>
+
+                    {/* Tier Groups */}
+                    {[1, 2, 3, 4].map(tier => {
+                      const tieredPlayers = sortedPlayers.filter(player => player.tier === tier)
+                      if (tieredPlayers.length === 0) return null
+
+                      return (
+                        <div key={tier} className="border-b">
+                          {/* Tier Header */}
+                          <div className={`${getTierConfig(tier).headerColor} ${getTierConfig(tier).headerTextColor} px-6 py-3 flex items-center gap-3`}>
+                            <span className="text-xl">{getTierConfig(tier).icon}</span>
+                            <span className="font-medium">Tier {tier}</span>
+                            <span className="opacity-90 text-sm">
+                              {getTierConfig(tier).label} - {getTierConfig(tier).description}
                             </span>
-                          </TableCell>
-                          <TableCell>{player.value}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </div>
+
+                          {/* Players in this tier */}
+                          {tieredPlayers.map((player, index) => (
+                            <div
+                              key={player.id}
+                              className={`
+                                grid grid-cols-9 gap-4 px-6 py-3 border-b border-border/50 last:border-b-0
+                                ${player.isUsed ? 'bg-muted/50' : ''} 
+                                ${!player.canAfford ? 'opacity-50' : ''}
+                                hover:bg-muted/50 transition-colors
+                              `}
+                            >
+                              <div className="col-span-1 flex items-center">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleAddPlayer(player)}
+                                  disabled={player.isUsed || !player.canAfford}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </Button>
+                              </div>
+
+                              <div className="col-span-2">
+                                <div className="flex items-center gap-2">
+                                  <Link
+                                    href={`/profile/${player.player.playerDkId}`}
+                                    className="text-primary hover:underline text-left text-sm font-medium"
+                                  >
+                                    {player.player.displayName}
+                                  </Link>
+                                  {selectedPosition === 'FLEX' && (
+                                    <span className={getPositionBadgeClasses(player.player.position)}>
+                                      {player.player.position}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="col-span-1 text-center text-sm font-medium text-muted-foreground">
+                                {player.player.team}
+                              </div>
+
+                              <div className="col-span-1 text-center text-sm font-medium">
+                                {player.player.position}
+                              </div>
+
+                              <div className="col-span-1 text-right text-sm font-medium">
+                                ${player.salary.toLocaleString()}
+                              </div>
+
+                              <div className="col-span-1 text-right text-sm font-medium">
+                                {player.projectedPoints || 'N/A'}
+                              </div>
+
+                              <div className="col-span-1 text-center">
+                                <span className={`text-sm ${
+                                  player.oprkQuality === 'High' ? 'text-green-600' : 
+                                  player.oprkQuality === 'Low' ? 'text-red-600' : 
+                                  'text-foreground'
+                                }`}>
+                                  {player.oprk}
+                                </span>
+                              </div>
+
+                              <div className="col-span-1 text-right text-sm font-medium text-primary">
+                                {player.value}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
             </CardContent>

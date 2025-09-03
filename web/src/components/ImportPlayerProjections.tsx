@@ -551,6 +551,18 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
               <strong>Example:</strong> Josh Allen BUF, QB, 24.2, 24.1, 2024-01-15, 24.5, 24.3, 24.0, 26.3
               <br />
               <em>Player names can include team codes (e.g., "Josh Allen BUF") or be separate columns. The system will automatically detect and use the best matching projection column based on your source name. HPPR Projections are ignored as requested.</em>
+              <br />
+              <br />
+              <strong>Download CSV files:</strong> Visit{' '}
+              <a 
+                href="https://winwithodds.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                winwithodds.com
+              </a>
+              {' '}to download projection CSV files.
             </AlertDescription>
           </Alert>
 
