@@ -24,8 +24,11 @@ class Team(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)  # sequential integer starting at 1
     full_name = Column(String(100), nullable=False)  # full team name
-    abbreviation = Column(String(10), nullable=False, unique=True)  # short code
-    mascat = Column(String(50))  # team mascot/category
+    abbreviation = Column(String(10), unique=True)  # short code (nullable)
+    mascot = Column(String(50))  # team mascot/category
+    logo = Column(String(500))  # URL to team logo
+    division = Column(String(50))  # team division
+    conference = Column(String(50))  # team conference
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     odds_api_id = Column(String(50))  # Odds API team ID for external API integration
@@ -172,7 +175,9 @@ class Game(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)  # unique sequential integer starting at 1
     week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)  # foreign key to week table
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)  # foreign key to teams table
+    opponent_team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)  # foreign key to opponent team
     homeoraway = Column(String(1), nullable=False)  # 'H' for home, 'A' for away, 'N' for neutral site
+    start_time = Column(DateTime(timezone=True))  # game start time
     proj_spread = Column(Float)  # projected spread (can be positive or negative)
     proj_total = Column(Float)  # projected total
     implied_team_total = Column(Float)  # implied team total
@@ -185,7 +190,8 @@ class Game(Base):
     
     # Relationships
     week = relationship("Week")
-    team = relationship("Team")
+    team = relationship("Team", foreign_keys=[team_id])
+    opponent_team = relationship("Team", foreign_keys=[opponent_team_id])
     
     # Constraints
     __table_args__ = (

@@ -5,8 +5,11 @@ from datetime import datetime, date
 # Base schemas
 class TeamBase(BaseModel):
     full_name: str = Field(..., min_length=1, max_length=100)  # full team name
-    abbreviation: str = Field(..., min_length=1, max_length=10)  # short code
-    mascat: Optional[str] = Field(None, max_length=50)  # team mascot/category
+    abbreviation: Optional[str] = Field(None, max_length=10)  # short code
+    mascot: Optional[str] = Field(None, max_length=50)  # team mascot/category
+    logo: Optional[str] = Field(None, max_length=500)  # URL to team logo
+    division: Optional[str] = Field(None, max_length=50)  # team division
+    conference: Optional[str] = Field(None, max_length=50)  # team conference
     odds_api_id: Optional[str] = Field(None, max_length=50)  # Odds API team ID
 
 class TeamCreate(TeamBase):
@@ -14,8 +17,11 @@ class TeamCreate(TeamBase):
 
 class TeamUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    abbreviation: Optional[str] = Field(None, min_length=1, max_length=10)
-    mascat: Optional[str] = Field(None, max_length=50)
+    abbreviation: Optional[str] = Field(None, max_length=10)
+    mascot: Optional[str] = Field(None, max_length=50)
+    logo: Optional[str] = Field(None, max_length=500)
+    division: Optional[str] = Field(None, max_length=50)
+    conference: Optional[str] = Field(None, max_length=50)
     odds_api_id: Optional[str] = Field(None, max_length=50)
 
 class Team(TeamBase):
@@ -422,7 +428,9 @@ class ProjectionImportResponse(BaseModel):
 class GameBase(BaseModel):
     week_id: int = Field(..., description="Week ID from weeks table")
     team_id: int = Field(..., description="Team ID from teams table")
+    opponent_team_id: Optional[int] = Field(None, description="Opponent team ID from teams table")
     homeoraway: str = Field(..., pattern="^[HAN]$", description="'H' for home, 'A' for away, 'N' for neutral site")
+    start_time: Optional[datetime] = Field(None, description="Game start time")
     proj_spread: Optional[float] = Field(None, description="Projected spread (can be positive or negative)")
     proj_total: Optional[float] = Field(None, description="Projected total")
     implied_team_total: Optional[float] = Field(None, description="Implied team total")
@@ -435,7 +443,9 @@ class GameCreate(GameBase):
     pass
 
 class GameUpdate(BaseModel):
+    opponent_team_id: Optional[int] = Field(None, description="Opponent team ID from teams table")
     homeoraway: Optional[str] = Field(None, pattern="^[HAN]$", description="'H' for home, 'A' for away, 'N' for neutral site")
+    start_time: Optional[datetime] = Field(None, description="Game start time")
     proj_spread: Optional[float] = Field(None, description="Projected spread (can be positive or negative)")
     proj_total: Optional[float] = Field(None, description="Projected total")
     implied_team_total: Optional[float] = Field(None, description="Implied team total")
@@ -448,6 +458,7 @@ class Game(GameBase):
     id: int
     week: Week
     team: Team
+    opponent_team: Optional[Team] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -458,7 +469,9 @@ class GameSimple(BaseModel):
     id: int
     week_id: int
     team_id: int
+    opponent_team_id: Optional[int] = None
     homeoraway: str
+    start_time: Optional[datetime] = None
     proj_spread: Optional[float] = None
     proj_total: Optional[float] = None
     implied_team_total: Optional[float] = None
