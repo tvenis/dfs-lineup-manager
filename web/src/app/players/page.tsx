@@ -11,8 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff, Search, X, User, UserX, ChevronUp, ChevronDown, ExternalLink, Info } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Eye, EyeOff, Search, X, User, UserX, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 // Minimal tooltip shim to avoid new dependency; optional
 import Link from 'next/link';
@@ -688,9 +687,9 @@ export default function PlayerPoolPage() {
                 <div className="overflow-x-auto">
                   {/* Table Header */}
                   <div className="bg-muted/10 border-b">
-                    <div className="grid grid-cols-20 gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground items-center">
+                    <div className="grid grid-cols-[repeat(13,_minmax(0,_1fr))] gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground items-center whitespace-nowrap">
                       <div 
-                        className="col-span-5 cursor-pointer hover:bg-muted/20 transition-colors flex items-center gap-1"
+                        className="col-span-1 cursor-pointer hover:bg-muted/20 transition-colors flex items-center gap-1"
                         onClick={() => handleSort('player')}
                       >
                         PLAYER NAME
@@ -699,66 +698,10 @@ export default function PlayerPoolPage() {
                         )}
                       </div>
                       <div className="col-span-1 text-center">TEAM</div>
-                      <div className="col-span-2 text-center flex items-center justify-center gap-1">
-                        OPPONENT
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>@ = Away game, • = Home game</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="col-span-1 text-center flex items-center justify-center gap-1">
-                        SPREAD
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Team's point spread. + underdog, - favorite</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="col-span-1 text-center flex items-center justify-center gap-1">
-                        O/U
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Game Over/Under total</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="col-span-1 text-center flex items-center justify-center gap-1">
-                        IMPLIED
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Team's implied point total</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
+                      <div className="col-span-1 text-center">OPPONENT</div>
+                      <div className="col-span-1 text-center">SPREAD</div>
+                      <div className="col-span-1 text-center">O/U</div>
+                      <div className="col-span-1 text-center">IMPLIED</div>
                       <div
                         role="button"
                         tabIndex={0}
@@ -770,21 +713,9 @@ export default function PlayerPoolPage() {
                         {sortField === 'opponentRank' && (
                           sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span>
-                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Opponent Position Rank — lower is better</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                       </div>
                       <div 
-                        className="col-span-2 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
+                        className="col-span-1 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
                         onClick={() => handleSort('salary')}
                       >
                         SALARY
@@ -793,7 +724,7 @@ export default function PlayerPoolPage() {
                         )}
                       </div>
                       <div 
-                        className="col-span-2 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
+                        className="col-span-1 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
                         onClick={() => handleSort('projection')}
                       >
                         PROJECTION
@@ -837,20 +768,20 @@ export default function PlayerPoolPage() {
                           <div
                             key={player.id}
                             className={`
-                              grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/50 last:border-b-0
+                              grid grid-cols-[repeat(13,_minmax(0,_1fr))] gap-2 px-6 py-3 border-b border-border/50 last:border-b-0 items-center whitespace-nowrap
                               ${player.excluded === true ? 'opacity-50 bg-muted/30' : ''} 
                               hover:bg-muted/50 transition-colors
                             `}
                           >
-                            <div className="col-span-5">
-                              <div className="flex items-center gap-2">
+                            <div className="col-span-1">
+                              <div className="flex items-center gap-2 overflow-hidden">
                                 <button
                                   onClick={() => {/* onPlayerSelect(player) */}}
-                                  className="flex items-center gap-2 text-left hover:text-primary transition-colors group"
+                                  className="flex items-center gap-2 text-left hover:text-primary transition-colors group overflow-hidden"
                                 >
                                   <Link 
                                     href={`/profile/${player.player.playerDkId}`}
-                                    className={`text-sm font-medium ${player.excluded === true ? 'line-through' : ''} group-hover:underline`}
+                                    className={`text-sm font-medium ${player.excluded === true ? 'line-through' : ''} group-hover:underline truncate`}
                                   >
                                     {player.player.displayName}
                                   </Link>
@@ -870,7 +801,7 @@ export default function PlayerPoolPage() {
                             </div>
 
                             {/* Opponent */}
-                            <div className="col-span-2 text-center">
+                            <div className="col-span-1 text-center">
                               {(() => {
                                 const g = gamesMap[player.player.team];
                                 const data: WeekAnalysisData = {
@@ -924,11 +855,11 @@ export default function PlayerPoolPage() {
                               })()}
                             </div>
 
-                            <div className="col-span-2 text-right text-sm font-medium">
+                            <div className="col-span-1 text-right text-sm font-medium">
                               ${player.salary?.toLocaleString() || 'N/A'}
                             </div>
 
-                            <div className="col-span-2 text-right text-sm font-medium">
+                            <div className="col-span-1 text-right text-sm font-medium">
                               {player.projectedPoints || 'N/A'}
                             </div>
 
