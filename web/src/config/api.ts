@@ -5,6 +5,7 @@ export const API_CONFIG = {
     PLAYERS: '/api/players/',
     WEEKS: '/api/weeks/',
     TEAMS: '/api/teams/',
+    GAMES: '/api/games/',
     LINEUPS: '/api/lineups/',
     CSV_IMPORT: '/api/csv/'
   }

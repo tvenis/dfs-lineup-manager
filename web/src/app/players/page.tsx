@@ -2,15 +2,18 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { PlayerService } from '@/lib/playerService';
+import { WeekService } from '@/lib/weekService';
 import type { PlayerPoolEntry, Week } from '@/types/prd';
+import { PlayerWeekAnalysis, WeekAnalysisData } from '@/components/PlayerWeekAnalysis';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff, Search, X, UserX, User, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
+import { Eye, EyeOff, Search, X, UserX, User, ChevronUp, ChevronDown, ExternalLink, Info } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Minimal tooltip shim to avoid new dependency; optional
 import Link from 'next/link';
 
 export default function PlayerPoolPage() {
@@ -26,6 +29,7 @@ export default function PlayerPoolPage() {
   const [sortField, setSortField] = useState<string>('player');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [tierFilter, setTierFilter] = useState<number | 'all'>('all');
+  const [gamesMap, setGamesMap] = useState<Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }>>({});
 
   // Fetch data on component mount
   useEffect(() => {
@@ -57,6 +61,26 @@ export default function PlayerPoolPage() {
           console.log('🎯 Pool data entries length:', poolData.entries?.length || 'undefined');
           console.log('🎯 Pool data total:', poolData.total || 'undefined');
           setPlayerPool(poolData.entries || []);
+
+          // Fetch games for week and build mapping
+          try {
+            const gamesResp = await WeekService.getGamesForWeek(defaultWeek.id);
+            const map: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
+            (gamesResp.games || []).forEach((g: any) => {
+              if (g.team_abbr) {
+                map[g.team_abbr] = {
+                  opponentAbbr: g.opponent_abbr ?? null,
+                  homeOrAway: g.homeoraway as 'H' | 'A' | 'N',
+                  proj_spread: g.proj_spread ?? null,
+                  proj_total: g.proj_total ?? null,
+                  implied_team_total: g.implied_team_total ?? null
+                };
+              }
+            });
+            setGamesMap(map);
+          } catch (e) {
+            console.error('Failed to load games for week', e);
+          }
         }
       } catch (err: unknown) {
         console.error('🎯 Error fetching data:', err);
@@ -85,6 +109,24 @@ export default function PlayerPoolPage() {
         setError(null);
         const poolData = await PlayerService.getPlayerPool(selectedWeek, { limit: 1000 });
         setPlayerPool(poolData.entries || []);
+        try {
+          const gamesResp = await WeekService.getGamesForWeek(selectedWeek);
+          const map: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
+          (gamesResp.games || []).forEach((g: any) => {
+            if (g.team_abbr) {
+              map[g.team_abbr] = {
+                opponentAbbr: g.opponent_abbr ?? null,
+                homeOrAway: g.homeoraway as 'H' | 'A' | 'N',
+                proj_spread: g.proj_spread ?? null,
+                proj_total: g.proj_total ?? null,
+                implied_team_total: g.implied_team_total ?? null
+              };
+            }
+          });
+          setGamesMap(map);
+        } catch (e) {
+          console.error('Failed to load games for week', e);
+        }
       } catch (err: unknown) {
         console.error('Error fetching player pool:', err);
         setError('Failed to fetch player pool');
@@ -607,33 +649,40 @@ export default function PlayerPoolPage() {
                 <div className="overflow-x-auto">
                   {/* Table Header */}
                   <div className="bg-muted/10 border-b">
-                    <div className="grid grid-cols-12 gap-4 px-6 py-3 text-sm font-medium text-muted-foreground">
+                    <div className="grid grid-cols-20 gap-2 px-6 py-3 text-xs font-medium text-muted-foreground">
                       <div 
                         className="col-span-5 cursor-pointer hover:bg-muted/20 transition-colors flex items-center gap-1"
                         onClick={() => handleSort('player')}
                       >
                         PLAYER NAME
                         {sortField === 'player' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
-                      <div className="col-span-1 text-center">TEAM</div>
+                      <div className="col-span-2 text-center">
+                        <div>TEAM</div>
+                        <div className="text-[10px] opacity-70">O/U</div>
+                      </div>
+                      <div className="col-span-1 text-center">IMPLIED</div>
+                      <div className="col-span-2 text-center">OPPONENT</div>
+                      <div className="col-span-1 text-center">OPRK</div>
+                      <div className="col-span-1 text-center">SPREAD</div>
                       <div 
-                        className="col-span-1 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
+                        className="col-span-2 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
                         onClick={() => handleSort('salary')}
                       >
                         SALARY
                         {sortField === 'salary' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
                       <div 
-                        className="col-span-1 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
+                        className="col-span-2 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
                         onClick={() => handleSort('projection')}
                       >
                         PROJECTION
                         {sortField === 'projection' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
                       <div 
@@ -642,7 +691,7 @@ export default function PlayerPoolPage() {
                       >
                         VALUE
                         {sortField === 'value' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
                       <div className="col-span-1 text-center">STATUS</div>
@@ -700,15 +749,68 @@ export default function PlayerPoolPage() {
                               </div>
                             </div>
 
-                            <div className="col-span-1 text-center text-sm font-medium text-muted-foreground">
-                              {player.player.team}
+                            <div className="col-span-2 text-center text-sm font-medium text-muted-foreground">
+                              <div>{player.player.team}</div>
+                              <div className="text-[11px] opacity-80">
+                                {(() => {
+                                  const g = gamesMap[player.player.team];
+                                  return g?.proj_total ?? '-'
+                                })()}
+                              </div>
                             </div>
 
-                            <div className="col-span-1 text-right text-sm font-medium">
+                            {/* Implied */}
+                            <div className="col-span-1 text-center">
+                              {(() => {
+                                const g = gamesMap[player.player.team];
+                                const data: WeekAnalysisData = { implied: g?.implied_team_total ?? null };
+                                return <PlayerWeekAnalysis weekAnalysis={data} column="implied" />
+                              })()}
+                            </div>
+
+                            {/* Opponent */}
+                            <div className="col-span-2 text-center">
+                              {(() => {
+                                const g = gamesMap[player.player.team];
+                                const data: WeekAnalysisData = {
+                                  opponent: {
+                                    opponentAbbr: g?.opponentAbbr || null,
+                                    homeOrAway: g?.homeOrAway || 'N'
+                                  }
+                                };
+                                return <PlayerWeekAnalysis weekAnalysis={data} column="opponent" />
+                              })()}
+                            </div>
+
+                            {/* OPRK */}
+                            <div className="col-span-1 text-center">
+                              {(() => {
+                                const attrs = Array.isArray(player.draftStatAttributes) ? (player.draftStatAttributes as any[]) : []
+                                const oppRank = attrs.find((a: any) => a.id === -2) || {}
+                                const data: WeekAnalysisData = {
+                                  oprk: {
+                                    value: oppRank.value ?? 0,
+                                    quality: (oppRank.quality as 'High' | 'Medium' | 'Low') || 'Medium'
+                                  }
+                                }
+                                return <PlayerWeekAnalysis weekAnalysis={data} column="oprk" />
+                              })()}
+                            </div>
+
+                            {/* Spread */}
+                            <div className="col-span-1 text-center">
+                              {(() => {
+                                const g = gamesMap[player.player.team];
+                                const data: WeekAnalysisData = { spread: g?.proj_spread ?? null };
+                                return <PlayerWeekAnalysis weekAnalysis={data} column="spread" />
+                              })()}
+                            </div>
+
+                            <div className="col-span-2 text-right text-sm font-medium">
                               ${player.salary?.toLocaleString() || 'N/A'}
                             </div>
 
-                            <div className="col-span-1 text-right text-sm font-medium">
+                            <div className="col-span-2 text-right text-sm font-medium">
                               {player.projectedPoints || 'N/A'}
                             </div>
 

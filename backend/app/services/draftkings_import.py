@@ -27,6 +27,8 @@ class DraftKingsImportService:
     def __init__(self, db: Session):
         self.db = db
         self.base_url = "https://api.draftkings.com"
+        # Cache for team abbreviation -> id lookups to minimize DB hits
+        self._team_abbrev_to_id_cache: Dict[str, Optional[int]] = {}
         
     async def import_player_pool(self, week_id: int, draft_group: str) -> DraftKingsImportResponse:
         """
@@ -418,6 +420,22 @@ class DraftKingsImportService:
         Returns: 'added' or 'updated'
         """
         try:
+            # Resolve team_id from team abbreviation (if available)
+            team_id: Optional[int] = None
+            try:
+                team_abbrev = player_data.get('team')
+                if team_abbrev:
+                    # Use cache first
+                    if team_abbrev in self._team_abbrev_to_id_cache:
+                        team_id = self._team_abbrev_to_id_cache[team_abbrev]
+                    else:
+                        team_row = self.db.query(Team).filter(Team.abbreviation == team_abbrev).first()
+                        team_id = team_row.id if team_row else None
+                        self._team_abbrev_to_id_cache[team_abbrev] = team_id
+            except Exception as e:
+                # Don't fail the whole player upsert on team lookup issues; just log
+                logger.warning(f"Failed to resolve team_id for team '{player_data.get('team')}' - {str(e)}")
+
             # Extract only player fields that exist in the Player model
             player_fields = {
                 'playerDkId': player_data['playerDkId'],
@@ -427,6 +445,7 @@ class DraftKingsImportService:
                 'shortName': player_data['shortName'],
                 'position': player_data['position'],
                 'team': player_data['team'],
+                'team_id': team_id,
                 'playerImage50': player_data['playerImage50'],
                 'playerImage160': player_data['playerImage160']
             }
@@ -444,7 +463,7 @@ class DraftKingsImportService:
             if existing_player:
                 # Update existing player - only update fields that might change
                 # Don't update immutable fields like playerDkId
-                updateable_fields = ['firstName', 'lastName', 'displayName', 'shortName', 'position', 'team', 'playerImage50', 'playerImage160']
+                updateable_fields = ['firstName', 'lastName', 'displayName', 'shortName', 'position', 'team', 'team_id', 'playerImage50', 'playerImage160']
                 updated = False
                 for field in updateable_fields:
                     if field in player_fields and player_fields[field] is not None:

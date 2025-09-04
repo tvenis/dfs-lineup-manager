@@ -43,6 +43,7 @@ class Player(Base):
     shortName = Column(String(50))
     position = Column(String(10), nullable=False)  # 'QB' | 'RB' | 'WR' | 'TE' | 'DST'
     team = Column(String(10), ForeignKey("teams.abbreviation"), nullable=False)  # team abbreviation
+    team_id = Column(Integer, ForeignKey("teams.id"))  # traditional FK to teams.id
     playerImage50 = Column(String(500))  # URL to 50x50 player image
     playerImage160 = Column(String(500))  # URL to 160x160 player image
     hidden = Column(Boolean, default=False)  # Whether to hide player from Player Profile list

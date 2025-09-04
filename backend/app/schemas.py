@@ -40,6 +40,7 @@ class PlayerBase(BaseModel):
     shortName: Optional[str] = Field(None, max_length=50)
     position: str = Field(..., min_length=1, max_length=10)  # 'QB' | 'RB' | 'WR' | 'TE' | 'DST'
     team: str = Field(..., min_length=1, max_length=10)  # team abbreviation
+    team_id: Optional[int] = Field(None, description="Foreign key to teams.id")
     playerImage50: Optional[str] = Field(None, max_length=500, description="URL to 50x50 player image")
     playerImage160: Optional[str] = Field(None, max_length=500, description="URL to 160x160 player image")
     hidden: bool = Field(default=False, description="Whether to hide player from Player Profile list")
@@ -54,6 +55,7 @@ class PlayerUpdate(BaseModel):
     shortName: Optional[str] = Field(None, max_length=50)
     position: Optional[str] = Field(None, min_length=1, max_length=10)
     team: Optional[str] = Field(None, min_length=1, max_length=10)
+    team_id: Optional[int] = Field(None, description="Foreign key to teams.id")
     playerImage50: Optional[str] = Field(None, max_length=500)
     playerImage160: Optional[str] = Field(None, max_length=500)
     hidden: Optional[bool] = Field(None, description="Whether to hide player from Player Profile list")
