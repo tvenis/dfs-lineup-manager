@@ -549,9 +549,9 @@ async def import_odds(
                                         game.proj_total = total_value
                                     break
                         
-                        # Calculate implied team total: (proj_total / 2) + (proj_spread / 2)
+                        # Calculate implied team total: (proj_total / 2) - (proj_spread / 2)
                         if game.proj_total is not None and game.proj_spread is not None:
-                            game.implied_team_total = (game.proj_total / 2) + (game.proj_spread / 2)
+                            game.implied_team_total = (game.proj_total / 2) - (game.proj_spread / 2)
                         
                         game.updated_at = datetime.utcnow()
                         games_updated += 1
