@@ -56,8 +56,7 @@ const mockGames = [
 const marketOptions = [
   { id: 'h2h', label: 'Head to Head', description: 'Moneyline betting' },
   { id: 'spreads', label: 'Spreads', description: 'Point spread betting' },
-  { id: 'totals', label: 'Totals', description: 'Over/Under betting' },
-  { id: 'outrights', label: 'Outrights', description: 'Season/championship futures' }
+  { id: 'totals', label: 'Totals', description: 'Over/Under betting' }
 ]
 
 // Types for API responses
@@ -112,8 +111,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   const [oddsEndTime, setOddsEndTime] = useState<Date | undefined>(undefined)
   const [oddsRegion, setOddsRegion] = useState<string>('us')
   const [oddsMarkets, setOddsMarkets] = useState<string[]>(['h2h', 'spreads', 'totals']) // Default selection
-  const [oddsFormat, setOddsFormat] = useState<string>('decimal')
-  const [oddsDateFormat, setOddsDateFormat] = useState<string>('iso')
+  // Odds/Date format removed; odds always requested in american and date in iso by backend
   const [oddsBookmakers, setOddsBookmakers] = useState<string>('draftkings')
   const [oddsDaysFrom, setOddsDaysFrom] = useState<string>('1')
   const [oddsGame, setOddsGame] = useState<string>('')
@@ -348,6 +346,17 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       return
     }
 
+    // Validate required parameters for Odds endpoint
+    if (endpoint === 'odds' && (!oddsStartTime || !oddsEndTime)) {
+      alert('Please configure Start Time and End Time for the Odds endpoint')
+      return
+    }
+
+    if (endpoint === 'odds' && !selectedWeekId) {
+      alert('Please select a week for the Odds endpoint')
+      return
+    }
+
     setIsImportingOdds(true)
     
     try {
@@ -390,8 +399,33 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           }
           requestBody.regions = oddsRegion
           requestBody.markets = oddsMarkets.join(',')
-          requestBody.odds_format = oddsFormat
-          requestBody.date_format = oddsDateFormat
+          // odds/date format not used for events
+          requestBody.bookmakers = oddsBookmakers
+          break
+        case 'odds':
+          // Map sport selection to API format
+          sport = oddsSport === 'NFL' ? 'americanfootball_nfl' : oddsSport
+          apiUrl = `http://localhost:8000/api/odds-api/odds/${sport}`
+          description = 'NFL odds for current week'
+          
+          // Add required parameters for odds
+          requestBody.week_id = selectedWeekId
+          
+          // Format times according to Odds-API requirements
+          if (oddsStartTime) {
+            const startDate = new Date(oddsStartTime)
+            startDate.setUTCHours(0, 0, 0, 0) // Set to midnight UTC
+            requestBody.commence_time_from = startDate.toISOString().replace('.000Z', 'Z')
+          }
+          
+          if (oddsEndTime) {
+            const endDate = new Date(oddsEndTime)
+            endDate.setUTCHours(23, 59, 0, 0) // Set to 23:59:00 UTC
+            requestBody.commence_time_to = endDate.toISOString().replace('.000Z', 'Z')
+          }
+          requestBody.regions = oddsRegion
+          requestBody.markets = oddsMarkets.join(',')
+          // odds/date format forced by backend for odds endpoint
           requestBody.bookmakers = oddsBookmakers
           break
         default:
@@ -437,6 +471,13 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         recordsAdded = data.games_created || 0
         recordsUpdated = data.games_updated || 0
         details = `${recordsAdded} games created, ${recordsUpdated} games updated from Odds-API`
+        if (data.errors && data.errors.length > 0) {
+          details += ` (${data.errors.length} errors)`
+        }
+      } else if (endpoint === 'odds') {
+        recordsAdded = 0
+        recordsUpdated = data.games_updated || 0
+        details = `${recordsUpdated} games updated with odds data from Odds-API`
         if (data.errors && data.errors.length > 0) {
           details += ` (${data.errors.length} errors)`
         }
@@ -833,33 +874,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   </div>
                 </div>
 
-                {/* Format Settings */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Odds Format</Label>
-                    <Select value={oddsFormat} onValueChange={setOddsFormat}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select format" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="decimal">Decimal</SelectItem>
-                        <SelectItem value="american">American</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date Format</Label>
-                    <Select value={oddsDateFormat} onValueChange={setOddsDateFormat}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select date format" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="iso">ISO 8601</SelectItem>
-                        <SelectItem value="unix">Unix Timestamp</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                {/* Odds/Date format configuration removed; backend forces american/iso */}
 
                 <Alert>
                   <CheckCircle className="h-4 w-4" />
@@ -946,6 +961,47 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                     Required parameters: API Key, Sport, Start Date, End Date, Week
                     <br />
                     Times are automatically set to midnight (start) and 23:59 (end)
+                  </div>
+                </div>
+
+                {/* Odds Endpoint */}
+                <div className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium flex items-center gap-2">
+                        Odds
+                        <Badge variant="secondary" className="text-xs">
+                          New
+                        </Badge>
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        Import NFL odds data to update game records with money lines, spreads, and totals
+                      </p>
+                    </div>
+                    <Badge variant="outline">Odds</Badge>
+                  </div>
+                  <Button 
+                    onClick={() => handleOddsApiImport('odds')}
+                    disabled={isImportingOdds || !oddsApiKey.trim() || !oddsStartTime || !oddsEndTime || !selectedWeekId}
+                    className="w-full gap-2"
+                    size="sm"
+                  >
+                    {isImportingOdds ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Import Odds
+                      </>
+                    )}
+                  </Button>
+                  <div className="text-xs text-muted-foreground">
+                    Required parameters: API Key, Sport, Start Date, End Date, Week
+                    <br />
+                    Updates existing games with money line, spread, and total odds
                   </div>
                 </div>
 

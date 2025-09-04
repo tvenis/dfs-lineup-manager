@@ -18,6 +18,15 @@ class OddsApiService:
         self.api_key = api_key
         self.base_url = ODDS_API_BASE_URL
     
+    def american_to_decimal(self, american_odds: float) -> float:
+        """Convert American odds to decimal odds"""
+        if american_odds > 0:
+            # Positive American odds: decimal = (american / 100) + 1
+            return (american_odds / 100) + 1
+        else:
+            # Negative American odds: decimal = (100 / abs(american)) + 1
+            return (100 / abs(american_odds)) + 1
+    
     async def get_participants(self, sport: str) -> List[Dict[str, Any]]:
         """Fetch participants from Odds-API"""
         url = f"{self.base_url}/sports/{sport}/participants"
@@ -43,7 +52,6 @@ class OddsApiService:
     
     async def get_events(self, sport: str, commence_time_from: str = None, commence_time_to: str = None, 
                         regions: str = "us", markets: str = "h2h,spreads,totals", 
-                        odds_format: str = "decimal", date_format: str = "iso", 
                         bookmakers: str = "draftkings") -> List[Dict[str, Any]]:
         """Fetch events from Odds-API"""
         url = f"{self.base_url}/sports/{sport}/events"
@@ -51,8 +59,6 @@ class OddsApiService:
             "apiKey": self.api_key,
             "regions": regions,
             "markets": markets,
-            "oddsFormat": odds_format,
-            "dateFormat": date_format,
             "bookmakers": bookmakers
         }
         
@@ -87,6 +93,53 @@ class OddsApiService:
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to fetch events: {str(e)}"
+                )
+    
+    async def get_odds(self, sport: str, commence_time_from: str = None, commence_time_to: str = None, 
+                      regions: str = "us", markets: str = "h2h,spreads,totals", 
+                      bookmakers: str = "draftkings") -> List[Dict[str, Any]]:
+        """Fetch odds from Odds-API"""
+        url = f"{self.base_url}/sports/{sport}/odds"
+        params = {
+            "apiKey": self.api_key,
+            "regions": regions,
+            "markets": markets,
+            "oddsFormat": "american",
+            "dateFormat": "iso",
+            "bookmakers": bookmakers
+        }
+        
+        # Add optional time parameters - format for Odds-API (YYYY-MM-DDTHH:MM:SSZ)
+        if commence_time_from:
+            # Convert to Odds-API format (remove milliseconds if present)
+            if '.' in commence_time_from:
+                commence_time_from = commence_time_from.split('.')[0] + 'Z'
+            elif not commence_time_from.endswith('Z'):
+                commence_time_from = commence_time_from + 'Z'
+            params["commenceTimeFrom"] = commence_time_from
+            
+        if commence_time_to:
+            # Convert to Odds-API format (remove milliseconds if present)
+            if '.' in commence_time_to:
+                commence_time_to = commence_time_to.split('.')[0] + 'Z'
+            elif not commence_time_to.endswith('Z'):
+                commence_time_to = commence_time_to + 'Z'
+            params["commenceTimeTo"] = commence_time_to
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                raise HTTPException(
+                    status_code=e.response.status_code,
+                    detail=f"Odds-API request failed: {e.response.text}"
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to fetch odds: {str(e)}"
                 )
 
 @router.post("/participants/{sport}")
@@ -214,8 +267,7 @@ async def import_events(
     commence_time_to = request.get("commence_time_to")
     regions = request.get("regions", "us")
     markets = request.get("markets", "h2h,spreads,totals")
-    odds_format = request.get("odds_format", "decimal")
-    date_format = request.get("date_format", "iso")
+    # Events endpoint does not use odds/date format
     bookmakers = request.get("bookmakers", "draftkings")
     
     try:
@@ -229,8 +281,6 @@ async def import_events(
             commence_time_to=commence_time_to,
             regions=regions,
             markets=markets,
-            odds_format=odds_format,
-            date_format=date_format,
             bookmakers=bookmakers
         )
         
@@ -351,6 +401,185 @@ async def import_events(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to import events: {str(e)}"
+        )
+
+@router.post("/odds/{sport}")
+async def import_odds(
+    sport: str,
+    request: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Import odds from Odds-API and update Game records
+    
+    Args:
+        sport: Sport identifier (e.g., 'americanfootball_nfl')
+        request: Request body containing API key, week_id, and optional parameters
+        db: Database session
+    
+    Returns:
+        Import results with counts and details
+    """
+    api_key = request.get("api_key")
+    week_id = request.get("week_id")
+    
+    if not api_key or not api_key.strip():
+        raise HTTPException(status_code=400, detail="API key is required")
+    
+    if not week_id:
+        raise HTTPException(status_code=400, detail="week_id is required")
+    
+    # Optional parameters with defaults
+    commence_time_from = request.get("commence_time_from")
+    commence_time_to = request.get("commence_time_to")
+    regions = request.get("regions", "us")
+    markets = request.get("markets", "h2h,spreads,totals")
+    # Odds endpoint: force odds/date format
+    odds_format = "american"
+    bookmakers = request.get("bookmakers", "draftkings")
+    
+    try:
+        # Initialize Odds-API service
+        odds_service = OddsApiService(api_key)
+        
+        print(f"DEBUG: Using odds format (forced): {odds_format}")
+        
+        # Fetch odds from Odds-API
+        odds_data = await odds_service.get_odds(
+            sport=sport,
+            commence_time_from=commence_time_from,
+            commence_time_to=commence_time_to,
+            regions=regions,
+            markets=markets,
+            # Force formats for odds endpoint
+            bookmakers=bookmakers
+        )
+        
+        if not odds_data:
+            return {
+                "success": True,
+                "message": "No odds data found",
+                "games_updated": 0,
+                "total_processed": 0
+            }
+        
+        # Process odds data and update Game records
+        games_updated = 0
+        errors = []
+        
+        for event in odds_data:
+            try:
+                event_id = event["id"]
+                
+                # Find games with this odds_api_gameid
+                games = db.query(Game).filter(
+                    Game.odds_api_gameid == event_id,
+                    Game.week_id == week_id
+                ).all()
+                
+                print(f"DEBUG: Found {len(games)} games for event ID {event_id}")
+                
+                if not games:
+                    errors.append(f"No games found for event ID {event_id}")
+                    continue
+                
+                # Extract odds data from the first bookmaker (DraftKings)
+                bookmaker_data = None
+                if event.get("bookmakers"):
+                    for bookmaker in event["bookmakers"]:
+                        if bookmaker.get("key") == "draftkings":
+                            bookmaker_data = bookmaker
+                            break
+                
+                if not bookmaker_data or not bookmaker_data.get("markets"):
+                    errors.append(f"No DraftKings odds data found for event ID {event_id}")
+                    continue
+                
+                # Extract market data
+                h2h_data = None
+                spreads_data = None
+                totals_data = None
+                
+                for market in bookmaker_data["markets"]:
+                    if market["key"] == "h2h":
+                        h2h_data = market
+                    elif market["key"] == "spreads":
+                        spreads_data = market
+                    elif market["key"] == "totals":
+                        totals_data = market
+                
+                # Process each game record
+                for game in games:
+                    try:
+                        # Update money line from h2h data
+                        if h2h_data and h2h_data.get("outcomes"):
+                            for outcome in h2h_data["outcomes"]:
+                                # Find the team name that matches this game's team
+                                team = db.query(Team).filter(Team.id == game.team_id).first()
+                                if team and team.full_name == outcome["name"]:
+                                    price = outcome["price"]
+                                    # Convert American odds to decimal if needed
+                                    if odds_format == "american":
+                                        converted_price = odds_service.american_to_decimal(price)
+                                        game.money_line = converted_price
+                                        print(f"DEBUG: Updated {team.full_name} money line: {price} (American) -> {converted_price} (Decimal)")
+                                    else:
+                                        game.money_line = price
+                                        print(f"DEBUG: Updated {team.full_name} money line: {price} (Decimal)")
+                                    break
+                        
+                        # Update spread from spreads data
+                        if spreads_data and spreads_data.get("outcomes"):
+                            for outcome in spreads_data["outcomes"]:
+                                # Find the team name that matches this game's team
+                                team = db.query(Team).filter(Team.id == game.team_id).first()
+                                if team and team.full_name == outcome["name"]:
+                                    # Handle negative spreads properly
+                                    spread_value = outcome.get("point")
+                                    if spread_value is not None:
+                                        game.proj_spread = spread_value
+                                    break
+                        
+                        # Update total from totals data (same for both teams)
+                        if totals_data and totals_data.get("outcomes"):
+                            for outcome in totals_data["outcomes"]:
+                                if outcome["name"] == "Over":
+                                    total_value = outcome.get("point")
+                                    if total_value is not None:
+                                        game.proj_total = total_value
+                                    break
+                        
+                        # Calculate implied team total: (proj_total / 2) + (proj_spread / 2)
+                        if game.proj_total is not None and game.proj_spread is not None:
+                            game.implied_team_total = (game.proj_total / 2) + (game.proj_spread / 2)
+                        
+                        game.updated_at = datetime.utcnow()
+                        games_updated += 1
+                        
+                    except Exception as e:
+                        errors.append(f"Failed to update game {game.id}: {str(e)}")
+                        
+            except Exception as e:
+                errors.append(f"Failed to process event {event.get('id', 'Unknown')}: {str(e)}")
+        
+        # Commit all changes
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Successfully processed odds for {len(odds_data)} events",
+            "games_updated": games_updated,
+            "total_processed": len(odds_data),
+            "errors": errors
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to import odds: {str(e)}"
         )
 
 @router.get("/sports")
