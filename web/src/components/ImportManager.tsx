@@ -5,8 +5,60 @@ import { Alert, AlertDescription } from './ui/alert'
 import { Label } from './ui/label'
 import { Input } from './ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
-import { Upload, FileText, CheckCircle, XCircle, Eye, RefreshCw, Database } from 'lucide-react'
+import { Upload, FileText, CheckCircle, XCircle, Eye, RefreshCw, Database, Globe, Calendar as CalendarIcon } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { Checkbox } from './ui/checkbox'
+import { Calendar } from './ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { Badge } from './ui/badge'
 import { ImportPlayerProjections } from './ImportPlayerProjections'
+
+// Mock data for the component
+const mockImportHistory = [
+  {
+    id: 1,
+    type: 'import' as const,
+    filename: 'Draft Group 12345',
+    format: 'API',
+    timestamp: new Date('2024-01-15T10:30:00'),
+    status: 'success' as const,
+    details: '150 players imported successfully for Week 1',
+    week: 'Week 1'
+  },
+  {
+    id: 2,
+    type: 'import' as const,
+    filename: 'projections_week1.csv',
+    format: 'CSV',
+    timestamp: new Date('2024-01-15T09:15:00'),
+    status: 'success' as const,
+    details: '120 projections imported successfully',
+    week: 'Week 1'
+  }
+]
+
+const mockWeeks = [
+  { value: '1', label: 'Week 1', isActive: true },
+  { value: '2', label: 'Week 2', isActive: false },
+  { value: '3', label: 'Week 3', isActive: false },
+  { value: 'wc', label: 'Wild Card', isActive: false },
+  { value: 'div', label: 'Divisional', isActive: false },
+  { value: 'conf', label: 'Conference Championship', isActive: false },
+  { value: 'sb', label: 'Super Bowl', isActive: false }
+]
+
+const mockGames = [
+  { value: 'game1', label: 'Game 1' },
+  { value: 'game2', label: 'Game 2' },
+  { value: 'game3', label: 'Game 3' }
+]
+
+const marketOptions = [
+  { id: 'h2h', label: 'Head to Head', description: 'Moneyline betting' },
+  { id: 'spreads', label: 'Spreads', description: 'Point spread betting' },
+  { id: 'totals', label: 'Totals', description: 'Over/Under betting' },
+  { id: 'outrights', label: 'Outrights', description: 'Season/championship futures' }
+]
 
 // Types for API responses
 interface DraftKingsImportResponse {
@@ -41,6 +93,7 @@ interface RecentActivity {
   errors: string[]
   user: string | null
   details: unknown
+  importType?: 'player-pool' | 'projections' | 'odds-api' // New field for tab-specific tracking
 }
 
 export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string }) {
@@ -50,6 +103,22 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   const [draftGroup, setDraftGroup] = useState<string>('')
   const [isImporting, setIsImporting] = useState(false)
   const [, setLastImportResult] = useState<DraftKingsImportResponse | null>(null)
+  
+  // Odds-API Integration state
+  const [oddsApiKey, setOddsApiKey] = useState<string>('')
+  const [oddsWeek, setOddsWeek] = useState<string>(selectedWeek) // Default to active week
+  const [oddsSport, setOddsSport] = useState<string>('NFL')
+  const [oddsStartTime, setOddsStartTime] = useState<Date | undefined>(undefined)
+  const [oddsEndTime, setOddsEndTime] = useState<Date | undefined>(undefined)
+  const [oddsRegion, setOddsRegion] = useState<string>('us')
+  const [oddsMarkets, setOddsMarkets] = useState<string[]>(['h2h', 'spreads', 'totals']) // Default selection
+  const [oddsFormat, setOddsFormat] = useState<string>('decimal')
+  const [oddsDateFormat, setOddsDateFormat] = useState<string>('iso')
+  const [oddsBookmakers, setOddsBookmakers] = useState<string>('draftkings')
+  const [oddsDaysFrom, setOddsDaysFrom] = useState<string>('1')
+  const [oddsGame, setOddsGame] = useState<string>('')
+  const [isImportingOdds, setIsImportingOdds] = useState(false)
+  const [activeTab, setActiveTab] = useState<string>('import-pool')
 
   // Check for success parameter from review page
   useEffect(() => {
@@ -103,8 +172,16 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         allActivities.push(...projectionsData)
       }
       
-      // Sort by timestamp (most recent first) and limit to 20
+      // Add import types to existing activities and sort by timestamp (most recent first)
       const sortedActivities = allActivities
+        .map(activity => ({
+          ...activity,
+          importType: activity.importType || (
+            activity.draftGroup === 'Odds-API' ? 'odds-api' :
+            activity.fileType === 'CSV' ? 'projections' :
+            'player-pool'
+          )
+        }))
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0, 20)
       
@@ -144,6 +221,26 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       setLastImportResult(result)
 
       await fetchRecentActivity() // Refresh history
+      
+      // Add a local activity item for immediate feedback
+      const newHistoryItem: RecentActivity = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        action: 'import',
+        fileType: 'API',
+        fileName: `Draft Group ${draftGroup}`,
+        week_id: selectedWeekId,
+        draftGroup: draftGroup,
+        recordsAdded: result.players_added + result.entries_added,
+        recordsUpdated: result.players_updated + result.entries_updated,
+        recordsSkipped: result.entries_skipped,
+        errors: result.errors,
+        user: null,
+        details: null,
+        importType: 'player-pool'
+      }
+      
+      setHistory(prev => [newHistoryItem, ...prev])
 
     } catch (error) {
       console.error('Import failed:', error)
@@ -152,6 +249,26 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         errors: [error instanceof Error ? error.message : 'Unknown error occurred'],
         total_processed: 0
       })
+      
+      // Add error activity item
+      const errorHistoryItem: RecentActivity = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        action: 'import',
+        fileType: 'API',
+        fileName: `Draft Group ${draftGroup}`,
+        week_id: selectedWeekId || 0,
+        draftGroup: draftGroup,
+        recordsAdded: 0,
+        recordsUpdated: 0,
+        recordsSkipped: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error occurred'],
+        user: null,
+        details: null,
+        importType: 'player-pool'
+      }
+      
+      setHistory(prev => [errorHistoryItem, ...prev])
     } finally {
       setIsImporting(false)
     }
@@ -160,6 +277,30 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   const getWeekLabel = (weekId: number) => {
     const week = weeks.find(w => w.id === weekId)
     return week ? week.label : `Week ID: ${weekId}`
+  }
+
+  const getImportTypeLabel = (activity: RecentActivity) => {
+    if (activity.importType) {
+      switch (activity.importType) {
+        case 'player-pool':
+          return 'Import Player Pool'
+        case 'projections':
+          return 'Import Projections'
+        case 'odds-api':
+          return 'Odds-API Integration'
+        default:
+          return 'Import'
+      }
+    }
+    
+    // Fallback for existing activities without importType
+    if (activity.draftGroup === 'Odds-API') {
+      return 'Odds-API Integration'
+    }
+    if (activity.fileType === 'CSV') {
+      return 'Import Projections'
+    }
+    return 'Import Player Pool'
   }
 
   const handleProjectionImportComplete = (importData: {
@@ -183,10 +324,184 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       recordsSkipped: importData.failedImports,
       errors: importData.failedImports > 0 ? [`${importData.failedImports} failed to match`] : [],
       user: null,
-      details: null
+      details: null,
+      importType: 'projections'
     }
     
     setHistory(prev => [newHistoryItem, ...prev])
+  }
+
+  const handleOddsApiImport = async (endpoint: string) => {
+    if (!oddsApiKey.trim()) {
+      alert('Please enter your Odds-API key')
+      return
+    }
+
+    // Validate required parameters for Events endpoint
+    if (endpoint === 'events' && (!oddsStartTime || !oddsEndTime)) {
+      alert('Please configure Start Time and End Time for the Events endpoint')
+      return
+    }
+
+    if (endpoint === 'events' && !selectedWeekId) {
+      alert('Please select a week for the Events endpoint')
+      return
+    }
+
+    setIsImportingOdds(true)
+    
+    try {
+      let apiUrl = ''
+      let description = ''
+      let sport = ''
+      let requestBody: any = {
+        api_key: oddsApiKey
+      }
+      
+      switch (endpoint) {
+        case 'participants':
+          // Map sport selection to API format
+          sport = oddsSport === 'NFL' ? 'americanfootball_nfl' : oddsSport
+          apiUrl = `http://localhost:8000/api/odds-api/participants/${sport}`
+          description = 'NFL team participants'
+          break
+        case 'events':
+          // Map sport selection to API format
+          sport = oddsSport === 'NFL' ? 'americanfootball_nfl' : oddsSport
+          apiUrl = `http://localhost:8000/api/odds-api/events/${sport}`
+          description = 'NFL games/events'
+          
+          // Add required parameters for events
+          requestBody.week_id = selectedWeekId
+          
+          // Format times according to Odds-API requirements
+          // Start Time: Midnight of the selected day (00:00:00Z)
+          // End Time: 1 minute before midnight of the next day (23:59:00Z)
+          if (oddsStartTime) {
+            const startDate = new Date(oddsStartTime)
+            startDate.setUTCHours(0, 0, 0, 0) // Set to midnight UTC
+            requestBody.commence_time_from = startDate.toISOString().replace('.000Z', 'Z')
+          }
+          
+          if (oddsEndTime) {
+            const endDate = new Date(oddsEndTime)
+            endDate.setUTCHours(23, 59, 0, 0) // Set to 23:59:00 UTC
+            requestBody.commence_time_to = endDate.toISOString().replace('.000Z', 'Z')
+          }
+          requestBody.regions = oddsRegion
+          requestBody.markets = oddsMarkets.join(',')
+          requestBody.odds_format = oddsFormat
+          requestBody.date_format = oddsDateFormat
+          requestBody.bookmakers = oddsBookmakers
+          break
+        default:
+          throw new Error('Unknown endpoint')
+      }
+      
+      console.log(`Importing ${description} from Odds-API via backend`)
+      console.log(`Backend API URL: ${apiUrl}`)
+      console.log(`Request body:`, requestBody)
+      
+      // Make the API call to our backend
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `API request failed: ${response.status} ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      
+      // Process the API response
+      console.log('Backend Odds-API Response:', data)
+      
+      let details = ''
+      let recordsAdded = 0
+      let recordsUpdated = 0
+      
+      if (endpoint === 'participants') {
+        recordsAdded = data.teams_created || 0
+        recordsUpdated = data.teams_updated || 0
+        details = `${recordsAdded} teams created, ${recordsUpdated} teams updated from Odds-API`
+        if (data.errors && data.errors.length > 0) {
+          details += ` (${data.errors.length} errors)`
+        }
+      } else if (endpoint === 'events') {
+        recordsAdded = data.games_created || 0
+        recordsUpdated = data.games_updated || 0
+        details = `${recordsAdded} games created, ${recordsUpdated} games updated from Odds-API`
+        if (data.errors && data.errors.length > 0) {
+          details += ` (${data.errors.length} errors)`
+        }
+      }
+      
+      const newHistoryItem: RecentActivity = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        action: 'import',
+        fileType: 'API',
+        fileName: `Odds-API ${endpoint}`,
+        week_id: endpoint === 'events' ? selectedWeekId || 0 : 0,
+        draftGroup: 'Odds-API',
+        recordsAdded,
+        recordsUpdated,
+        recordsSkipped: 0,
+        errors: data.errors || [],
+        user: null,
+        details: null,
+        importType: 'odds-api'
+      }
+      
+      setHistory(prev => [newHistoryItem, ...prev])
+      
+    } catch (error) {
+      console.error('Odds-API import failed:', error)
+      
+      const errorHistoryItem: RecentActivity = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        action: 'import',
+        fileType: 'API',
+        fileName: `Odds-API ${endpoint}`,
+        week_id: endpoint === 'events' ? selectedWeekId || 0 : 0,
+        draftGroup: 'Odds-API',
+        recordsAdded: 0,
+        recordsUpdated: 0,
+        recordsSkipped: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+        user: null,
+        details: null,
+        importType: 'odds-api'
+      }
+      
+      setHistory(prev => [errorHistoryItem, ...prev])
+    } finally {
+      setIsImportingOdds(false)
+    }
+  }
+
+  const handleMarketChange = (marketId: string, checked: boolean) => {
+    if (checked) {
+      setOddsMarkets(prev => [...prev, marketId])
+    } else {
+      setOddsMarkets(prev => prev.filter(id => id !== marketId))
+    }
+  }
+
+  const formatDate = (date: Date | undefined) => {
+    if (!date) return 'Select date'
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    })
   }
 
   return (
@@ -195,13 +510,13 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       <div className="space-y-1">
         <h2>Import Data</h2>
         <p className="text-muted-foreground">
-          Import player data from DraftKings API or CSV files
+          Import player data from DraftKings API, CSV projection files, or Odds-API integration
         </p>
       </div>
 
       {/* Import Tabs */}
-      <Tabs defaultValue="import-pool" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="import-pool" className="space-y-6" onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="import-pool" className="gap-2">
             <Database className="w-4 h-4" />
             Import Player Pool
@@ -209,6 +524,10 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           <TabsTrigger value="import-projections" className="gap-2">
             <FileText className="w-4 h-4" />
             Import Projections
+          </TabsTrigger>
+          <TabsTrigger value="odds-api" className="gap-2">
+            <Globe className="w-4 h-4" />
+            Odds-API Integration
           </TabsTrigger>
         </TabsList>
 
@@ -321,70 +640,426 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         <TabsContent value="import-projections">
           <ImportPlayerProjections onImportComplete={handleProjectionImportComplete} />
         </TabsContent>
+
+        <TabsContent value="odds-api">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Odds-API Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="w-5 h-5" />
+                  Odds-API Configuration
+                </CardTitle>
+                <CardDescription>
+                  Configure your Odds-API settings and standard parameters
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* API Key */}
+                <div className="space-y-2">
+                  <Label htmlFor="odds-api-key">API Key</Label>
+                  <Input
+                    id="odds-api-key"
+                    type="password"
+                    placeholder="Enter your Odds-API key"
+                    value={oddsApiKey}
+                    onChange={(e) => setOddsApiKey(e.target.value)}
+                  />
+                </div>
+
+                {/* Week and Sport */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Week</Label>
+                    <Select value={selectedWeekId?.toString() || ''} onValueChange={(value) => setSelectedWeekId(parseInt(value))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select week" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {weeks.map((week) => (
+                          <SelectItem key={week.id} value={week.id.toString()}>
+                            {week.label} {week.status === 'Active' ? '(Active)' : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sport</Label>
+                    <Select value={oddsSport} onValueChange={setOddsSport}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select sport" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NFL">NFL</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Start Time and End Time */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Start Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formatDate(oddsStartTime)}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={oddsStartTime}
+                          onSelect={setOddsStartTime}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <p className="text-xs text-muted-foreground">
+                      Will be set to 00:00:00Z (midnight UTC)
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>End Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formatDate(oddsEndTime)}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={oddsEndTime}
+                          onSelect={setOddsEndTime}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <p className="text-xs text-muted-foreground">
+                      Will be set to 23:59:00Z (1 min before midnight UTC)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Region and Bookmakers */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Region</Label>
+                    <Select value={oddsRegion} onValueChange={setOddsRegion}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select region" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="us">United States</SelectItem>
+                        <SelectItem value="uk">United Kingdom</SelectItem>
+                        <SelectItem value="eu">Europe</SelectItem>
+                        <SelectItem value="au">Australia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bookmakers</Label>
+                    <Select value={oddsBookmakers} onValueChange={setOddsBookmakers}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select bookmaker" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draftkings">DraftKings</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Markets */}
+                <div className="space-y-3">
+                  <Label>Markets</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {marketOptions.map((market) => (
+                      <div key={market.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={market.id}
+                          checked={oddsMarkets.includes(market.id)}
+                          onCheckedChange={(checked) => handleMarketChange(market.id, checked as boolean)}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label
+                            htmlFor={market.id}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {market.label}
+                          </label>
+                          <p className="text-xs text-muted-foreground">
+                            {market.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Days From and Game */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Days From</Label>
+                    <Select value={oddsDaysFrom} onValueChange={setOddsDaysFrom}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select days" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 Day</SelectItem>
+                        <SelectItem value="2">2 Days</SelectItem>
+                        <SelectItem value="3">3 Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Game</Label>
+                    <Select value={oddsGame} onValueChange={setOddsGame}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select game" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockGames.map((game) => (
+                          <SelectItem key={game.value} value={game.value}>
+                            {game.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Format Settings */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Odds Format</Label>
+                    <Select value={oddsFormat} onValueChange={setOddsFormat}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select format" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="decimal">Decimal</SelectItem>
+                        <SelectItem value="american">American</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date Format</Label>
+                    <Select value={oddsDateFormat} onValueChange={setOddsDateFormat}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select date format" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="iso">ISO 8601</SelectItem>
+                        <SelectItem value="unix">Unix Timestamp</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Alert>
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    These parameters will be applied to all Odds-API endpoint calls. Get your free API key from the-odds-api.com.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+
+            {/* Available Endpoints */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Available Endpoints</CardTitle>
+                <CardDescription>
+                  Import data from different Odds-API endpoints
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Participants Endpoint */}
+                <div className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">Participants</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Import NFL team data to populate Teams table
+                      </p>
+                    </div>
+                    <Badge variant="outline">Teams</Badge>
+                  </div>
+                  <Button 
+                    onClick={() => handleOddsApiImport('participants')}
+                    disabled={isImportingOdds || !oddsApiKey.trim()}
+                    className="w-full gap-2"
+                    size="sm"
+                  >
+                    {isImportingOdds ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Import Participants
+                      </>
+                    )}
+                  </Button>
+                  <div className="text-xs text-muted-foreground">
+                    Required parameters: API Key, Sport
+                  </div>
+                </div>
+
+                {/* Events Endpoint */}
+                <div className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">Events (Games)</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Import NFL games for the selected time period (requires Start/End Time)
+                      </p>
+                    </div>
+                    <Badge variant="outline">Games</Badge>
+                  </div>
+                  <Button 
+                    onClick={() => handleOddsApiImport('events')}
+                    disabled={isImportingOdds || !oddsApiKey.trim() || !oddsStartTime || !oddsEndTime || !selectedWeekId}
+                    className="w-full gap-2"
+                    size="sm"
+                  >
+                    {isImportingOdds ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Import Events
+                      </>
+                    )}
+                  </Button>
+                  <div className="text-xs text-muted-foreground">
+                    Required parameters: API Key, Sport, Start Date, End Date, Week
+                    <br />
+                    Times are automatically set to midnight (start) and 23:59 (end)
+                  </div>
+                </div>
+
+                {/* Placeholder for future endpoints */}
+                <div className="p-4 border rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-muted-foreground">More Endpoints</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Additional endpoints will be added here
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="bg-muted">Coming Soon</Badge>
+                  </div>
+                </div>
+
+                <Alert>
+                  <Globe className="h-4 w-4" />
+                  <AlertDescription>
+                    Configure your parameters above, then use the endpoints to import NFL team data and games from the Odds-API.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Import History */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Import Activity</CardTitle>
-          <CardDescription>Your recent import operations</CardDescription>
+          <CardDescription>
+            {activeTab === 'import-pool' && 'Your recent player pool imports'}
+            {activeTab === 'import-projections' && 'Your recent projection imports'}
+            {activeTab === 'odds-api' && 'Your recent Odds-API imports'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {history.filter(item => item.action === 'import').length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
-                No recent import activity found
-              </div>
-            ) : (
-              history
-                .filter(item => item.action === 'import')
-                .map((item, index) => (
-                  <div key={`${item.draftGroup}-${item.id}-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {(item.errors && item.errors.length > 0) ? (
-                        <XCircle className="w-4 h-4 text-red-600" />
-                      ) : (
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                      )}
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{item.fileName || `${item.action} for ${getWeekLabel(item.week_id)}`}</span>
-                          <span className="text-xs bg-muted px-2 py-1 rounded">
-                            {item.fileType}
-                          </span>
+            {(() => {
+              // Filter activities based on current tab
+              const filteredHistory = history.filter(item => {
+                if (item.action !== 'import') return false
+                
+                switch (activeTab) {
+                  case 'import-pool':
+                    return item.importType === 'player-pool' || (!item.importType && item.fileType === 'API' && item.draftGroup !== 'Odds-API')
+                  case 'import-projections':
+                    return item.importType === 'projections' || (!item.importType && item.fileType === 'CSV')
+                  case 'odds-api':
+                    return item.importType === 'odds-api' || (!item.importType && item.draftGroup === 'Odds-API')
+                  default:
+                    return true
+                }
+              })
+              
+              if (filteredHistory.length === 0) {
+                return (
+                  <div className="text-center text-gray-500 py-8">
+                    No recent {activeTab === 'import-pool' ? 'player pool' : activeTab === 'import-projections' ? 'projection' : 'Odds-API'} import activity found
+                  </div>
+                )
+              }
+              
+              return filteredHistory.map((item, index) => (
+                <div key={`${item.draftGroup}-${item.id}-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {(item.errors && item.errors.length > 0) ? (
+                      <XCircle className="w-4 h-4 text-red-600" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    )}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{getImportTypeLabel(item)}</span>
+                        <span className="text-xs bg-muted px-2 py-1 rounded">
+                          {item.fileType}
+                        </span>
+                        {item.week_id > 0 && (
                           <span className="text-xs bg-muted px-2 py-1 rounded">
                             {getWeekLabel(item.week_id)}
                           </span>
-                          <span className="text-xs bg-muted px-2 py-1 rounded">
-                            {item.draftGroup}
-                          </span>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            (item.errors && item.errors.length > 0) ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
-                          }`}>
-                            {(item.errors && item.errors.length > 0) ? 'Error' : 'Success'}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {item.recordsAdded} added, {item.recordsUpdated} updated, {item.recordsSkipped} skipped
-                        </p>
-                        {item.errors && item.errors.length > 0 && (
-                          <p className="text-sm text-red-600">
-                            Errors: {item.errors.join(', ')}
-                          </p>
                         )}
+                        <span className="text-xs bg-muted px-2 py-1 rounded">
+                          {item.draftGroup}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          (item.errors && item.errors.length > 0) ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
+                        }`}>
+                          {(item.errors && item.errors.length > 0) ? 'Error' : 'Success'}
+                        </span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(item.timestamp).toLocaleString()}
-                      </span>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <p className="text-sm text-muted-foreground">
+                        {item.recordsAdded} added, {item.recordsUpdated} updated, {item.recordsSkipped} skipped
+                      </p>
+                      {item.errors && item.errors.length > 0 && (
+                        <p className="text-sm text-red-600">
+                          Errors: {item.errors.join(', ')}
+                        </p>
+                      )}
                     </div>
                   </div>
-                ))
-            )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </span>
+                    <Button variant="ghost" size="sm">
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            })()}
           </div>
         </CardContent>
       </Card>
