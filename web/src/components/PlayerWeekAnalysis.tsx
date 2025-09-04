@@ -38,7 +38,16 @@ export function PlayerWeekAnalysis({ weekAnalysis, column }: { weekAnalysis: Wee
 
   if (column === 'oprk') {
     const { value, quality } = weekAnalysis.oprk || {}
-    const color = quality === 'High' ? 'text-green-600' : quality === 'Low' ? 'text-red-600' : 'text-foreground'
+    // Fallback: if quality missing, derive from value thresholds
+    let derivedQuality: 'High' | 'Medium' | 'Low' = 'Medium'
+    if (quality) {
+      derivedQuality = quality
+    } else if (typeof value === 'number') {
+      if (value <= 10) derivedQuality = 'High'
+      else if (value <= 20) derivedQuality = 'Medium'
+      else derivedQuality = 'Low'
+    }
+    const color = derivedQuality === 'High' ? 'text-green-600' : derivedQuality === 'Low' ? 'text-red-600' : 'text-yellow-600'
     return <span className={`text-sm ${color}`}>{value ?? '-'}</span>
   }
 

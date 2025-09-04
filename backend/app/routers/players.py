@@ -4,11 +4,11 @@ from typing import List, Optional
 import uuid
 
 from app.database import get_db
-from app.models import Player, Team, PlayerPoolEntry, Week
+from app.models import Player, Team, PlayerPoolEntry, Week, Game
 from app.schemas import (
     PlayerCreate, PlayerUpdate, Player as PlayerSchema,
     PlayerPoolEntryCreate, PlayerPoolEntryUpdate, PlayerPoolEntry as PlayerPoolEntrySchema,
-    PlayerListResponse, PlayerPoolResponse
+    PlayerListResponse, PlayerPoolResponse, PlayerPoolAnalysisResponse, PlayerPoolEntryWithAnalysis, WeekAnalysisData
 )
 
 router = APIRouter()
@@ -213,6 +213,54 @@ def get_player_pool(
         total=total,
         week_id=week_id
     )
+
+@router.get("/pool/{week_id}/analysis", response_model=PlayerPoolAnalysisResponse)
+def get_player_pool_with_analysis(
+    week_id: int,
+    db: Session = Depends(get_db)
+):
+    """Return player pool entries joined with Players and Games for the Active (or specified) week.
+
+    Mapping rules:
+    - Join `player_pool_entries.week_id == week_id`
+    - Join to `players` via `player_pool_entries.playerDkId`
+    - Use `players.team` or newly-added `players.team_id` to find the team row
+    - Join to `games` using `games.week_id == week_id` and matching `games.team_id == players.team_id`
+    """
+    # Verify week exists
+    week = db.query(Week).filter(Week.id == week_id).first()
+    if not week:
+        raise HTTPException(status_code=404, detail="Week not found")
+
+    # Build query with joins
+    # Note: support both team_id on Player (preferred) and fallback by Team abbreviation if needed.
+    query = (
+        db.query(PlayerPoolEntry, Player, Game)
+        .join(Player, PlayerPoolEntry.playerDkId == Player.playerDkId)
+        .outerjoin(
+            Game,
+            (Game.week_id == PlayerPoolEntry.week_id) & (Game.team_id == Player.team_id)
+        )
+        .filter(PlayerPoolEntry.week_id == week_id)
+    )
+
+    rows = query.all()
+
+    entries: list[PlayerPoolEntryWithAnalysis] = []
+    for row in rows:
+        entry, player, game = row
+        analysis = WeekAnalysisData(
+            opponent_abbr=(game.opponent_team.abbreviation if getattr(game, 'opponent_team', None) else None) if game else None,
+            homeoraway=game.homeoraway if game else None,
+            proj_spread=game.proj_spread if game else None,
+            proj_total=game.proj_total if game else None,
+            implied_team_total=game.implied_team_total if game else None,
+        )
+        # Reattach ORM objects: FastAPI will transform via Pydantic models
+        entry.player = player
+        entries.append(PlayerPoolEntryWithAnalysis(entry=entry, analysis=analysis))
+
+    return PlayerPoolAnalysisResponse(entries=entries, total=len(entries), week_id=week_id)
 
 @router.put("/pool/{entry_id}", response_model=PlayerPoolEntrySchema)
 def update_player_pool_entry(

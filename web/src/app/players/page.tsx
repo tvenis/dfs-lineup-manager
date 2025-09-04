@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff, Search, X, UserX, User, ChevronUp, ChevronDown, ExternalLink, Info } from 'lucide-react';
+import { Eye, EyeOff, Search, X, User, UserX, ChevronUp, ChevronDown, ExternalLink, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 // Minimal tooltip shim to avoid new dependency; optional
 import Link from 'next/link';
@@ -62,24 +63,43 @@ export default function PlayerPoolPage() {
           console.log('🎯 Pool data total:', poolData.total || 'undefined');
           setPlayerPool(poolData.entries || []);
 
-          // Fetch games for week and build mapping
+          // Prefer server-side joined analysis for accuracy
           try {
-            const gamesResp = await WeekService.getGamesForWeek(defaultWeek.id);
-            const map: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
-            (gamesResp.games || []).forEach((g: any) => {
-              if (g.team_abbr) {
-                map[g.team_abbr] = {
-                  opponentAbbr: g.opponent_abbr ?? null,
-                  homeOrAway: g.homeoraway as 'H' | 'A' | 'N',
-                  proj_spread: g.proj_spread ?? null,
-                  proj_total: g.proj_total ?? null,
-                  implied_team_total: g.implied_team_total ?? null
+            const analysis = await PlayerService.getPlayerPoolWithAnalysis(defaultWeek.id);
+            const mapByTeam: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
+            (analysis.entries || []).forEach((e: any) => {
+              const team = e.entry?.player?.team;
+              if (team) {
+                mapByTeam[team] = {
+                  opponentAbbr: e.analysis?.opponent_abbr ?? null,
+                  homeOrAway: (e.analysis?.homeoraway as 'H' | 'A' | 'N') || 'N',
+                  proj_spread: e.analysis?.proj_spread ?? null,
+                  proj_total: e.analysis?.proj_total ?? null,
+                  implied_team_total: e.analysis?.implied_team_total ?? null
                 };
               }
             });
-            setGamesMap(map);
+            setGamesMap(mapByTeam);
           } catch (e) {
-            console.error('Failed to load games for week', e);
+            console.error('Failed to load joined analysis; falling back to games map', e);
+            try {
+              const gamesResp = await WeekService.getGamesForWeek(defaultWeek.id);
+              const fallback: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
+              (gamesResp.games || []).forEach((g: any) => {
+                if (g.team_abbr) {
+                  fallback[g.team_abbr] = {
+                    opponentAbbr: g.opponent_abbr ?? null,
+                    homeOrAway: g.homeoraway as 'H' | 'A' | 'N',
+                    proj_spread: g.proj_spread ?? null,
+                    proj_total: g.proj_total ?? null,
+                    implied_team_total: g.implied_team_total ?? null
+                  };
+                }
+              });
+              setGamesMap(fallback);
+            } catch (e2) {
+              console.error('Failed to load games for week', e2);
+            }
           }
         }
       } catch (err: unknown) {
@@ -110,22 +130,41 @@ export default function PlayerPoolPage() {
         const poolData = await PlayerService.getPlayerPool(selectedWeek, { limit: 1000 });
         setPlayerPool(poolData.entries || []);
         try {
-          const gamesResp = await WeekService.getGamesForWeek(selectedWeek);
-          const map: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
-          (gamesResp.games || []).forEach((g: any) => {
-            if (g.team_abbr) {
-              map[g.team_abbr] = {
-                opponentAbbr: g.opponent_abbr ?? null,
-                homeOrAway: g.homeoraway as 'H' | 'A' | 'N',
-                proj_spread: g.proj_spread ?? null,
-                proj_total: g.proj_total ?? null,
-                implied_team_total: g.implied_team_total ?? null
+          const analysis = await PlayerService.getPlayerPoolWithAnalysis(selectedWeek);
+          const mapByTeam: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
+          (analysis.entries || []).forEach((e: any) => {
+            const team = e.entry?.player?.team;
+            if (team) {
+              mapByTeam[team] = {
+                opponentAbbr: e.analysis?.opponent_abbr ?? null,
+                homeOrAway: (e.analysis?.homeoraway as 'H' | 'A' | 'N') || 'N',
+                proj_spread: e.analysis?.proj_spread ?? null,
+                proj_total: e.analysis?.proj_total ?? null,
+                implied_team_total: e.analysis?.implied_team_total ?? null
               };
             }
           });
-          setGamesMap(map);
+          setGamesMap(mapByTeam);
         } catch (e) {
-          console.error('Failed to load games for week', e);
+          console.error('Failed to load joined analysis; falling back to games map', e);
+          try {
+            const gamesResp = await WeekService.getGamesForWeek(selectedWeek);
+            const map: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
+            (gamesResp.games || []).forEach((g: any) => {
+              if (g.team_abbr) {
+                map[g.team_abbr] = {
+                  opponentAbbr: g.opponent_abbr ?? null,
+                  homeOrAway: g.homeoraway as 'H' | 'A' | 'N',
+                  proj_spread: g.proj_spread ?? null,
+                  proj_total: g.proj_total ?? null,
+                  implied_team_total: g.implied_team_total ?? null
+                };
+              }
+            });
+            setGamesMap(map);
+          } catch (e2) {
+            console.error('Failed to load games for week', e2);
+          }
         }
       } catch (err: unknown) {
         console.error('Error fetching player pool:', err);
@@ -649,7 +688,7 @@ export default function PlayerPoolPage() {
                 <div className="overflow-x-auto">
                   {/* Table Header */}
                   <div className="bg-muted/10 border-b">
-                    <div className="grid grid-cols-20 gap-2 px-6 py-3 text-xs font-medium text-muted-foreground">
+                    <div className="grid grid-cols-20 gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground items-center">
                       <div 
                         className="col-span-5 cursor-pointer hover:bg-muted/20 transition-colors flex items-center gap-1"
                         onClick={() => handleSort('player')}
@@ -659,14 +698,91 @@ export default function PlayerPoolPage() {
                           sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
-                      <div className="col-span-2 text-center">
-                        <div>TEAM</div>
-                        <div className="text-[10px] opacity-70">O/U</div>
+                      <div className="col-span-1 text-center">TEAM</div>
+                      <div className="col-span-2 text-center flex items-center justify-center gap-1">
+                        OPPONENT
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>@ = Away game, • = Home game</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
-                      <div className="col-span-1 text-center">IMPLIED</div>
-                      <div className="col-span-2 text-center">OPPONENT</div>
-                      <div className="col-span-1 text-center">OPRK</div>
-                      <div className="col-span-1 text-center">SPREAD</div>
+                      <div className="col-span-1 text-center flex items-center justify-center gap-1">
+                        SPREAD
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Team's point spread. + underdog, - favorite</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div className="col-span-1 text-center flex items-center justify-center gap-1">
+                        O/U
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Game Over/Under total</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div className="col-span-1 text-center flex items-center justify-center gap-1">
+                        IMPLIED
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Team's implied point total</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="col-span-1 text-center flex items-center justify-center gap-1 cursor-pointer hover:bg-muted/20 transition-colors"
+                        onClick={() => handleSort('opponentRank')}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSort('opponentRank') }}
+                      >
+                        OPRK
+                        {sortField === 'opponentRank' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Info className="w-3 h-3 opacity-60 hover:opacity-100" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Opponent Position Rank — lower is better</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <div 
                         className="col-span-2 text-right cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-end gap-1"
                         onClick={() => handleSort('salary')}
@@ -749,23 +865,8 @@ export default function PlayerPoolPage() {
                               </div>
                             </div>
 
-                            <div className="col-span-2 text-center text-sm font-medium text-muted-foreground">
-                              <div>{player.player.team}</div>
-                              <div className="text-[11px] opacity-80">
-                                {(() => {
-                                  const g = gamesMap[player.player.team];
-                                  return g?.proj_total ?? '-'
-                                })()}
-                              </div>
-                            </div>
-
-                            {/* Implied */}
-                            <div className="col-span-1 text-center">
-                              {(() => {
-                                const g = gamesMap[player.player.team];
-                                const data: WeekAnalysisData = { implied: g?.implied_team_total ?? null };
-                                return <PlayerWeekAnalysis weekAnalysis={data} column="implied" />
-                              })()}
+                            <div className="col-span-1 text-center text-sm font-medium text-muted-foreground">
+                              {player.player.team}
                             </div>
 
                             {/* Opponent */}
@@ -782,6 +883,32 @@ export default function PlayerPoolPage() {
                               })()}
                             </div>
 
+                            {/* Spread */}
+                            <div className="col-span-1 text-center">
+                              {(() => {
+                                const g = gamesMap[player.player.team];
+                                const data: WeekAnalysisData = { spread: g?.proj_spread ?? null };
+                                return <PlayerWeekAnalysis weekAnalysis={data} column="spread" />
+                              })()}
+                            </div>
+
+                            {/* O/U */}
+                            <div className="col-span-1 text-center">
+                              {(() => {
+                                const g = gamesMap[player.player.team];
+                                const data: WeekAnalysisData = { total: g?.proj_total ?? null };
+                                return <PlayerWeekAnalysis weekAnalysis={data} column="total" />
+                              })()}
+                            </div>
+
+                            {/* Implied */}
+                            <div className="col-span-1 text-center">
+                              {(() => {
+                                const g = gamesMap[player.player.team];
+                                const data: WeekAnalysisData = { implied: g?.implied_team_total ?? null };
+                                return <PlayerWeekAnalysis weekAnalysis={data} column="implied" />
+                              })()}
+                            </div>
                             {/* OPRK */}
                             <div className="col-span-1 text-center">
                               {(() => {
@@ -794,15 +921,6 @@ export default function PlayerPoolPage() {
                                   }
                                 }
                                 return <PlayerWeekAnalysis weekAnalysis={data} column="oprk" />
-                              })()}
-                            </div>
-
-                            {/* Spread */}
-                            <div className="col-span-1 text-center">
-                              {(() => {
-                                const g = gamesMap[player.player.team];
-                                const data: WeekAnalysisData = { spread: g?.proj_spread ?? null };
-                                return <PlayerWeekAnalysis weekAnalysis={data} column="spread" />
                               })()}
                             </div>
 

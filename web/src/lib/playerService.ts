@@ -16,6 +16,25 @@ export interface PlayerPoolResponse {
   week_id: number;  // Updated to Integer
 }
 
+export interface WeekAnalysisDataDto {
+  opponent_abbr?: string | null;
+  homeoraway?: 'H' | 'A' | 'N' | string | null;
+  proj_spread?: number | null;
+  proj_total?: number | null;
+  implied_team_total?: number | null;
+}
+
+export interface PlayerPoolEntryWithAnalysisDto {
+  entry: PlayerPoolEntry;
+  analysis: WeekAnalysisDataDto;
+}
+
+export interface PlayerPoolAnalysisResponseDto {
+  entries: PlayerPoolEntryWithAnalysisDto[];
+  total: number;
+  week_id: number;
+}
+
 export interface Week {
   id: number;  // Updated to Integer
   week_number: number;
@@ -111,6 +130,16 @@ export class PlayerService {
       console.error('Error fetching player pool:', error);
       throw error;
     }
+  }
+
+  static async getPlayerPoolWithAnalysis(weekId: number): Promise<PlayerPoolAnalysisResponseDto> {
+    const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
+    const url = `${baseUrl.slice(0, -1)}/pool/${weekId}/analysis`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
   }
 
   static async updatePlayerPoolEntry(

@@ -491,3 +491,20 @@ class GameListResponse(BaseModel):
     games: List[GameSimple]
     total: int
     week_id: int
+
+# Analysis types for player pool joined with games
+class WeekAnalysisData(BaseModel):
+    opponent_abbr: Optional[str] = None
+    homeoraway: Optional[str] = None
+    proj_spread: Optional[float] = None
+    proj_total: Optional[float] = None
+    implied_team_total: Optional[float] = None
+
+class PlayerPoolEntryWithAnalysis(BaseModel):
+    entry: PlayerPoolEntry
+    analysis: WeekAnalysisData
+
+class PlayerPoolAnalysisResponse(BaseModel):
+    entries: List[PlayerPoolEntryWithAnalysis]
+    total: int
+    week_id: int
