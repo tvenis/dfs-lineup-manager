@@ -619,7 +619,7 @@ def optimize_lineup(
             print(f"DEBUG: Created CSV file: {csv_path}")
         
         try:
-            # Prepare configuration shared by both in-process and subprocess execution
+            # Prepare configuration for Python script
             config = {
                 'csvPath': csv_path,
                 'weekId': week_id,
@@ -637,57 +637,26 @@ def optimize_lineup(
                 'defaultPlayers': [{'position': dp.position, 'playerId': dp.playerId} for dp in settings.defaultPlayers]
             }
 
-            # First try in-process optimization to avoid subprocess stdio issues
-            optimization_result = None
-            try:
-                print("DEBUG: Attempting in-process optimization")
-                import sys as _sys
-                base_dir = os.path.join(os.path.dirname(__file__), '..', '..')
-                if base_dir not in _sys.path:
-                    _sys.path.append(base_dir)
-                from optimize_lineup_simple import optimize_lineup_greedy
-                optimization_result = optimize_lineup_greedy(
-                    csv_path=config['csvPath'],
-                    week_id=config['weekId'],
-                    salary_cap=config['salaryCap'],
-                    roster_size=config['rosterSize'],
-                    qb_min=config['qbMin'],
-                    rb_min=config['rbMin'],
-                    wr_min=config['wrMin'],
-                    te_min=config['teMin'],
-                    dst_min=config['dstMin'],
-                    flex_min=config['flexMin'],
-                    max_per_team=config['maxPerTeam'],
-                    enforce_qb_stack=config['enforceQbStack'],
-                    enforce_bringback=config['enforceBringback'],
-                    default_players=config['defaultPlayers']
+            # Run the Python optimization script (original behavior)
+            script_path = os.path.join(os.path.dirname(__file__), '..', '..', 'optimize_lineup_simple.py')
+            print(f"DEBUG: Running optimization script: {script_path}")
+            print(f"DEBUG: Config: {config}")
+            venv_python = os.path.join(os.path.dirname(__file__), '..', '..', 'venv', 'bin', 'python')
+            result = subprocess.run(
+                [venv_python, script_path, json.dumps(config)],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            print(f"DEBUG: Script return code: {result.returncode}")
+            print(f"DEBUG: Script stdout: {result.stdout}")
+            print(f"DEBUG: Script stderr: {result.stderr}")
+            if result.returncode != 0:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Optimization script failed (code {result.returncode}): {result.stderr}"
                 )
-                print("DEBUG: In-process optimization completed")
-            except Exception as inproc_err:
-                print(f"DEBUG: In-process optimization failed, falling back to subprocess: {inproc_err}")
-
-            if optimization_result is None:
-                # Run the Python optimization script as a subprocess fallback
-                script_path = os.path.join(os.path.dirname(__file__), '..', '..', 'optimize_lineup_simple.py')
-                print(f"DEBUG: Running optimization script: {script_path}")
-                print(f"DEBUG: Config: {config}")
-                venv_python = os.path.join(os.path.dirname(__file__), '..', '..', 'venv', 'bin', 'python')
-                result = subprocess.run(
-                    [venv_python, script_path, json.dumps(config)],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    stdin=subprocess.DEVNULL,
-                )
-                print(f"DEBUG: Script return code: {result.returncode}")
-                print(f"DEBUG: Script stdout: {result.stdout}")
-                print(f"DEBUG: Script stderr: {result.stderr}")
-                if result.returncode != 0:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Optimization script failed (code {result.returncode}): {result.stderr}"
-                    )
-                optimization_result = json.loads(result.stdout)
+            optimization_result = json.loads(result.stdout)
             
             if not optimization_result.get('success', False):
                 raise HTTPException(
