@@ -4,9 +4,11 @@ from typing import List, Dict, Any
 import httpx
 import os
 from app.database import get_db
-from app.models import Team, Game
+from app.models import Team, Game, Player, PlayerPropBet, RecentActivity
 from app.schemas import TeamCreate, TeamUpdate
 from datetime import datetime
+from urllib.parse import urlencode
+from sqlalchemy import and_, or_, func
 
 router = APIRouter(prefix="/api/odds-api", tags=["odds-api"])
 
@@ -140,6 +142,32 @@ class OddsApiService:
                 raise HTTPException(
                     status_code=500,
                     detail=f"Failed to fetch odds: {str(e)}"
+                )
+
+    async def get_event_odds(self, sport: str, event_id: str, markets: str, regions: str = "us") -> Dict[str, Any]:
+        """Fetch odds for a specific event (game) and markets from Odds-API"""
+        url = f"{self.base_url}/sports/{sport}/events/{event_id}/odds"
+        params = {
+            "apiKey": self.api_key,
+            "regions": regions,
+            "markets": markets,
+            "oddsFormat": "american",
+            "dateFormat": "iso",
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as e:
+                raise HTTPException(
+                    status_code=e.response.status_code,
+                    detail=f"Odds-API request failed: {e.response.text}"
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to fetch event odds: {str(e)}"
                 )
 
 @router.post("/participants/{sport}")
@@ -597,6 +625,278 @@ async def get_available_sports():
             }
         ]
     }
+
+@router.post("/player-props/{sport}")
+async def import_player_props(
+    sport: str,
+    request: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Import player prop bets from Odds-API for a given market (starting with player_pass_tds).
+    - Supports a specific game by odds_api_gameid, or All games for a week.
+    - If bookmakers is 'all', fetch from all bookmakers (omit param).
+    """
+    api_key = request.get("api_key")
+    week_id = request.get("week_id")
+    # Accept single or multiple markets
+    markets = request.get("markets")
+    if isinstance(markets, list):
+        market_list = [m for m in markets if isinstance(m, str) and m]
+    elif isinstance(markets, str) and markets:
+        market_list = [markets]
+    else:
+        market_list = ["player_pass_tds"]
+    regions = request.get("regions", "us")
+    event_id = request.get("event_id")  # odds_api_gameid, optional when 'All'
+    bookmakers = request.get("bookmakers", "all")  # 'all' or specific key like 'fanduel'
+
+    if not api_key or not api_key.strip():
+        raise HTTPException(status_code=400, detail="API key is required")
+    if not week_id:
+        raise HTTPException(status_code=400, detail="week_id is required")
+
+    try:
+        odds_service = OddsApiService(api_key)
+
+        # Resolve list of event IDs
+        event_ids: List[str] = []
+        if event_id and event_id != "All":
+            event_ids = [event_id]
+        else:
+            # Lookup all FUTURE games for the given week with odds_api_gameid
+            now = datetime.utcnow()
+            games = db.query(Game).filter(
+                and_(
+                    Game.week_id == week_id,
+                    Game.odds_api_gameid != None,
+                    or_(Game.start_time == None, Game.start_time >= now)
+                )
+            ).all()
+            # Deduplicate event_ids (one per event)
+            seen = set()
+            for g in games:
+                if g.odds_api_gameid and g.odds_api_gameid not in seen:
+                    seen.add(g.odds_api_gameid)
+                    event_ids.append(g.odds_api_gameid)
+
+        if not event_ids:
+            return {"success": True, "message": "No events found for week", "created": 0, "total_processed": 0, "errors": []}
+
+        total_created = 0
+        total_updated = 0
+        errors: List[str] = []
+        unmatched_players: List[str] = []
+        api_requests: List[Dict[str, Any]] = []
+
+        # Helper to normalize and resolve Player by full name (robust)
+        def normalize_token(token: str) -> str:
+            return token.replace("'", "").replace("-", " ").strip()
+
+        def strip_suffixes(name: str) -> str:
+            suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
+            parts = [p for p in name.split() if p.lower().strip('.').strip(',') not in suffixes]
+            return " ".join(parts)
+
+        def parse_first_last(name: str) -> tuple[str, str]:
+            cleaned = strip_suffixes(normalize_token(name))
+            tokens = [t for t in cleaned.split() if t]
+            if len(tokens) == 0:
+                return "", ""
+            if len(tokens) == 1:
+                return tokens[0], ""
+            return tokens[0], " ".join(tokens[1:])
+
+        def find_player_by_name(name: str) -> Player | None:
+            if not name:
+                return None
+            # Try exact displayName (case-insensitive)
+            player = db.query(Player).filter(func.lower(Player.displayName) == func.lower(func.trim(name))).first()
+            if player:
+                return player
+
+            first, last = parse_first_last(name)
+            if first and last:
+                # Try exact first/last (case-insensitive)
+                player = db.query(Player).filter(
+                    and_(func.lower(Player.firstName) == first.lower(), func.lower(Player.lastName) == last.lower())
+                ).first()
+                if player:
+                    return player
+
+            # Try relaxed matching by last name contains and first name initial
+            if last:
+                first_initial = first[:1].lower() if first else None
+                query = db.query(Player).filter(func.lower(Player.lastName).like(f"%{last.lower()}%"))
+                if first_initial:
+                    query = query.filter(func.lower(Player.firstName).like(f"{first_initial}%"))
+                player = query.first()
+                if player:
+                    return player
+
+            # Try shortName match if available
+            player = db.query(Player).filter(Player.shortName.ilike(f"%{name}%")).first()
+            if player:
+                return player
+
+            # Final fallback: contains on displayName
+            player = db.query(Player).filter(Player.displayName.ilike(f"%{name}%")).first()
+            return player
+
+        # Iterate over each event and request all selected markets in one API call (comma-delimited)
+        for eid in event_ids:
+            try:
+                markets_param = ",".join(market_list)
+                market_set = set(market_list)
+                # Record the exact request for observability
+                req_url = f"{odds_service.base_url}/sports/{sport}/events/{eid}/odds"
+                req_params = {
+                    "apiKey": api_key,
+                    "regions": regions,
+                    "markets": markets_param,
+                    "oddsFormat": "american",
+                    "dateFormat": "iso",
+                }
+                api_requests.append({
+                    "event_id": eid,
+                    "url": req_url,
+                    "params": req_params,
+                    "full_url": f"{req_url}?{urlencode(req_params)}"
+                })
+
+                event_odds = await odds_service.get_event_odds(sport=sport, event_id=eid, markets=markets_param, regions=regions)
+
+                # Basic validation
+                if not event_odds or not event_odds.get("bookmakers"):
+                    continue
+
+                for bookmaker in event_odds["bookmakers"]:
+                    # Respect bookmakers filter: if specific bookmaker chosen
+                    if bookmakers != "all" and bookmaker.get("key") != bookmakers:
+                        continue
+
+                    for mk in bookmaker.get("markets", []):
+                        mk_key = mk.get("key")
+                        if mk_key not in market_set:
+                            continue
+                        last_update_iso = mk.get("last_update")
+                        last_update_dt = None
+                        if last_update_iso:
+                            try:
+                                last_update_dt = datetime.fromisoformat(last_update_iso.replace('Z', '+00:00'))
+                            except Exception:
+                                last_update_dt = None
+
+                        for outcome in mk.get("outcomes", []):
+                            try:
+                                outcome_name = outcome.get("name")
+                                outcome_description = outcome.get("description")  # player name
+                                outcome_price = outcome.get("price")
+                                outcome_point = outcome.get("point")
+
+                                player_obj = find_player_by_name(outcome_description) if outcome_description else None
+
+                                if not player_obj:
+                                    unmatched_players.append(outcome_description or "<unknown>")
+                                    continue
+
+                                # Map event id back to the corresponding Game row for this week
+                                game_row = db.query(Game).filter(
+                                    Game.week_id == week_id,
+                                    Game.odds_api_gameid == eid
+                                ).first()
+                                if not game_row:
+                                    errors.append(f"No game row found for event {eid} (player {outcome_description})")
+                                    continue
+
+                                # Upsert: unique on (week_id, game_id, bookmakers, market, outcome_name, playerDkId)
+                                existing = db.query(PlayerPropBet).filter(
+                                    and_(
+                                        PlayerPropBet.week_id == week_id,
+                                        PlayerPropBet.game_id == game_row.id,
+                                        PlayerPropBet.bookmaker == bookmaker.get("key"),
+                                        PlayerPropBet.market == mk_key,
+                                        PlayerPropBet.outcome_name == outcome_name,
+                                        PlayerPropBet.playerDkId == player_obj.playerDkId,
+                                    )
+                                ).first()
+
+                                if existing:
+                                    existing.outcome_description = outcome_description
+                                    existing.outcome_price = outcome_price
+                                    existing.outcome_point = outcome_point
+                                    existing.last_prop_update = last_update_dt
+                                    existing.updated_by = "API"
+                                    existing.updated_at = datetime.utcnow()
+                                    total_updated += 1
+                                else:
+                                    prop = PlayerPropBet(
+                                        week_id=week_id,
+                                        game_id=game_row.id,
+                                        bookmaker=bookmaker.get("key"),
+                                        market=mk_key,
+                                        outcome_name=outcome_name,
+                                        outcome_description=outcome_description,
+                                        playerDkId=player_obj.playerDkId,
+                                        outcome_price=outcome_price,
+                                        outcome_point=outcome_point,
+                                        outcome_likelihood=None,
+                                        updated_by="API",
+                                        last_prop_update=last_update_dt,
+                                    )
+                                    db.add(prop)
+                                    total_created += 1
+                            except Exception as e:
+                                errors.append(f"Failed to process outcome for event {eid}: {str(e)}")
+            except HTTPException:
+                raise
+            except Exception as e:
+                errors.append(f"Failed to process event {eid}: {str(e)}")
+
+        # Commit all changes
+        db.commit()
+
+        # Log unmatched players into RecentActivity
+        # Log recent activity even if no unmatched players so we capture the request
+        markets_param = ",".join(market_list)
+        activity = RecentActivity(
+            timestamp=datetime.utcnow(),
+            action="import",
+            fileType="API",
+            fileName=f"odds-api:player-props:{markets_param}",
+            week_id=week_id,
+            draftGroup=markets_param,
+            recordsAdded=total_created,
+            recordsUpdated=total_updated,
+            recordsSkipped=len(unmatched_players),
+            errors=errors,
+            user="system",
+            details={
+                "unmatched_players": unmatched_players,
+                "api_requests": api_requests,
+                "bookmaker": bookmakers,
+                "regions": regions,
+                "markets": market_list,
+            }
+        )
+        db.add(activity)
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Imported player props for {len(event_ids)} event(s)",
+            "created": total_created,
+            "events_processed": len(event_ids),
+            "unmatched_players": len(unmatched_players),
+            "updated": total_updated,
+            "errors": errors,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to import player props: {str(e)}")
 
 @router.get("/teams")
 async def get_teams_with_odds_ids(db: Session = Depends(get_db)):

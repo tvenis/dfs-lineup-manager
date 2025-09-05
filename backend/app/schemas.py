@@ -508,3 +508,40 @@ class PlayerPoolAnalysisResponse(BaseModel):
     entries: List[PlayerPoolEntryWithAnalysis]
     total: int
     week_id: int
+
+# Player Prop Bets schemas
+class PlayerPropBetBase(BaseModel):
+    week_id: int = Field(..., description="Week ID from weeks table")
+    game_id: int = Field(..., description="Foreign key to games.id")
+    bookmaker: Optional[str] = Field(None, max_length=100)
+    market: Optional[str] = Field(None, max_length=100)
+    outcome_name: Optional[str] = Field(None, max_length=200)
+    outcome_description: Optional[str] = Field(None, max_length=500)
+    playerDkId: int = Field(..., description="Foreign key to players.playerDkId")
+    outcome_price: Optional[int] = None
+    outcome_point: Optional[int] = None
+    outcome_likelihood: Optional[float] = Field(None, ge=0, le=100, description="Percentage 0-100")
+    updated_by: Optional[str] = Field("API", max_length=100)
+    last_prop_update: Optional[datetime] = None
+
+class PlayerPropBetCreate(PlayerPropBetBase):
+    pass
+
+class PlayerPropBetUpdate(BaseModel):
+    bookmaker: Optional[str] = Field(None, max_length=100)
+    market: Optional[str] = Field(None, max_length=100)
+    outcome_name: Optional[str] = Field(None, max_length=200)
+    outcome_description: Optional[str] = Field(None, max_length=500)
+    outcome_price: Optional[int] = None
+    outcome_point: Optional[int] = None
+    outcome_likelihood: Optional[float] = Field(None, ge=0, le=100)
+    updated_by: Optional[str] = Field(None, max_length=100)
+    last_prop_update: Optional[datetime] = None
+
+class PlayerPropBet(PlayerPropBetBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True

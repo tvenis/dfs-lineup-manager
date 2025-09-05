@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Upload, FileText, CheckCircle, XCircle, Eye, RefreshCw, Database, Globe, Calendar as CalendarIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Checkbox } from './ui/checkbox'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
 import { Calendar } from './ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Badge } from './ui/badge'
@@ -47,11 +48,11 @@ const mockWeeks = [
   { value: 'sb', label: 'Super Bowl', isActive: false }
 ]
 
-const mockGames = [
-  { value: 'game1', label: 'Game 1' },
-  { value: 'game2', label: 'Game 2' },
-  { value: 'game3', label: 'Game 3' }
-]
+// Dynamic games will be fetched per week; keep type here for convenience
+interface GameOption {
+  value: string
+  label: string
+}
 
 const marketOptions = [
   { id: 'h2h', label: 'Head to Head', description: 'Moneyline betting' },
@@ -114,9 +115,15 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   // Odds/Date format removed; odds always requested in american and date in iso by backend
   const [oddsBookmakers, setOddsBookmakers] = useState<string>('draftkings')
   const [oddsDaysFrom, setOddsDaysFrom] = useState<string>('1')
-  const [oddsGame, setOddsGame] = useState<string>('')
+  const [oddsGame, setOddsGame] = useState<string>('All')
   const [isImportingOdds, setIsImportingOdds] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('import-pool')
+  const [gameOptions, setGameOptions] = useState<GameOption[]>([])
+  // Player Prop market (single-select for now; expand to multi later)
+  const [playerPropMarkets, setPlayerPropMarkets] = useState<string[]>(['player_pass_tds'])
+  // Activity details dialog state
+  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false)
+  const [detailsActivity, setDetailsActivity] = useState<RecentActivity | null>(null)
 
   // Check for success parameter from review page
   useEffect(() => {
@@ -133,6 +140,36 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
     fetchWeeks()
     fetchRecentActivity()
   }, [])
+
+  // When week changes, fetch games for the week to populate the Game picker
+  useEffect(() => {
+    const fetchGamesForWeek = async () => {
+      if (!selectedWeekId) return
+      try {
+        const res = await fetch(`http://localhost:8000/api/games/week/${selectedWeekId}?future=true`)
+        if (!res.ok) return
+        const data = await res.json()
+        // Deduplicate by odds_api_gameid (event id) and only include those with an id
+        const seen = new Set<string>()
+        const options: GameOption[] = []
+        // Always include All at top
+        options.push({ value: 'All', label: 'All Games' })
+        for (const g of data.games as any[]) {
+          const eid: string | null = g.odds_api_gameid
+          if (!eid) continue
+          if (seen.has(eid)) continue
+          seen.add(eid)
+          const label = `${g.team_name || 'TBD'} ${g.homeoraway === 'H' ? 'vs' : '@'} ${g.opponent_name || 'TBD'}`
+          options.push({ value: eid, label })
+        }
+        setGameOptions(options)
+        setOddsGame('All')
+      } catch (e) {
+        console.error('Failed to fetch games for week', e)
+      }
+    }
+    fetchGamesForWeek()
+  }, [selectedWeekId])
 
   const fetchWeeks = async () => {
     try {
@@ -374,6 +411,19 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           apiUrl = `http://localhost:8000/api/odds-api/participants/${sport}`
           description = 'NFL team participants'
           break
+        case 'player-props':
+          // Map sport selection to API format
+          sport = oddsSport === 'NFL' ? 'americanfootball_nfl' : oddsSport
+          apiUrl = `http://localhost:8000/api/odds-api/player-props/${sport}`
+          description = 'NFL player props'
+          requestBody.week_id = selectedWeekId
+          requestBody.regions = oddsRegion
+          requestBody.markets = playerPropMarkets
+          // event_id: either specific odds_api_gameid or 'All'
+          requestBody.event_id = oddsGame || 'All'
+          // bookmakers: allow 'all' or specific
+          requestBody.bookmakers = oddsBookmakers
+          break
         case 'events':
           // Map sport selection to API format
           sport = oddsSport === 'NFL' ? 'americanfootball_nfl' : oddsSport
@@ -480,6 +530,13 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         details = `${recordsUpdated} games updated with odds data from Odds-API`
         if (data.errors && data.errors.length > 0) {
           details += ` (${data.errors.length} errors)`
+        }
+      } else if (endpoint === 'player-props') {
+        recordsAdded = data.created || 0
+        recordsUpdated = 0
+        details = `${recordsAdded} player prop rows created across ${data.events_processed || 0} event(s)`
+        if (data.unmatched_players && data.unmatched_players > 0) {
+          details += ` (${data.unmatched_players} unmatched players logged)`
         }
       }
       
@@ -809,7 +866,9 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                         <SelectValue placeholder="Select bookmaker" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
                         <SelectItem value="draftkings">DraftKings</SelectItem>
+                        <SelectItem value="fanduel">FanDuel</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -842,36 +901,144 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   </div>
                 </div>
 
-                {/* Days From and Game */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Days From</Label>
-                    <Select value={oddsDaysFrom} onValueChange={setOddsDaysFrom}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select days" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 Day</SelectItem>
-                        <SelectItem value="2">2 Days</SelectItem>
-                        <SelectItem value="3">3 Days</SelectItem>
-                      </SelectContent>
-                    </Select>
+                {/* Game (Required for Player Props) */}
+                <div className="space-y-2">
+                  <Label>Game (Required for Player Props)</Label>
+                  <Select value={oddsGame} onValueChange={setOddsGame}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select game for player props" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gameOptions.map((game) => (
+                        <SelectItem key={game.value} value={game.value}>
+                          {game.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Player Prop Markets */}
+                <div className="mt-2 space-y-2">
+                  <Label>Player Prop Markets</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="player_pass_tds"
+                        checked={playerPropMarkets.includes('player_pass_tds')}
+                        onCheckedChange={(checked) => {
+                          setPlayerPropMarkets((prev) => {
+                            const exists = prev.includes('player_pass_tds')
+                            if (checked && !exists) return [...prev, 'player_pass_tds']
+                            if (!checked && exists) return prev.filter(m => m !== 'player_pass_tds')
+                            return prev
+                          })
+                        }}
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_pass_tds" className="text-sm font-medium leading-none">
+                          Passing TDs
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player passing touchdowns</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="player_pass_attempts"
+                        checked={playerPropMarkets.includes('player_pass_attempts')}
+                        onCheckedChange={(checked) => {
+                          setPlayerPropMarkets((prev) => {
+                            const exists = prev.includes('player_pass_attempts')
+                            if (checked && !exists) return [...prev, 'player_pass_attempts']
+                            if (!checked && exists) return prev.filter(m => m !== 'player_pass_attempts')
+                            return prev
+                          })
+                        }}
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_pass_attempts" className="text-sm font-medium leading-none">
+                          Pass Attempts
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player passing attempts</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-2 opacity-50">
+                      <Checkbox id="player_pass_completions" disabled />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_pass_completions" className="text-sm font-medium leading-none">
+                          Pass Completions (Coming Soon)
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player passing completions</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-2 opacity-50">
+                      <Checkbox id="player_pass_yds" disabled />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_pass_yds" className="text-sm font-medium leading-none">
+                          Passing Yards (Coming Soon)
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player passing yards</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-2 opacity-50">
+                      <Checkbox id="player_receptions" disabled />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_receptions" className="text-sm font-medium leading-none">
+                          Receptions (Coming Soon)
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player receptions</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-2 opacity-50">
+                      <Checkbox id="player_rec_tds" disabled />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_rec_tds" className="text-sm font-medium leading-none">
+                          Reception TDs (Coming Soon)
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player reception touchdowns</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-2 opacity-50">
+                      <Checkbox id="player_rec_yds" disabled />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_rec_yds" className="text-sm font-medium leading-none">
+                          Reception Yards (Coming Soon)
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player reception yards</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-2 opacity-50">
+                      <Checkbox id="player_rush_atts" disabled />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_rush_atts" className="text-sm font-medium leading-none">
+                          Rush Attempts (Coming Soon)
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player rushing attempts</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Game</Label>
-                    <Select value={oddsGame} onValueChange={setOddsGame}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select game" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockGames.map((game) => (
-                          <SelectItem key={game.value} value={game.value}>
-                            {game.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                </div>
+
+                {/* Days From */}
+                <div className="mt-2 space-y-2">
+                  <Label>Days From</Label>
+                  <Select value={oddsDaysFrom} onValueChange={setOddsDaysFrom}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select days" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Day</SelectItem>
+                      <SelectItem value="2">2 Days</SelectItem>
+                      <SelectItem value="3">3 Days</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Odds/Date format configuration removed; backend forces american/iso */}
@@ -1009,12 +1176,35 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                 <div className="p-4 border rounded-lg bg-muted/30 space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium text-muted-foreground">More Endpoints</h4>
+                      <h4 className="font-medium">Player Props</h4>
                       <p className="text-sm text-muted-foreground">
-                        Additional endpoints will be added here
+                        Import player prop bets (currently Passing TDs). Requires Week and optional Game selection.
                       </p>
                     </div>
-                    <Badge variant="outline" className="bg-muted">Coming Soon</Badge>
+                    <Badge variant="outline">Player Props</Badge>
+                  </div>
+                  <Button
+                    onClick={() => handleOddsApiImport('player-props')}
+                    disabled={isImportingOdds || !oddsApiKey.trim() || !selectedWeekId}
+                    className="w-full gap-2"
+                    size="sm"
+                  >
+                    {isImportingOdds ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Import Player Props
+                      </>
+                    )}
+                  </Button>
+                  <div className="text-xs text-muted-foreground">
+                    Required parameters: API Key, Sport, Player Prop Markets, Game (Event ID) or All, Region
+                    <br />
+                    This endpoint pulls player prop bets for all bookmakers.
                   </div>
                 </div>
 
@@ -1109,7 +1299,14 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                     <span className="text-sm text-muted-foreground">
                       {new Date(item.timestamp).toLocaleString()}
                     </span>
-                    <Button variant="ghost" size="sm">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDetailsActivity(item)
+                        setIsDetailsOpen(true)
+                      }}
+                    >
                       <Eye className="w-4 h-4" />
                     </Button>
                   </div>
@@ -1119,6 +1316,69 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           </div>
         </CardContent>
       </Card>
+
+      {/* Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Details</DialogTitle>
+            <DialogDescription>
+              Metadata and payload for troubleshooting.
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailsActivity && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Action:</span> {detailsActivity.action}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Type:</span> {detailsActivity.fileType}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Week:</span> {detailsActivity.week_id > 0 ? getWeekLabel(detailsActivity.week_id) : '—'}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Draft Group:</span> {detailsActivity.draftGroup}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Added:</span> {detailsActivity.recordsAdded}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Updated:</span> {detailsActivity.recordsUpdated}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Skipped:</span> {detailsActivity.recordsSkipped}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Timestamp:</span> {new Date(detailsActivity.timestamp).toLocaleString()}
+                </div>
+              </div>
+
+              {detailsActivity.errors && detailsActivity.errors.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Errors</div>
+                  <ul className="list-disc list-inside text-sm text-red-600">
+                    {detailsActivity.errors.map((e, idx) => (
+                      <li key={idx}>{e}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Details</div>
+                <div className="rounded-md border bg-muted p-2 max-h-80 overflow-auto">
+                  <pre className="text-xs whitespace-pre-wrap">
+{JSON.stringify(detailsActivity.details, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

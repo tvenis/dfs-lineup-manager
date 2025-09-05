@@ -210,3 +210,32 @@ class Comment(Base):
     
     # Relationships
     player = relationship("Player")
+
+class PlayerPropBet(Base):
+    __tablename__ = "player_prop_bets"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
+    game_id = Column(Integer, ForeignKey("games.id"), nullable=False)
+    bookmaker = Column(String(100))
+    market = Column(String(100))  # Note: originally specified as 'maket'
+    outcome_name = Column(String(200))
+    outcome_description = Column(String(500))
+    playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=False)
+    outcome_price = Column(Integer)
+    outcome_point = Column(Integer)
+    outcome_likelihood = Column(Float)  # percentage value (e.g., 62.5 for 62.5%)
+    updated_by = Column(String(100), default="API")
+    last_prop_update = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    week = relationship("Week")
+    game = relationship("Game")
+    player = relationship("Player")
+    
+    # Indexes for common lookup patterns
+    __table_args__ = (
+        Index('ux_prop_bets_unique', 'week_id', 'game_id', 'bookmaker', 'market', 'outcome_name', 'playerDkId', unique=True),
+    )
