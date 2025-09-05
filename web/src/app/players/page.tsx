@@ -340,6 +340,34 @@ export default function PlayerPoolPage() {
           aValue = a.player.team.toLowerCase();
           bValue = b.player.team.toLowerCase();
           break;
+        case 'opponent': {
+          const aOpp = (gamesMap[a.player.team]?.opponentAbbr || '').toLowerCase();
+          const bOpp = (gamesMap[b.player.team]?.opponentAbbr || '').toLowerCase();
+          aValue = aOpp;
+          bValue = bOpp;
+          break;
+        }
+        case 'spread': {
+          const aSpread = gamesMap[a.player.team]?.proj_spread;
+          const bSpread = gamesMap[b.player.team]?.proj_spread;
+          aValue = aSpread == null ? Number.POSITIVE_INFINITY : aSpread;
+          bValue = bSpread == null ? Number.POSITIVE_INFINITY : bSpread;
+          break;
+        }
+        case 'total': {
+          const aTotal = gamesMap[a.player.team]?.proj_total;
+          const bTotal = gamesMap[b.player.team]?.proj_total;
+          aValue = aTotal == null ? Number.POSITIVE_INFINITY : aTotal;
+          bValue = bTotal == null ? Number.POSITIVE_INFINITY : bTotal;
+          break;
+        }
+        case 'implied': {
+          const aImp = gamesMap[a.player.team]?.implied_team_total;
+          const bImp = gamesMap[b.player.team]?.implied_team_total;
+          aValue = aImp == null ? Number.POSITIVE_INFINITY : aImp;
+          bValue = bImp == null ? Number.POSITIVE_INFINITY : bImp;
+          break;
+        }
         case 'salary':
           aValue = a.salary || 0;
           bValue = b.salary || 0;
@@ -697,11 +725,51 @@ export default function PlayerPoolPage() {
                           sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
-                      <div className="col-span-1 text-center">TEAM</div>
-                      <div className="col-span-1 text-center">OPPONENT</div>
-                      <div className="col-span-1 text-center">SPREAD</div>
-                      <div className="col-span-1 text-center">O/U</div>
-                      <div className="col-span-1 text-center">IMPLIED</div>
+                      <div 
+                        className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                        onClick={() => handleSort('team')}
+                      >
+                        TEAM
+                        {sortField === 'team' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
+                      <div 
+                        className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                        onClick={() => handleSort('opponent')}
+                      >
+                        OPPONENT
+                        {sortField === 'opponent' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
+                      <div 
+                        className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                        onClick={() => handleSort('spread')}
+                      >
+                        SPREAD
+                        {sortField === 'spread' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
+                      <div 
+                        className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                        onClick={() => handleSort('total')}
+                      >
+                        O/U
+                        {sortField === 'total' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
+                      <div 
+                        className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                        onClick={() => handleSort('implied')}
+                      >
+                        IMPLIED
+                        {sortField === 'implied' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
                       <div
                         role="button"
                         tabIndex={0}
@@ -741,7 +809,15 @@ export default function PlayerPoolPage() {
                           sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
-                      <div className="col-span-1 text-center">STATUS</div>
+                      <div 
+                        className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                        onClick={() => handleSort('status')}
+                      >
+                        STATUS
+                        {sortField === 'status' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
                       <div className="col-span-1 text-center">TIER</div>
                       <div className="col-span-1 text-center">EXCLUDE</div>
                     </div>

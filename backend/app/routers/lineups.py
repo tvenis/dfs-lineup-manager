@@ -650,7 +650,8 @@ def optimize_lineup(
                 [venv_python, script_path, json.dumps(config)],
                 capture_output=True,
                 text=True,
-                timeout=30  # 30 second timeout
+                timeout=30,  # 30 second timeout
+                stdin=subprocess.DEVNULL  # ensure valid stdin when server runs detached
             )
             
             # Debug: Log the result
