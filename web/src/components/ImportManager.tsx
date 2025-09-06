@@ -964,21 +964,43 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                       </div>
                     </div>
 
-                    <div className="flex items-start space-x-2 opacity-50">
-                      <Checkbox id="player_pass_completions" disabled />
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="player_pass_completions"
+                        checked={playerPropMarkets.includes('player_pass_completions')}
+                        onCheckedChange={(checked) => {
+                          setPlayerPropMarkets((prev) => {
+                            const exists = prev.includes('player_pass_completions')
+                            if (checked && !exists) return [...prev, 'player_pass_completions']
+                            if (!checked && exists) return prev.filter(m => m !== 'player_pass_completions')
+                            return prev
+                          })
+                        }}
+                      />
                       <div className="grid gap-1.5 leading-none">
                         <label htmlFor="player_pass_completions" className="text-sm font-medium leading-none">
-                          Pass Completions (Coming Soon)
+                          Pass Completions
                         </label>
                         <p className="text-xs text-muted-foreground">Player passing completions</p>
                       </div>
                     </div>
 
-                    <div className="flex items-start space-x-2 opacity-50">
-                      <Checkbox id="player_pass_yds" disabled />
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="player_pass_yds"
+                        checked={playerPropMarkets.includes('player_pass_yds')}
+                        onCheckedChange={(checked) => {
+                          setPlayerPropMarkets((prev) => {
+                            const exists = prev.includes('player_pass_yds')
+                            if (checked && !exists) return [...prev, 'player_pass_yds']
+                            if (!checked && exists) return prev.filter(m => m !== 'player_pass_yds')
+                            return prev
+                          })
+                        }}
+                      />
                       <div className="grid gap-1.5 leading-none">
                         <label htmlFor="player_pass_yds" className="text-sm font-medium leading-none">
-                          Passing Yards (Coming Soon)
+                          Passing Yards
                         </label>
                         <p className="text-xs text-muted-foreground">Player passing yards</p>
                       </div>
