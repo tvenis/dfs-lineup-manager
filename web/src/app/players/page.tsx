@@ -999,7 +999,7 @@ export default function PlayerPoolPage() {
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Sorts on attempts. Showing the completion percentage.</p>
+                              <p>Sorts on attempts. Showing the completion percentage. Based on Player Props.</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

@@ -1045,6 +1045,27 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                         <p className="text-xs text-muted-foreground">Player rushing attempts</p>
                       </div>
                     </div>
+
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="player_tds_over"
+                        checked={playerPropMarkets.includes('player_tds_over')}
+                        onCheckedChange={(checked) => {
+                          setPlayerPropMarkets((prev) => {
+                            const exists = prev.includes('player_tds_over')
+                            if (checked && !exists) return [...prev, 'player_tds_over']
+                            if (!checked && exists) return prev.filter(m => m !== 'player_tds_over')
+                            return prev
+                          })
+                        }}
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_tds_over" className="text-sm font-medium leading-none">
+                          Touchdown Overs
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player total touchdowns (over/under)</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
