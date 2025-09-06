@@ -1063,7 +1063,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                         <label htmlFor="player_tds_over" className="text-sm font-medium leading-none">
                           Touchdown Overs
                         </label>
-                        <p className="text-xs text-muted-foreground">Player total touchdowns (over/under)</p>
+                        <p className="text-xs text-muted-foreground">Player total touchdown overs</p>
                       </div>
                     </div>
                   </div>
