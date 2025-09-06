@@ -1050,11 +1050,22 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                       </div>
                     </div>
 
-                    <div className="flex items-start space-x-2 opacity-50">
-                      <Checkbox id="player_rush_atts" disabled />
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="player_rush_attempts"
+                        checked={playerPropMarkets.includes('player_rush_attempts')}
+                        onCheckedChange={(checked) => {
+                          setPlayerPropMarkets((prev) => {
+                            const exists = prev.includes('player_rush_attempts')
+                            if (checked && !exists) return [...prev, 'player_rush_attempts']
+                            if (!checked && exists) return prev.filter(m => m !== 'player_rush_attempts')
+                            return prev
+                          })
+                        }}
+                      />
                       <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_rush_atts" className="text-sm font-medium leading-none">
-                          Rush Attempts (Coming Soon)
+                        <label htmlFor="player_rush_attempts" className="text-sm font-medium leading-none">
+                          Rush Attempts
                         </label>
                         <p className="text-xs text-muted-foreground">Player rushing attempts</p>
                       </div>
