@@ -1048,6 +1048,27 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
 
                     <div className="flex items-start space-x-2">
                       <Checkbox
+                        id="player_rush_yds"
+                        checked={playerPropMarkets.includes('player_rush_yds')}
+                        onCheckedChange={(checked) => {
+                          setPlayerPropMarkets((prev) => {
+                            const exists = prev.includes('player_rush_yds')
+                            if (checked && !exists) return [...prev, 'player_rush_yds']
+                            if (!checked && exists) return prev.filter(m => m !== 'player_rush_yds')
+                            return prev
+                          })
+                        }}
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <label htmlFor="player_rush_yds" className="text-sm font-medium leading-none">
+                          Rushing Yards
+                        </label>
+                        <p className="text-xs text-muted-foreground">Player rushing yards</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
                         id="player_tds_over"
                         checked={playerPropMarkets.includes('player_tds_over')}
                         onCheckedChange={(checked) => {
