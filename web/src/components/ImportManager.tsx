@@ -1027,15 +1027,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                       </div>
                     </div>
 
-                    <div className="flex items-start space-x-2 opacity-50">
-                      <Checkbox id="player_rec_tds" disabled />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_rec_tds" className="text-sm font-medium leading-none">
-                          Reception TDs (Coming Soon)
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player reception touchdowns</p>
-                      </div>
-                    </div>
+                    
 
                     <div className="flex items-start space-x-2 opacity-50">
                       <Checkbox id="player_rec_yds" disabled />
