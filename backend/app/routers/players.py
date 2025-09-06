@@ -4,11 +4,12 @@ from typing import List, Optional
 import uuid
 
 from app.database import get_db
-from app.models import Player, Team, PlayerPoolEntry, Week, Game
+from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet
 from app.schemas import (
     PlayerCreate, PlayerUpdate, Player as PlayerSchema,
     PlayerPoolEntryCreate, PlayerPoolEntryUpdate, PlayerPoolEntry as PlayerPoolEntrySchema,
-    PlayerListResponse, PlayerPoolResponse, PlayerPoolAnalysisResponse, PlayerPoolEntryWithAnalysis, WeekAnalysisData
+    PlayerListResponse, PlayerPoolResponse, PlayerPoolAnalysisResponse, PlayerPoolEntryWithAnalysis, WeekAnalysisData,
+    PlayerPropsResponse, PlayerPropBetWithMeta
 )
 
 router = APIRouter()
@@ -372,3 +373,61 @@ def bulk_update_player_pool_entries(
         db.refresh(entry)
     
     return updated_entries
+
+# Player Props endpoints
+@router.get("/{player_id}/props", response_model=PlayerPropsResponse)
+def get_player_props(
+    player_id: int,
+    week_id: Optional[int] = Query(None, description="Filter by week id"),
+    bookmaker: Optional[str] = Query(None, description="Filter by bookmaker key"),
+    market: Optional[str] = Query(None, description="Filter by market key"),
+    db: Session = Depends(get_db)
+):
+    """Return player prop bets for a given player with optional filters and opponent/week metadata."""
+    # Ensure player exists
+    player = db.query(Player).filter(Player.playerDkId == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    # Base query joining to Game and Week for metadata
+    query = (
+        db.query(PlayerPropBet, Game, Week)
+        .join(Game, PlayerPropBet.game_id == Game.id)
+        .join(Week, PlayerPropBet.week_id == Week.id)
+        .filter(PlayerPropBet.playerDkId == player_id)
+    )
+
+    if week_id:
+        query = query.filter(PlayerPropBet.week_id == week_id)
+    if bookmaker:
+        query = query.filter(PlayerPropBet.bookmaker == bookmaker)
+    if market:
+        query = query.filter(PlayerPropBet.market == market)
+
+    rows = query.order_by(PlayerPropBet.last_prop_update.desc().nullslast()).all()
+
+    props: list[PlayerPropBetWithMeta] = []
+    for prop_row, game_row, week_row in rows:
+        opponent_abbr = None
+        try:
+            if getattr(game_row, 'opponent_team', None):
+                opponent_abbr = game_row.opponent_team.abbreviation
+        except Exception:
+            opponent_abbr = None
+
+        props.append(
+            PlayerPropBetWithMeta(
+                week_number=week_row.week_number,
+                opponent=opponent_abbr,
+                homeoraway=game_row.homeoraway if game_row else None,
+                bookmaker=prop_row.bookmaker,
+                market=prop_row.market,
+                outcome_name=prop_row.outcome_name,
+                outcome_price=prop_row.outcome_price,
+                outcome_point=prop_row.outcome_point,
+                probability=prop_row.outcome_likelihood,
+                updated=prop_row.last_prop_update,
+            )
+        )
+
+    return PlayerPropsResponse(props=props, total=len(props))

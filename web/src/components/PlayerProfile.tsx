@@ -10,6 +10,7 @@ import { Separator } from "./ui/separator";
 import { PlayerService } from "@/lib/playerService";
 import { Player } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
+import PlayerProps from "./PlayerProps";
 
 interface PlayerProfileProps {
   playerId: string;
@@ -300,6 +301,9 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Player Props Section */}
+          <PlayerProps playerId={playerData.playerDkId} />
 
           {/* Comments Section */}
           <Card>

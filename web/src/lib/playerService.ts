@@ -1,4 +1,4 @@
-import { PlayerPoolEntry, Player } from '@/types/prd';
+import { PlayerPoolEntry, Player, PlayerPropsResponse } from '@/types/prd';
 import { buildApiUrl, API_CONFIG } from '@/config/api';
 
 export interface PlayerPoolFilters {
@@ -211,6 +211,24 @@ export class PlayerService {
       console.error('Error fetching player:', error);
       throw error;
     }
+  }
+
+  static async getPlayerProps(
+    playerDkId: number,
+    filters: { week_id?: number; bookmaker?: string; market?: string } = {}
+  ): Promise<PlayerPropsResponse> {
+    const params = new URLSearchParams();
+    if (filters.week_id !== undefined) params.append('week_id', String(filters.week_id));
+    if (filters.bookmaker) params.append('bookmaker', filters.bookmaker);
+    if (filters.market) params.append('market', filters.market);
+
+    const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
+    const url = `${baseUrl.slice(0, -1)}/${playerDkId}/props?${params.toString()}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
   }
 
   static async getPlayerProfiles(filters: {

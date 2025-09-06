@@ -545,3 +545,20 @@ class PlayerPropBet(PlayerPropBetBase):
     
     class Config:
         from_attributes = True
+
+# Response schemas for Player Props enriched with opponent and week metadata
+class PlayerPropBetWithMeta(BaseModel):
+    week_number: int
+    opponent: Optional[str] = None
+    homeoraway: Optional[str] = None
+    bookmaker: Optional[str] = None
+    market: Optional[str] = None
+    outcome_name: Optional[str] = None
+    outcome_price: Optional[int] = None
+    outcome_point: Optional[float] = None
+    probability: Optional[float] = None
+    updated: Optional[datetime] = None
+
+class PlayerPropsResponse(BaseModel):
+    props: List[PlayerPropBetWithMeta]
+    total: int

@@ -132,3 +132,22 @@ export interface PlayerPoolEntry {
 }
 
 
+// Player Props
+export interface PlayerPropBetWithMeta {
+  week_number: number;
+  opponent?: string | null;
+  homeoraway?: 'H' | 'A' | 'N' | string | null;
+  bookmaker?: string | null;
+  market?: string | null;
+  outcome_name?: string | null;
+  outcome_price?: number | null;
+  outcome_point?: number | null;
+  probability?: number | null; // percentage 0-100 if provided
+  updated?: string | null; // ISO date
+}
+
+export interface PlayerPropsResponse {
+  props: PlayerPropBetWithMeta[];
+  total: number;
+}
+
