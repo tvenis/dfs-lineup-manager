@@ -1006,11 +1006,22 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                       </div>
                     </div>
 
-                    <div className="flex items-start space-x-2 opacity-50">
-                      <Checkbox id="player_receptions" disabled />
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="player_receptions"
+                        checked={playerPropMarkets.includes('player_receptions')}
+                        onCheckedChange={(checked) => {
+                          setPlayerPropMarkets((prev) => {
+                            const exists = prev.includes('player_receptions')
+                            if (checked && !exists) return [...prev, 'player_receptions']
+                            if (!checked && exists) return prev.filter(m => m !== 'player_receptions')
+                            return prev
+                          })
+                        }}
+                      />
                       <div className="grid gap-1.5 leading-none">
                         <label htmlFor="player_receptions" className="text-sm font-medium leading-none">
-                          Receptions (Coming Soon)
+                          Receptions
                         </label>
                         <p className="text-xs text-muted-foreground">Player receptions</p>
                       </div>
