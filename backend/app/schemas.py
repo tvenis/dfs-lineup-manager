@@ -519,7 +519,7 @@ class PlayerPropBetBase(BaseModel):
     outcome_description: Optional[str] = Field(None, max_length=500)
     playerDkId: int = Field(..., description="Foreign key to players.playerDkId")
     outcome_price: Optional[int] = None
-    outcome_point: Optional[int] = None
+    outcome_point: Optional[float] = None
     outcome_likelihood: Optional[float] = Field(None, ge=0, le=100, description="Percentage 0-100")
     updated_by: Optional[str] = Field("API", max_length=100)
     last_prop_update: Optional[datetime] = None
@@ -533,7 +533,7 @@ class PlayerPropBetUpdate(BaseModel):
     outcome_name: Optional[str] = Field(None, max_length=200)
     outcome_description: Optional[str] = Field(None, max_length=500)
     outcome_price: Optional[int] = None
-    outcome_point: Optional[int] = None
+    outcome_point: Optional[float] = None
     outcome_likelihood: Optional[float] = Field(None, ge=0, le=100)
     updated_by: Optional[str] = Field(None, max_length=100)
     last_prop_update: Optional[datetime] = None

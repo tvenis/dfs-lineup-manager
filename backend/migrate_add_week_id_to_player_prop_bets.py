@@ -40,7 +40,7 @@ def ensure_schema() -> bool:
                     outcome_description VARCHAR(500),
                     playerDkId INTEGER NOT NULL,
                     outcome_price INTEGER,
-                    outcome_point INTEGER,
+                    outcome_point FLOAT,
                     outcome_likelihood FLOAT,
                     updated_by VARCHAR(100) DEFAULT 'API',
                     last_prop_update DATETIME,
@@ -91,13 +91,13 @@ def ensure_schema() -> bool:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     week_id INTEGER NOT NULL,
                     game_id INTEGER NOT NULL,
-                    bookmakers VARCHAR(100),
+                    bookmaker VARCHAR(100),
                     market VARCHAR(100),
                     outcome_name VARCHAR(200),
                     outcome_description VARCHAR(500),
                     playerDkId INTEGER NOT NULL,
                     outcome_price INTEGER,
-                    outcome_point INTEGER,
+                    outcome_point FLOAT,
                     outcome_likelihood FLOAT,
                     updated_by VARCHAR(100) DEFAULT 'API',
                     last_prop_update DATETIME,
@@ -118,7 +118,7 @@ def ensure_schema() -> bool:
             cur.execute(
                 """
                 CREATE UNIQUE INDEX IF NOT EXISTS ux_prop_bets_unique
-                ON player_prop_bets (week_id, game_id, bookmaker, market, outcome_name, playerDkId)
+                ON player_prop_bets (week_id, game_id, bookmaker, market, outcome_name, playerDkId, outcome_point)
                 """
             )
             conn.commit()
@@ -138,7 +138,7 @@ def ensure_schema() -> bool:
             cur.execute(
                 """
                 CREATE UNIQUE INDEX IF NOT EXISTS ux_prop_bets_unique
-                ON player_prop_bets (week_id, game_id, bookmaker, market, outcome_name, playerDkId)
+                ON player_prop_bets (week_id, game_id, bookmaker, market, outcome_name, playerDkId, outcome_point)
                 """
             )
         except Exception:

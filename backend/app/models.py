@@ -223,7 +223,7 @@ class PlayerPropBet(Base):
     outcome_description = Column(String(500))
     playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=False)
     outcome_price = Column(Integer)
-    outcome_point = Column(Integer)
+    outcome_point = Column(Float)
     outcome_likelihood = Column(Float)  # percentage value (e.g., 62.5 for 62.5%)
     updated_by = Column(String(100), default="API")
     last_prop_update = Column(DateTime(timezone=True))
@@ -237,5 +237,5 @@ class PlayerPropBet(Base):
     
     # Indexes for common lookup patterns
     __table_args__ = (
-        Index('ux_prop_bets_unique', 'week_id', 'game_id', 'bookmaker', 'market', 'outcome_name', 'playerDkId', unique=True),
+        Index('ux_prop_bets_unique', 'week_id', 'game_id', 'bookmaker', 'market', 'outcome_name', 'playerDkId', 'outcome_point', unique=True),
     )

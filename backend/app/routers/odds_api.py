@@ -809,7 +809,7 @@ async def import_player_props(
                                     errors.append(f"No game row found for event {eid} (player {outcome_description})")
                                     continue
 
-                                # Upsert: unique on (week_id, game_id, bookmakers, market, outcome_name, playerDkId)
+                                # Upsert: unique on (week_id, game_id, bookmaker, market, outcome_name, playerDkId, outcome_point)
                                 existing = db.query(PlayerPropBet).filter(
                                     and_(
                                         PlayerPropBet.week_id == week_id,
@@ -818,6 +818,7 @@ async def import_player_props(
                                         PlayerPropBet.market == mk_key,
                                         PlayerPropBet.outcome_name == outcome_name,
                                         PlayerPropBet.playerDkId == player_obj.playerDkId,
+                                        PlayerPropBet.outcome_point == outcome_point,
                                     )
                                 ).first()
 

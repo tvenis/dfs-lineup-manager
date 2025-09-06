@@ -46,7 +46,7 @@ def migrate_database():
                 outcome_description VARCHAR(500),
                 playerDkId INTEGER NOT NULL,
                 outcome_price INTEGER,
-                outcome_point INTEGER,
+                outcome_point FLOAT,
                 outcome_likelihood FLOAT,
                 updated_by VARCHAR(100) DEFAULT 'API',
                 last_prop_update DATETIME,
@@ -69,11 +69,11 @@ def migrate_database():
         )
 
         # Unique index for upsert keys
-        print("Creating unique index ux_prop_bets_unique on (week_id, game_id, bookmakers, market, outcome_name, playerDkId)...")
+        print("Creating unique index ux_prop_bets_unique on (week_id, game_id, bookmaker, market, outcome_name, playerDkId, outcome_point)...")
         cursor.execute(
             """
             CREATE UNIQUE INDEX IF NOT EXISTS ux_prop_bets_unique
-            ON player_prop_bets (week_id, game_id, bookmaker, market, outcome_name, playerDkId)
+            ON player_prop_bets (week_id, game_id, bookmaker, market, outcome_name, playerDkId, outcome_point)
             """
         )
 
