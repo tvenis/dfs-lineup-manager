@@ -121,6 +121,10 @@ export class PlayerService {
       const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
       const url = `${baseUrl.slice(0, -1)}/pool/${weekId}?${params.toString()}`;
       
+      console.log('🎯 PlayerService.getPlayerPool URL:', url);
+      console.log('🎯 PlayerService.getPlayerPool baseUrl:', baseUrl);
+      console.log('🎯 PlayerService.getPlayerPool API_CONFIG.BASE_URL:', API_CONFIG.BASE_URL);
+      
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

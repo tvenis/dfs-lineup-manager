@@ -249,7 +249,10 @@ export default function PlayerProps({ playerId }: Props) {
                 {paginatedRows.map((p, idx) => (
                   <TableRow key={`${p.week_number}-${idx}-${p.bookmaker}-${p.market}-${p.outcome_name}`}>
                     <TableCell>{p.week_number}</TableCell>
-                    <TableCell>{p.opponent || ""}</TableCell>
+                    <TableCell>
+                      {p.homeoraway === "H" ? "vs " : p.homeoraway === "A" ? "@ " : ""}
+                      {p.opponent || ""}
+                    </TableCell>
                     <TableCell>{p.bookmaker}</TableCell>
                     <TableCell>{p.market}</TableCell>
                     <TableCell>{p.outcome_name}</TableCell>

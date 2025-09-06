@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, EyeOff, Search, X, User, UserX, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 // Minimal tooltip shim to avoid new dependency; optional
 import Link from 'next/link';
@@ -26,10 +27,163 @@ export default function PlayerPoolPage() {
   const [hideExcluded, setHideExcluded] = useState(true);
   // Removed excludedPlayers state since we're using database exclusions directly
   const [activeTab, setActiveTab] = useState<string>('QB');
-  const [sortField, setSortField] = useState<string>('player');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<string>('projection');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [tierFilter, setTierFilter] = useState<number | 'all'>('all');
   const [gamesMap, setGamesMap] = useState<Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }>>({});
+  const [qbPassYardsProps, setQbPassYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [qbPassingTdsProps, setQbPassingTdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [qbPassAttemptsProps, setQbPassAttemptsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [qbPassCompletionsProps, setQbPassCompletionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+
+  // Function to fetch QB passing yards props
+  const fetchQbPassYardsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      
+      // Fetch props for each QB in the player pool
+      for (const qb of qbPlayers) {
+        try {
+          const propsData = await PlayerService.getPlayerProps(qb.player.playerDkId, { 
+            week_id: weekId, 
+            bookmaker: 'draftkings',
+            market: 'player_pass_yds'
+          });
+          
+          // Find the "Over" prop for passing yards
+          const overProp = propsData.props.find(prop => 
+            prop.outcome_name === 'Over' && 
+            prop.bookmaker === 'draftkings' &&
+            prop.market === 'player_pass_yds'
+          );
+          
+          if (overProp) {
+            propsMap[qb.player.playerDkId] = {
+              point: overProp.outcome_point || undefined,
+              price: overProp.outcome_price || undefined,
+              bookmaker: overProp.bookmaker || undefined
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching props for QB ${qb.player.displayName}:`, error);
+        }
+      }
+      
+      setQbPassYardsProps(propsMap);
+      console.log(`🎯 Fetched passing yards props for ${Object.keys(propsMap).length} QBs`);
+    } catch (error) {
+      console.error('Error fetching QB passing yards props:', error);
+    }
+  };
+
+  // Function to fetch QB passing TDs props
+  const fetchQbPassingTdsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      
+      // Fetch props for each QB in the player pool
+      for (const qb of qbPlayers) {
+        try {
+          const propsData = await PlayerService.getPlayerProps(qb.player.playerDkId, { 
+            week_id: weekId, 
+            bookmaker: 'draftkings',
+            market: 'player_pass_tds'
+          });
+          
+          // Find the "Over" prop for passing TDs
+          const overProp = propsData.props.find(prop => 
+            prop.outcome_name === 'Over' && 
+            prop.bookmaker === 'draftkings' &&
+            prop.market === 'player_pass_tds'
+          );
+          
+          if (overProp) {
+            propsMap[qb.player.playerDkId] = {
+              point: overProp.outcome_point || undefined,
+              price: overProp.outcome_price || undefined,
+              bookmaker: overProp.bookmaker || undefined
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching passing TDs props for QB ${qb.player.displayName}:`, error);
+        }
+      }
+      
+      setQbPassingTdsProps(propsMap);
+      console.log(`🎯 Fetched passing TDs props for ${Object.keys(propsMap).length} QBs`);
+    } catch (error) {
+      console.error('Error fetching QB passing TDs props:', error);
+    }
+  };
+
+  // Function to fetch QB pass attempts and completions props
+  const fetchQbPassAttemptsCompletionsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
+      const attemptsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const completionsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      
+      // Fetch props for each QB in the player pool
+      for (const qb of qbPlayers) {
+        try {
+          // Fetch pass attempts props
+          const attemptsData = await PlayerService.getPlayerProps(qb.player.playerDkId, { 
+            week_id: weekId, 
+            bookmaker: 'draftkings',
+            market: 'player_pass_attempts'
+          });
+          
+          // Find the "Over" prop for pass attempts
+          const overAttemptsProp = attemptsData.props.find(prop => 
+            prop.outcome_name === 'Over' && 
+            prop.bookmaker === 'draftkings' &&
+            prop.market === 'player_pass_attempts'
+          );
+          
+          if (overAttemptsProp) {
+            attemptsMap[qb.player.playerDkId] = {
+              point: overAttemptsProp.outcome_point || undefined,
+              price: overAttemptsProp.outcome_price || undefined,
+              bookmaker: overAttemptsProp.bookmaker || undefined
+            };
+          }
+
+          // Fetch pass completions props
+          const completionsData = await PlayerService.getPlayerProps(qb.player.playerDkId, { 
+            week_id: weekId, 
+            bookmaker: 'draftkings',
+            market: 'player_pass_completions'
+          });
+          
+          // Find the "Over" prop for pass completions
+          const overCompletionsProp = completionsData.props.find(prop => 
+            prop.outcome_name === 'Over' && 
+            prop.bookmaker === 'draftkings' &&
+            prop.market === 'player_pass_completions'
+          );
+          
+          if (overCompletionsProp) {
+            completionsMap[qb.player.playerDkId] = {
+              point: overCompletionsProp.outcome_point || undefined,
+              price: overCompletionsProp.outcome_price || undefined,
+              bookmaker: overCompletionsProp.bookmaker || undefined
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching pass attempts/completions props for QB ${qb.player.displayName}:`, error);
+        }
+      }
+      
+      setQbPassAttemptsProps(attemptsMap);
+      setQbPassCompletionsProps(completionsMap);
+      console.log(`🎯 Fetched pass attempts props for ${Object.keys(attemptsMap).length} QBs`);
+      console.log(`🎯 Fetched pass completions props for ${Object.keys(completionsMap).length} QBs`);
+    } catch (error) {
+      console.error('Error fetching QB pass attempts/completions props:', error);
+    }
+  };
 
   // Fetch data on component mount
   useEffect(() => {
@@ -61,6 +215,11 @@ export default function PlayerPoolPage() {
           console.log('🎯 Pool data entries length:', poolData.entries?.length || 'undefined');
           console.log('🎯 Pool data total:', poolData.total || 'undefined');
           setPlayerPool(poolData.entries || []);
+
+          // Fetch QB passing yards, TDs, and attempts/completions props
+          await fetchQbPassYardsProps(poolData.entries || [], defaultWeek.id);
+          await fetchQbPassingTdsProps(poolData.entries || [], defaultWeek.id);
+          await fetchQbPassAttemptsCompletionsProps(poolData.entries || [], defaultWeek.id);
 
           // Prefer server-side joined analysis for accuracy
           try {
@@ -128,6 +287,11 @@ export default function PlayerPoolPage() {
         setError(null);
         const poolData = await PlayerService.getPlayerPool(selectedWeek, { limit: 1000 });
         setPlayerPool(poolData.entries || []);
+        
+        // Fetch QB passing yards, TDs, and attempts/completions props
+        await fetchQbPassYardsProps(poolData.entries || [], selectedWeek);
+        await fetchQbPassingTdsProps(poolData.entries || [], selectedWeek);
+        await fetchQbPassAttemptsCompletionsProps(poolData.entries || [], selectedWeek);
         try {
           const analysis = await PlayerService.getPlayerPoolWithAnalysis(selectedWeek);
           const mapByTeam: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
@@ -336,10 +500,6 @@ export default function PlayerPoolPage() {
           aValue = a.player.displayName.toLowerCase();
           bValue = b.player.displayName.toLowerCase();
           break;
-        case 'team':
-          aValue = a.player.team.toLowerCase();
-          bValue = b.player.team.toLowerCase();
-          break;
         case 'opponent': {
           const aOpp = (gamesMap[a.player.team]?.opponentAbbr || '').toLowerCase();
           const bOpp = (gamesMap[b.player.team]?.opponentAbbr || '').toLowerCase();
@@ -402,6 +562,30 @@ export default function PlayerPoolPage() {
           aValue = a.excluded === true ? 1 : 0;
           bValue = b.excluded === true ? 1 : 0;
           break;
+        case 'passYds': {
+          // Sort by passing yards point value (the yardage line)
+          const aPassYds = qbPassYardsProps[a.player.playerDkId]?.point;
+          const bPassYds = qbPassYardsProps[b.player.playerDkId]?.point;
+          aValue = aPassYds || 0;
+          bValue = bPassYds || 0;
+          break;
+        }
+        case 'passingTds': {
+          // Sort by passing TDs point value (the TD line)
+          const aPassingTds = qbPassingTdsProps[a.player.playerDkId]?.point;
+          const bPassingTds = qbPassingTdsProps[b.player.playerDkId]?.point;
+          aValue = aPassingTds || 0;
+          bValue = bPassingTds || 0;
+          break;
+        }
+        case 'passing': {
+          // Sort by pass attempts point value (the attempts line)
+          const aPassAttempts = qbPassAttemptsProps[a.player.playerDkId]?.point;
+          const bPassAttempts = qbPassAttemptsProps[b.player.playerDkId]?.point;
+          aValue = aPassAttempts || 0;
+          bValue = bPassAttempts || 0;
+          break;
+        }
         default:
           return 0;
       }
@@ -520,6 +704,45 @@ export default function PlayerPoolPage() {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Tier Legend */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <h3 className="text-sm font-medium text-gray-700 mb-3">Player Tiers</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className={`${getTierConfig(1).headerColor} ${getTierConfig(1).headerTextColor} p-3 rounded-lg flex items-center gap-3`}>
+            <span className="text-xl">{getTierConfig(1).icon}</span>
+            <div>
+              <div className="font-medium">Tier 1</div>
+              <div className="text-xs opacity-90">{getTierConfig(1).label}</div>
+              <div className="text-xs opacity-75">{getTierConfig(1).description}</div>
+            </div>
+          </div>
+          <div className={`${getTierConfig(2).headerColor} ${getTierConfig(2).headerTextColor} p-3 rounded-lg flex items-center gap-3`}>
+            <span className="text-xl">{getTierConfig(2).icon}</span>
+            <div>
+              <div className="font-medium">Tier 2</div>
+              <div className="text-xs opacity-90">{getTierConfig(2).label}</div>
+              <div className="text-xs opacity-75">{getTierConfig(2).description}</div>
+            </div>
+          </div>
+          <div className={`${getTierConfig(3).headerColor} ${getTierConfig(3).headerTextColor} p-3 rounded-lg flex items-center gap-3`}>
+            <span className="text-xl">{getTierConfig(3).icon}</span>
+            <div>
+              <div className="font-medium">Tier 3</div>
+              <div className="text-xs opacity-90">{getTierConfig(3).label}</div>
+              <div className="text-xs opacity-75">{getTierConfig(3).description}</div>
+            </div>
+          </div>
+          <div className={`${getTierConfig(4).headerColor} ${getTierConfig(4).headerTextColor} p-3 rounded-lg flex items-center gap-3`}>
+            <span className="text-xl">{getTierConfig(4).icon}</span>
+            <div>
+              <div className="font-medium">Tier 4</div>
+              <div className="text-xs opacity-90">{getTierConfig(4).label}</div>
+              <div className="text-xs opacity-75">{getTierConfig(4).description}</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Position Tabs */}
@@ -715,22 +938,13 @@ export default function PlayerPoolPage() {
                 <div className="overflow-x-auto">
                   {/* Table Header */}
                   <div className="bg-muted/10 border-b">
-                    <div className="grid grid-cols-[repeat(13,_minmax(0,_1fr))] gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground items-center whitespace-nowrap">
+                    <div className={`grid gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}`}>
                       <div 
                         className="col-span-1 cursor-pointer hover:bg-muted/20 transition-colors flex items-center gap-1"
                         onClick={() => handleSort('player')}
                       >
                         PLAYER NAME
                         {sortField === 'player' && (
-                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                        )}
-                      </div>
-                      <div 
-                        className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
-                        onClick={() => handleSort('team')}
-                      >
-                        TEAM
-                        {sortField === 'team' && (
                           sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
@@ -770,6 +984,48 @@ export default function PlayerPoolPage() {
                           sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
+                      {position === 'QB' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div 
+                                className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                                onClick={() => handleSort('passing')}
+                              >
+                                <span className="italic">Passing</span>
+                                {sortField === 'passing' && (
+                                  sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Sorts on attempts. Showing the completion percentage.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {position === 'QB' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('passYds')}
+                        >
+                          <span className="italic">Pass Yds</span>
+                          {sortField === 'passYds' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {position === 'QB' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('passingTds')}
+                        >
+                          <span className="italic">Passing TDs</span>
+                          {sortField === 'passingTds' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
                       <div
                         role="button"
                         tabIndex={0}
@@ -823,206 +1079,269 @@ export default function PlayerPoolPage() {
                     </div>
                   </div>
 
-                  {/* Tier Groups */}
-                  {[1, 2, 3, 4].map(tier => {
-                    const tieredPlayers = sortPlayers(filteredPlayers.filter(player => player.tier === tier))
-                    if (tieredPlayers.length === 0) return null
-
-                    return (
-                      <div key={tier} className="border-b">
-                        {/* Tier Header */}
-                        <div className={`${getTierConfig(tier).headerColor} ${getTierConfig(tier).headerTextColor} px-6 py-3 flex items-center gap-3`}>
-                          <span className="text-xl">{getTierConfig(tier).icon}</span>
-                          <span className="font-medium">Tier {tier}</span>
-                          <span className="opacity-90 text-sm">
-                            {getTierConfig(tier).label} - {getTierConfig(tier).description}
-                          </span>
-                        </div>
-
-                        {/* Players in this tier */}
-                        {tieredPlayers.map((player, index) => (
-                          <div
-                            key={player.id}
-                            className={`
-                              grid grid-cols-[repeat(13,_minmax(0,_1fr))] gap-2 px-6 py-3 border-b border-border/50 last:border-b-0 items-center whitespace-nowrap
-                              ${player.excluded === true ? 'opacity-50 bg-muted/30' : ''} 
-                              hover:bg-muted/50 transition-colors
-                            `}
+                  {/* All Players Sorted */}
+                  {sortPlayers(filteredPlayers).map((player, index) => (
+                    <div
+                      key={player.id}
+                      className={`
+                        grid gap-2 px-6 py-3 border-b border-border/50 last:border-b-0 items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}
+                        ${player.excluded === true ? 'opacity-50 bg-muted/30' : ''} 
+                        hover:bg-muted/50 transition-colors
+                      `}
+                    >
+                      <div className="col-span-1">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <button
+                            onClick={() => {/* onPlayerSelect(player) */}}
+                            className="flex items-center gap-2 text-left hover:text-primary transition-colors group overflow-hidden"
                           >
-                            <div className="col-span-1">
-                              <div className="flex items-center gap-2 overflow-hidden">
-                                <button
-                                  onClick={() => {/* onPlayerSelect(player) */}}
-                                  className="flex items-center gap-2 text-left hover:text-primary transition-colors group overflow-hidden"
-                                >
-                                  <Link 
-                                    href={`/profile/${player.player.playerDkId}`}
-                                    className={`text-sm font-medium ${player.excluded === true ? 'line-through' : ''} group-hover:underline truncate`}
-                                  >
-                                    {player.player.displayName}
-                                  </Link>
-                                  <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </button>
-                                {player.excluded === true && <X className="w-4 h-4 text-destructive ml-1" />}
-                                {position === 'FLEX' && (
-                                  <Badge variant="outline" className="text-xs ml-2">
-                                    {player.player.position}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="col-span-1 text-center text-sm font-medium text-muted-foreground">
-                              {player.player.team}
-                            </div>
-
-                            {/* Opponent */}
-                            <div className="col-span-1 text-center">
-                              {(() => {
-                                const g = gamesMap[player.player.team];
-                                const data: WeekAnalysisData = {
-                                  opponent: {
-                                    opponentAbbr: g?.opponentAbbr || null,
-                                    homeOrAway: g?.homeOrAway || 'N'
-                                  }
-                                };
-                                return <PlayerWeekAnalysis weekAnalysis={data} column="opponent" />
-                              })()}
-                            </div>
-
-                            {/* Spread */}
-                            <div className="col-span-1 text-center">
-                              {(() => {
-                                const g = gamesMap[player.player.team];
-                                const data: WeekAnalysisData = { spread: g?.proj_spread ?? null };
-                                return <PlayerWeekAnalysis weekAnalysis={data} column="spread" />
-                              })()}
-                            </div>
-
-                            {/* O/U */}
-                            <div className="col-span-1 text-center">
-                              {(() => {
-                                const g = gamesMap[player.player.team];
-                                const data: WeekAnalysisData = { total: g?.proj_total ?? null };
-                                return <PlayerWeekAnalysis weekAnalysis={data} column="total" />
-                              })()}
-                            </div>
-
-                            {/* Implied */}
-                            <div className="col-span-1 text-center">
-                              {(() => {
-                                const g = gamesMap[player.player.team];
-                                const data: WeekAnalysisData = { implied: g?.implied_team_total ?? null };
-                                return <PlayerWeekAnalysis weekAnalysis={data} column="implied" />
-                              })()}
-                            </div>
-                            {/* OPRK */}
-                            <div className="col-span-1 text-center">
-                              {(() => {
-                                const attrs = Array.isArray(player.draftStatAttributes) ? (player.draftStatAttributes as any[]) : []
-                                const oppRank = attrs.find((a: any) => a.id === -2) || {}
-                                const data: WeekAnalysisData = {
-                                  oprk: {
-                                    value: oppRank.value ?? 0,
-                                    quality: (oppRank.quality as 'High' | 'Medium' | 'Low') || 'Medium'
-                                  }
-                                }
-                                return <PlayerWeekAnalysis weekAnalysis={data} column="oprk" />
-                              })()}
-                            </div>
-
-                            <div className="col-span-1 text-right text-sm font-medium">
-                              ${player.salary?.toLocaleString() || 'N/A'}
-                            </div>
-
-                            <div className="col-span-1 text-right text-sm font-medium">
-                              {player.projectedPoints || 'N/A'}
-                            </div>
-
-                            <div className="col-span-1 text-right text-sm font-medium text-primary">
-                              {player.projectedPoints && player.salary 
-                                ? ((player.projectedPoints / player.salary) * 1000).toFixed(1)
-                                : 'N/A'
-                              }
-                            </div>
-
-                            <div className="col-span-1 text-center">
-                              <Badge 
-                                variant="outline" 
-                                className={`${getStatusColor(player.status)} text-xs font-medium`}
-                              >
-                                {player.status || 'Active'}
-                              </Badge>
-                            </div>
-
-                            <div className="col-span-1 text-center">
-                              <Select 
-                                value={player.tier?.toString() || '4'} 
-                                onValueChange={(value: string) => {
-                                  const newTierValue = parseInt(value);
-                                  // Call API to update the player pool entry
-                                  PlayerService.updatePlayerPoolEntry(player.id, { tier: newTierValue })
-                                    .then(() => {
-                                      // Update local state to reflect the change
-                                      setPlayerPool(prev => 
-                                        prev.map(p => 
-                                          p.id === player.id 
-                                            ? { ...p, tier: newTierValue }
-                                            : p
-                                        )
-                                      );
-                                    })
-                                    .catch(err => {
-                                      console.error('Error updating player tier:', err);
-                                      // Could add a toast notification here
-                                    });
-                                }}
-                              >
-                                <SelectTrigger className="w-full h-8 text-xs">
-                                  <SelectValue>
-                                    <span className="font-medium">{player.tier || 4}</span>
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="1">1</SelectItem>
-                                  <SelectItem value="2">2</SelectItem>
-                                  <SelectItem value="3">3</SelectItem>
-                                  <SelectItem value="4">4</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="col-span-1 text-center">
-                              <Checkbox
-                                checked={player.excluded === true}
-                                onCheckedChange={(checked) => {
-                                  // Update the player's excluded status in the database
-                                  const newExcludedValue = checked === true;
-                                  // Call API to update the player pool entry
-                                  PlayerService.updatePlayerPoolEntry(player.id, { excluded: newExcludedValue })
-                                    .then(() => {
-                                      // Update local state to reflect the change
-                                      setPlayerPool(prev => 
-                                        prev.map(p => 
-                                          p.id === player.id 
-                                            ? { ...p, excluded: newExcludedValue }
-                                            : p
-                                        )
-                                      );
-                                    })
-                                    .catch(err => {
-                                      console.error('Error updating player exclusion:', err);
-                                      // Could add a toast notification here
-                                    });
-                                }}
-                                className="w-4 h-4"
-                              />
-                            </div>
-                          </div>
-                        ))}
+                            <Link 
+                              href={`/profile/${player.player.playerDkId}`}
+                              className={`text-sm font-medium ${player.excluded === true ? 'line-through' : ''} group-hover:underline truncate`}
+                            >
+                              {player.player.displayName} ({player.player.team})
+                            </Link>
+                            <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                          {player.excluded === true && <X className="w-4 h-4 text-destructive ml-1" />}
+                          {position === 'FLEX' && (
+                            <Badge variant="outline" className="text-xs ml-2">
+                              {player.player.position}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    )
-                  })}
+
+                      {/* Opponent */}
+                      <div className="col-span-1 text-center">
+                        {(() => {
+                          const g = gamesMap[player.player.team];
+                          const data: WeekAnalysisData = {
+                            opponent: {
+                              opponentAbbr: g?.opponentAbbr || null,
+                              homeOrAway: g?.homeOrAway || 'N'
+                            }
+                          };
+                          return <PlayerWeekAnalysis weekAnalysis={data} column="opponent" />
+                        })()}
+                      </div>
+
+                      {/* Spread */}
+                      <div className="col-span-1 text-center">
+                        {(() => {
+                          const g = gamesMap[player.player.team];
+                          const data: WeekAnalysisData = { spread: g?.proj_spread ?? null };
+                          return <PlayerWeekAnalysis weekAnalysis={data} column="spread" />
+                        })()}
+                      </div>
+
+                      {/* O/U */}
+                      <div className="col-span-1 text-center">
+                        {(() => {
+                          const g = gamesMap[player.player.team];
+                          const data: WeekAnalysisData = { total: g?.proj_total ?? null };
+                          return <PlayerWeekAnalysis weekAnalysis={data} column="total" />
+                        })()}
+                      </div>
+
+                      {/* Implied */}
+                      <div className="col-span-1 text-center">
+                        {(() => {
+                          const g = gamesMap[player.player.team];
+                          const data: WeekAnalysisData = { implied: g?.implied_team_total ?? null };
+                          return <PlayerWeekAnalysis weekAnalysis={data} column="implied" />
+                        })()}
+                      </div>
+                      {/* Passing (QB only) */}
+                      {position === 'QB' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const attemptsData = qbPassAttemptsProps[player.player.playerDkId];
+                            const completionsData = qbPassCompletionsProps[player.player.playerDkId];
+                            
+                            if (attemptsData?.point && completionsData?.point) {
+                              const attempts = attemptsData.point;
+                              const completions = completionsData.point;
+                              const percentage = attempts > 0 ? ((completions / attempts) * 100).toFixed(1) : '0.0';
+                              
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{completions}/{attempts}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {percentage}%
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Pass Yds (QB only) */}
+                      {position === 'QB' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const passYdsData = qbPassYardsProps[player.player.playerDkId];
+                            if (passYdsData?.point && passYdsData?.price) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{passYdsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{passYdsData.price > 0 ? '+' : ''}{passYdsData.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Passing TDs (QB only) */}
+                      {position === 'QB' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const passingTdsData = qbPassingTdsProps[player.player.playerDkId];
+                            if (passingTdsData?.point && passingTdsData?.price) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{passingTdsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{passingTdsData.price > 0 ? '+' : ''}{passingTdsData.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* OPRK */}
+                      <div className="col-span-1 text-center">
+                        {(() => {
+                          const attrs = Array.isArray(player.draftStatAttributes) ? (player.draftStatAttributes as any[]) : []
+                          const oppRank = attrs.find((a: any) => a.id === -2) || {}
+                          const data: WeekAnalysisData = {
+                            oprk: {
+                              value: oppRank.value ?? 0,
+                              quality: (oppRank.quality as 'High' | 'Medium' | 'Low') || 'Medium'
+                            }
+                          }
+                          return <PlayerWeekAnalysis weekAnalysis={data} column="oprk" />
+                        })()}
+                      </div>
+
+                      <div className="col-span-1 text-right text-sm font-medium">
+                        ${player.salary?.toLocaleString() || 'N/A'}
+                      </div>
+
+                      <div className="col-span-1 text-right text-sm font-medium">
+                        {player.projectedPoints || 'N/A'}
+                      </div>
+
+                      <div className="col-span-1 text-right text-sm font-medium text-primary">
+                        {player.projectedPoints && player.salary 
+                          ? ((player.projectedPoints / player.salary) * 1000).toFixed(1)
+                          : 'N/A'
+                        }
+                      </div>
+
+                      <div className="col-span-1 text-center">
+                        <Badge 
+                          variant="outline" 
+                          className={`${getStatusColor(player.status)} text-xs font-medium`}
+                        >
+                          {player.status || 'Active'}
+                        </Badge>
+                      </div>
+
+                      <div className="col-span-1 text-center">
+                        <Select 
+                          value={player.tier?.toString() || '4'} 
+                          onValueChange={(value: string) => {
+                            const newTierValue = parseInt(value);
+                            // Call API to update the player pool entry
+                            PlayerService.updatePlayerPoolEntry(player.id, { tier: newTierValue })
+                              .then(() => {
+                                // Update local state to reflect the change
+                                setPlayerPool(prev => 
+                                  prev.map(p => 
+                                    p.id === player.id 
+                                      ? { ...p, tier: newTierValue }
+                                      : p
+                                  )
+                                );
+                              })
+                              .catch(err => {
+                                console.error('Error updating player tier:', err);
+                                // Could add a toast notification here
+                              });
+                          }}
+                        >
+                          <SelectTrigger className="w-full h-8 text-xs">
+                            <SelectValue>
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm">{getTierConfig(player.tier || 4).icon}</span>
+                                <span className="font-medium">{player.tier || 4}</span>
+                              </div>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">
+                              <div className="flex items-center gap-2">
+                                <span>{getTierConfig(1).icon}</span>
+                                <span>1</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="2">
+                              <div className="flex items-center gap-2">
+                                <span>{getTierConfig(2).icon}</span>
+                                <span>2</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="3">
+                              <div className="flex items-center gap-2">
+                                <span>{getTierConfig(3).icon}</span>
+                                <span>3</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="4">
+                              <div className="flex items-center gap-2">
+                                <span>{getTierConfig(4).icon}</span>
+                                <span>4</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="col-span-1 text-center">
+                        <Checkbox
+                          checked={player.excluded === true}
+                          onCheckedChange={(checked) => {
+                            // Update the player's excluded status in the database
+                            const newExcludedValue = checked === true;
+                            // Call API to update the player pool entry
+                            PlayerService.updatePlayerPoolEntry(player.id, { excluded: newExcludedValue })
+                              .then(() => {
+                                // Update local state to reflect the change
+                                setPlayerPool(prev => 
+                                  prev.map(p => 
+                                    p.id === player.id 
+                                      ? { ...p, excluded: newExcludedValue }
+                                      : p
+                                  )
+                                );
+                              })
+                              .catch(err => {
+                                console.error('Error updating player exclusion:', err);
+                                // Could add a toast notification here
+                              });
+                          }}
+                          className="w-4 h-4"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 {filteredPlayers.length === 0 && (

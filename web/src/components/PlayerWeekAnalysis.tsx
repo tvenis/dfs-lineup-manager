@@ -18,7 +18,7 @@ export function PlayerWeekAnalysis({ weekAnalysis, column }: { weekAnalysis: Wee
   if (!weekAnalysis) return null
 
   if (column === 'opponent') {
-    const indicator = weekAnalysis.opponent?.homeOrAway === 'A' ? '@' : weekAnalysis.opponent?.homeOrAway === 'H' ? '•' : ''
+    const indicator = weekAnalysis.opponent?.homeOrAway === 'A' ? '@' : weekAnalysis.opponent?.homeOrAway === 'H' ? 'vs' : ''
     return <span className="text-sm">{indicator} {weekAnalysis.opponent?.opponentAbbr || '-'}</span>
   }
 
