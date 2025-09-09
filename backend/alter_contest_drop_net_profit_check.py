@@ -24,11 +24,12 @@ def migrate() -> bool:
         # 1) Rename old table
         cur.execute("ALTER TABLE contest RENAME TO contest_old")
 
-        # 2) Create new table without net_profit_usd check
+        # 2) Create new table schema with entry_key PK and contest_id non-unique, no net_profit check
         cur.execute(
             """
             CREATE TABLE contest (
-                contest_id INTEGER PRIMARY KEY,
+                entry_key INTEGER PRIMARY KEY,
+                contest_id INTEGER,
                 week_id INTEGER,
                 sport_id INTEGER NOT NULL,
                 lineup_id VARCHAR(50),
@@ -58,13 +59,13 @@ def migrate() -> bool:
         cur.execute(
             """
             INSERT INTO contest (
-                contest_id, week_id, sport_id, lineup_id, game_type_id, contest_description,
+                entry_key, contest_id, week_id, sport_id, lineup_id, game_type_id, contest_description,
                 contest_opponent, contest_date_utc, contest_place, contest_points,
                 winnings_non_ticket, winnings_ticket, contest_entries, places_paid,
                 entry_fee_usd, prize_pool_usd, net_profit_usd, created_at
             )
             SELECT 
-                contest_id, week_id, sport_id, lineup_id, game_type_id, contest_description,
+                contest_id as entry_key, contest_id, week_id, sport_id, lineup_id, game_type_id, contest_description,
                 contest_opponent, contest_date_utc, contest_place, contest_points,
                 winnings_non_ticket, winnings_ticket, contest_entries, places_paid,
                 entry_fee_usd, prize_pool_usd, net_profit_usd, created_at
@@ -76,6 +77,7 @@ def migrate() -> bool:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_contest_week ON contest(week_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_contest_sport ON contest(sport_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_contest_game_type ON contest(game_type_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_contest_contest_id ON contest(contest_id)")
 
         # 5) Drop old table
         cur.execute("DROP TABLE contest_old")

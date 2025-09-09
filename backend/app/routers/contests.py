@@ -130,6 +130,7 @@ async def parse_contests_csv(
     staged: List[Dict[str, Any]] = []
     for row in reader:
         # Map by provided spec names with variants
+        entry_key_raw = _get_stripped(row, header_map, ["entry_key", "entry id", "entry key"]) or "0"
         contest_id_raw = _get_stripped(row, header_map, ["contest_key", "contest id", "contest_id"]) or "0"
         sport_code = _get_stripped(row, header_map, ["sport"]).upper() or "NFL"
         game_type_code = _get_stripped(row, header_map, ["game_type", "game type"]).strip() or "Classic"
@@ -146,11 +147,16 @@ async def parse_contests_csv(
         win_ticket = _get_stripped(row, header_map, ["winnings_ticket", "winnings_ticket_usd", "winnings ticket"]) or "0"
 
         try:
+            entry_key = int(re.sub(r"[^0-9]", "", entry_key_raw))
+        except Exception:
+            entry_key = 0
+        try:
             contest_id = int(re.sub(r"[^0-9]", "", contest_id_raw))
         except Exception:
             contest_id = 0
 
         staged.append({
+            "entry_key": entry_key,
             "contest_id": contest_id,
             "week_id": week_id,
             "sport_code": sport_code,
@@ -190,27 +196,33 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
         created = 0
         updated = 0
         errors: List[str] = []
+        cache: Dict[int, Contest] = {}
 
         for r in rows:
             try:
-                contest_id = int(r.get("contest_id"))
+                entry_key = int(r.get("entry_key")) if r.get("entry_key") is not None else 0
+                contest_id = int(r.get("contest_id")) if r.get("contest_id") is not None else 0
+                if entry_key <= 0:
+                    errors.append("Missing or invalid entry_key")
+                    continue
                 sport_id = code_to_sport.get(str(r.get("sport_code", "")).upper())
                 game_type_id = code_to_game_type.get(str(r.get("game_type_code", "Classic")))
                 if not sport_id:
-                    errors.append(f"Contest {contest_id}: Unknown sport code '{r.get('sport_code')}'")
+                    errors.append(f"Entry {entry_key}: Unknown sport code '{r.get('sport_code')}'")
                     continue
                 if not game_type_id:
-                    errors.append(f"Contest {contest_id}: Unknown game type '{r.get('game_type_code')}'")
+                    errors.append(f"Entry {entry_key}: Unknown game type '{r.get('game_type_code')}'")
                     continue
 
                 net_profit = float(r.get("winnings_non_ticket") or 0) + float(r.get("winnings_ticket") or 0) - float(r.get("entry_fee_usd") or 0)
-
-                existing = db.query(Contest).filter(Contest.contest_id == contest_id).first()
+                # Prefer cached (created earlier in this batch), then DB lookup
+                existing = cache.get(entry_key) or db.query(Contest).filter(Contest.entry_key == entry_key).first()
                 if existing:
                     existing.week_id = week_id
                     existing.sport_id = sport_id
                     existing.lineup_id = r.get("lineup_id")
                     existing.game_type_id = game_type_id
+                    existing.contest_id = contest_id
                     existing.contest_description = r.get("contest_description")
                     existing.contest_opponent = r.get("contest_opponent")
                     existing.contest_date_utc = datetime.fromisoformat(r.get("contest_date_utc")).astimezone(ZoneInfo("UTC"))
@@ -225,7 +237,8 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                     existing.net_profit_usd = net_profit
                     updated += 1
                 else:
-                    db.add(Contest(
+                    obj = Contest(
+                        entry_key=entry_key,
                         contest_id=contest_id,
                         week_id=week_id,
                         sport_id=sport_id,
@@ -243,10 +256,14 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                         entry_fee_usd=r.get("entry_fee_usd"),
                         prize_pool_usd=r.get("prize_pool_usd"),
                         net_profit_usd=net_profit,
-                    ))
+                    )
+                    db.add(obj)
+                    # Flush so subsequent iterations can see this row
+                    db.flush()
+                    cache[entry_key] = obj
                     created += 1
             except Exception as e:
-                errors.append(f"Contest {r.get('contest_id')}: {str(e)}")
+                errors.append(f"Entry {r.get('entry_key')}: {str(e)}")
 
         db.commit()
 

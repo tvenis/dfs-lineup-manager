@@ -33,7 +33,8 @@ def migrate_database() -> bool:
         cursor.execute(
             """
             CREATE TABLE contest (
-                contest_id INTEGER PRIMARY KEY, -- external bigint id (Contest_Key)
+                entry_key INTEGER PRIMARY KEY, -- Entry_Key unique per entry
+                contest_id INTEGER, -- external Contest_Key (not unique)
                 week_id INTEGER,
                 sport_id INTEGER NOT NULL,
                 lineup_id VARCHAR(50),
@@ -63,6 +64,7 @@ def migrate_database() -> bool:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_contest_week ON contest(week_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_contest_sport ON contest(sport_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_contest_game_type ON contest(game_type_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_contest_contest_id ON contest(contest_id)")
 
         conn.commit()
         print("Successfully created contest table and indexes")

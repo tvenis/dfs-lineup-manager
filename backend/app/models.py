@@ -41,7 +41,8 @@ class GameType(Base):
 class Contest(Base):
     __tablename__ = "contest"
     
-    contest_id = Column(BigInteger, primary_key=True)  # Maps to Contest_Key (external id)
+    entry_key = Column(BigInteger, primary_key=True)  # Unique per entry: maps to Entry_Key
+    contest_id = Column(BigInteger)  # Contest_Key (can repeat across entries)
     week_id = Column(Integer, ForeignKey("weeks.id"))  # Passed from UI, optional
     sport_id = Column(Integer, ForeignKey("sport.sport_id"), nullable=False)
     lineup_id = Column(String(50), ForeignKey("lineups.id"))  # Nullable
@@ -71,6 +72,7 @@ class Contest(Base):
         Index('idx_contest_week', 'week_id'),
         Index('idx_contest_sport', 'sport_id'),
         Index('idx_contest_game_type', 'game_type_id'),
+        Index('idx_contest_contest_id', 'contest_id'),
         CheckConstraint('contest_entries > 0', name='ck_contest_entries_positive'),
         CheckConstraint('places_paid >= 0', name='ck_places_paid_nonnegative'),
         CheckConstraint('entry_fee_usd >= 0', name='ck_entry_fee_nonnegative'),

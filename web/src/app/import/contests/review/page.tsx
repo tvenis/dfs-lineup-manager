@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, RefreshCw, Upload } from 'lucide-react'
 
 interface Row {
+  entry_key: number
   contest_id: number
   week_id: number
   sport_code: string
@@ -34,6 +35,7 @@ export default function ContestReviewPage() {
   const [weekId, setWeekId] = useState<string>('')
   const [filename, setFilename] = useState<string>('contests.csv')
   const [isSaving, setIsSaving] = useState(false)
+  const [lineups, setLineups] = useState<{id: string, name: string}[]>([])
 
   useEffect(() => {
     const stored = sessionStorage.getItem('contestImportReview')
@@ -46,6 +48,22 @@ export default function ContestReviewPage() {
     setWeekId(data.week_id?.toString() || '')
     setFilename(data.filename || 'contests.csv')
   }, [router])
+
+  useEffect(() => {
+    const fetchLineups = async () => {
+      if (!weekId) return
+      try {
+        const res = await fetch(`http://localhost:8000/api/lineups?week_id=${weekId}&limit=1000`)
+        if (!res.ok) return
+        const data = await res.json()
+        const items = (data.lineups || []).map((l: any) => ({ id: l.id, name: l.name }))
+        setLineups(items)
+      } catch (e) {
+        console.error('Failed to fetch lineups', e)
+      }
+    }
+    fetchLineups()
+  }, [weekId])
 
   const total = useMemo(() => rows.length, [rows])
 
@@ -100,23 +118,21 @@ export default function ContestReviewPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Entry Key</TableHead>
                   <TableHead>Contest ID</TableHead>
                   <TableHead>Sport</TableHead>
                   <TableHead>Game Type</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Opponent</TableHead>
-                  <TableHead>Date (UTC)</TableHead>
-                  <TableHead>Place</TableHead>
-                  <TableHead>Points</TableHead>
-                  <TableHead>Entries</TableHead>
-                  <TableHead>Places Paid</TableHead>
+                  <TableHead>Lineup</TableHead>
                   <TableHead>Entry Fee</TableHead>
-                  <TableHead>Prize Pool</TableHead>
+                  <TableHead>Net Profit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((r, i) => (
-                  <TableRow key={`${r.contest_id}-${i}`}>
+                  <TableRow key={`${r.entry_key}-${i}`}>
+                    <TableCell className="min-w-28">{r.entry_key}</TableCell>
                     <TableCell className="min-w-28">{r.contest_id}</TableCell>
                     <TableCell className="min-w-24">
                       <Input value={r.sport_code} onChange={e => updateRow(i, 'sport_code', e.target.value)} />
@@ -130,26 +146,24 @@ export default function ContestReviewPage() {
                     <TableCell className="min-w-44">
                       <Input value={r.contest_opponent || ''} onChange={e => updateRow(i, 'contest_opponent', e.target.value)} />
                     </TableCell>
-                    <TableCell className="min-w-56">
-                      <Input value={r.contest_date_utc} onChange={e => updateRow(i, 'contest_date_utc', e.target.value)} />
-                    </TableCell>
-                    <TableCell className="min-w-20">
-                      <Input type="number" value={r.contest_place ?? 0} onChange={e => updateRow(i, 'contest_place', Number(e.target.value))} />
-                    </TableCell>
-                    <TableCell className="min-w-24">
-                      <Input type="number" value={r.contest_points ?? 0} step="0.01" onChange={e => updateRow(i, 'contest_points', Number(e.target.value))} />
-                    </TableCell>
-                    <TableCell className="min-w-24">
-                      <Input type="number" value={r.contest_entries} onChange={e => updateRow(i, 'contest_entries', Number(e.target.value))} />
-                    </TableCell>
-                    <TableCell className="min-w-24">
-                      <Input type="number" value={r.places_paid} onChange={e => updateRow(i, 'places_paid', Number(e.target.value))} />
+                    <TableCell className="min-w-64">
+                      <Select value={r.lineup_id ?? 'none'} onValueChange={(v) => updateRow(i, 'lineup_id', v === 'none' ? null : v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select lineup (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No lineup</SelectItem>
+                          {lineups.map(l => (
+                            <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="min-w-28">
                       <Input type="number" step="0.01" value={r.entry_fee_usd} onChange={e => updateRow(i, 'entry_fee_usd', Number(e.target.value))} />
                     </TableCell>
                     <TableCell className="min-w-28">
-                      <Input type="number" step="0.01" value={r.prize_pool_usd} onChange={e => updateRow(i, 'prize_pool_usd', Number(e.target.value))} />
+                      {((r.winnings_non_ticket || 0) + (r.winnings_ticket || 0) - (r.entry_fee_usd || 0)).toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
