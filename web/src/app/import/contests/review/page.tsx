@@ -27,6 +27,7 @@ interface Row {
   places_paid: number
   entry_fee_usd: number
   prize_pool_usd: number
+  result?: number | boolean
 }
 
 export default function ContestReviewPage() {
@@ -127,6 +128,7 @@ export default function ContestReviewPage() {
                   <TableHead>Lineup</TableHead>
                   <TableHead>Entry Fee</TableHead>
                   <TableHead>Net Profit</TableHead>
+                  <TableHead>Result</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -164,6 +166,13 @@ export default function ContestReviewPage() {
                     </TableCell>
                     <TableCell className="min-w-28">
                       {((r.winnings_non_ticket || 0) + (r.winnings_ticket || 0) - (r.entry_fee_usd || 0)).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="min-w-20">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(r.result)}
+                        onChange={(e) => updateRow(i, 'result', e.target.checked ? 1 : 0)}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

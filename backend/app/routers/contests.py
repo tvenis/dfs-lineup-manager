@@ -155,6 +155,9 @@ async def parse_contests_csv(
         except Exception:
             contest_id = 0
 
+        # Compute result flag: 1 if any winnings > 0
+        result_flag = 1 if (_parse_money(win_cash) > 0 or _parse_money(win_ticket) > 0) else 0
+
         staged.append({
             "entry_key": entry_key,
             "contest_id": contest_id,
@@ -173,6 +176,7 @@ async def parse_contests_csv(
             "places_paid": _parse_int(places_paid),
             "entry_fee_usd": _parse_money(entry_fee),
             "prize_pool_usd": _parse_money(prize_pool),
+            "result": result_flag,
         })
 
     return {"staged": staged, "count": len(staged)}
@@ -215,6 +219,7 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                     continue
 
                 net_profit = float(r.get("winnings_non_ticket") or 0) + float(r.get("winnings_ticket") or 0) - float(r.get("entry_fee_usd") or 0)
+                result_flag = 1 if ((r.get("winnings_non_ticket") or 0) > 0 or (r.get("winnings_ticket") or 0) > 0) else 0
                 # Prefer cached (created earlier in this batch), then DB lookup
                 existing = cache.get(entry_key) or db.query(Contest).filter(Contest.entry_key == entry_key).first()
                 if existing:
@@ -235,6 +240,7 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                     existing.entry_fee_usd = r.get("entry_fee_usd")
                     existing.prize_pool_usd = r.get("prize_pool_usd")
                     existing.net_profit_usd = net_profit
+                    existing.result = bool(result_flag)
                     updated += 1
                 else:
                     obj = Contest(
@@ -256,6 +262,7 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                         entry_fee_usd=r.get("entry_fee_usd"),
                         prize_pool_usd=r.get("prize_pool_usd"),
                         net_profit_usd=net_profit,
+                        result=bool(result_flag),
                     )
                     db.add(obj)
                     # Flush so subsequent iterations can see this row

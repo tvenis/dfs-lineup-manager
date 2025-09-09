@@ -1,7 +1,8 @@
 "use client";
 
-import { HistoricalLineups } from "@/components/HistoricalLineups";
+import { redirect } from "next/navigation";
 
 export default function HistoryPage() {
-  return <HistoricalLineups />;
+  redirect("/scoreboard");
+  return null;
 }

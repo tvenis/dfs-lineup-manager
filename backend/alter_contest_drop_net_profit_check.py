@@ -46,6 +46,7 @@ def migrate() -> bool:
                 entry_fee_usd NUMERIC(12,2) NOT NULL CHECK (entry_fee_usd >= 0),
                 prize_pool_usd NUMERIC(12,2) NOT NULL CHECK (prize_pool_usd >= 0),
                 net_profit_usd NUMERIC(12,2) NOT NULL,
+                result INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (week_id) REFERENCES weeks(id),
                 FOREIGN KEY (sport_id) REFERENCES sport(sport_id),
@@ -62,13 +63,13 @@ def migrate() -> bool:
                 entry_key, contest_id, week_id, sport_id, lineup_id, game_type_id, contest_description,
                 contest_opponent, contest_date_utc, contest_place, contest_points,
                 winnings_non_ticket, winnings_ticket, contest_entries, places_paid,
-                entry_fee_usd, prize_pool_usd, net_profit_usd, created_at
+                entry_fee_usd, prize_pool_usd, net_profit_usd, result, created_at
             )
             SELECT 
                 contest_id as entry_key, contest_id, week_id, sport_id, lineup_id, game_type_id, contest_description,
                 contest_opponent, contest_date_utc, contest_place, contest_points,
                 winnings_non_ticket, winnings_ticket, contest_entries, places_paid,
-                entry_fee_usd, prize_pool_usd, net_profit_usd, created_at
+                entry_fee_usd, prize_pool_usd, net_profit_usd, 0 as result, created_at
             FROM contest_old
             """
         )

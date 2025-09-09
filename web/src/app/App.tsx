@@ -19,7 +19,7 @@ import {
   Home,
   Users,
   PlusCircle,
-  History,
+  Trophy,
   Upload,
   Download,
   Settings,
@@ -53,10 +53,10 @@ export default function App({ children }: { children: React.ReactNode }) {
       href: "/builder",
     },
     {
-      id: "history",
-      label: "History",
-      icon: History,
-      href: "/history",
+      id: "scoreboard",
+      label: "Scoreboard",
+      icon: Trophy,
+      href: "/scoreboard",
     },
     {
       id: "profile",

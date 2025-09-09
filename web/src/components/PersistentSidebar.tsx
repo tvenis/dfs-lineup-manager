@@ -18,7 +18,7 @@ import {
   Home,
   Users,
   PlusCircle,
-  History,
+  Trophy,
   Upload,
   Download,
   Settings,
@@ -51,10 +51,10 @@ const navigationItems = [
     href: "/profile",
   },
   {
-    id: "history",
-    label: "Historical Lineups",
-    icon: History,
-    href: "/history",
+    id: "scoreboard",
+    label: "Scoreboard",
+    icon: Trophy,
+    href: "/scoreboard",
   },
   {
     id: "import",

@@ -57,6 +57,7 @@ def get_lineups(
     limit: int = Query(100, ge=1, le=1000),
     game_style: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """Get lineups with filtering and pagination"""
@@ -70,6 +71,9 @@ def get_lineups(
     
     if search:
         query = query.filter(Lineup.name.ilike(f"%{search}%"))
+
+    if status:
+        query = query.filter(Lineup.status == status)
     
     total = query.count()
     lineups = query.offset(skip).limit(limit).all()

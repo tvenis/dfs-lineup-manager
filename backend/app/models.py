@@ -59,6 +59,7 @@ class Contest(Base):
     entry_fee_usd = Column(Numeric(12, 2), nullable=False)
     prize_pool_usd = Column(Numeric(12, 2), nullable=False)
     net_profit_usd = Column(Numeric(12, 2), nullable=False)
+    result = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
