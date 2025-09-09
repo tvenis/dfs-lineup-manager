@@ -14,7 +14,7 @@ import re
 from datetime import datetime as _dt
 
 from app.database import get_db
-from app.models import Week, Sport, GameType, Contest, RecentActivity, Lineup, DKContestDetail
+from app.models import Week, Sport, GameType, Contest, RecentActivity, Lineup, ContestType, DKContestDetail
 import httpx
 
 router = APIRouter(prefix="/api/contests", tags=["contests"])
@@ -509,6 +509,7 @@ async def list_contests(week_id: int | None = None, limit: int = 100, db: Sessio
                 "year": getattr(c.week, "year", None),
                 "sport": getattr(c.sport, "code", None),
                 "game_type": getattr(c.game_type, "code", None),
+                "contest_type": getattr(c.contest_type, "code", None),
                 "lineup_id": c.lineup_id,
                 "lineup_name": getattr(c.lineup, "name", None),
                 "contest_description": c.contest_description,
@@ -547,6 +548,15 @@ async def list_game_types(db: Session = Depends(get_db)):
     try:
         game_types = db.query(GameType).order_by(GameType.code.asc()).all()
         return {"game_types": [gt.code for gt in game_types]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/contest-types")
+async def list_contest_types(db: Session = Depends(get_db)):
+    try:
+        contest_types = db.query(ContestType).order_by(ContestType.code.asc()).all()
+        return {"contest_types": [ct.code for ct in contest_types]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

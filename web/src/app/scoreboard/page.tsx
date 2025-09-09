@@ -22,6 +22,7 @@ interface ContestRow {
   year?: number | null;
   sport: string | null;
   game_type: string | null;
+  contest_type: string | null;
   lineup_id: string | null;
   lineup_name?: string | null;
   contest_description: string | null;
@@ -44,16 +45,17 @@ interface ContestRow {
 export default function ScoreboardPage() {
   const [allContests, setAllContests] = useState<ContestRow[]>([]);
   const [weeks, setWeeks] = useState<{ id: number; week_number: number; year: number; status: string }[]>([]);
-  const [gameTypes, setGameTypes] = useState<string[]>([]);
+  const [contestTypes, setContestTypes] = useState<string[]>([]);
   const [submittedLineups, setSubmittedLineups] = useState<{ id: string; name: string; week_id: number }[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [weekFilter, setWeekFilter] = useState<string>("current");
-  const [gameTypeFilter, setGameTypeFilter] = useState<string>("all");
+  const [contestTypeFilter, setContestTypeFilter] = useState<string>("all");
   const [lineupFilter, setLineupFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("contest_date_utc");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [opponentFilter, setOpponentFilter] = useState<string>("all");
+  const [resultFilter, setResultFilter] = useState<string>("all");
   const [feeMinSel, setFeeMinSel] = useState<string>("none");
   const [feeMaxSel, setFeeMaxSel] = useState<string>("none");
 
@@ -62,10 +64,10 @@ export default function ScoreboardPage() {
       try {
         setLoading(true);
         setError(null);
-        const [contestsRes, weeksRes, gameTypesRes] = await Promise.all([
+        const [contestsRes, weeksRes, contestTypesRes] = await Promise.all([
           fetch(buildApiUrl("/api/contests")),
           fetch(buildApiUrl("/api/weeks")),
-          fetch(buildApiUrl("/api/contests/game-types")),
+          fetch(buildApiUrl("/api/contests/contest-types")),
         ]);
         if (!contestsRes.ok) {
           const err = await contestsRes.json().catch(() => ({}));
@@ -75,16 +77,16 @@ export default function ScoreboardPage() {
           const err = await weeksRes.json().catch(() => ({}));
           throw new Error(err.detail || "Failed to load weeks");
         }
-        if (!gameTypesRes.ok) {
-          const err = await gameTypesRes.json().catch(() => ({}));
-          throw new Error(err.detail || "Failed to load game types");
+        if (!contestTypesRes.ok) {
+          const err = await contestTypesRes.json().catch(() => ({}));
+          throw new Error(err.detail || "Failed to load contest types");
         }
         const contestsData = await contestsRes.json();
         const weeksData = await weeksRes.json();
-        const gameTypesData = await gameTypesRes.json();
+        const contestTypesData = await contestTypesRes.json();
         setAllContests(contestsData.contests || []);
         setWeeks(weeksData.weeks || []);
-        setGameTypes(gameTypesData.game_types || []);
+        setContestTypes(contestTypesData.contest_types || []);
       } catch (e: any) {
         setError(e.message || "Unknown error");
       } finally {
@@ -131,9 +133,15 @@ export default function ScoreboardPage() {
     return [{ value: "all", label: "All Lineups" }, ...submittedLineups.map(l => ({ value: l.name, label: l.name }))];
   }, [submittedLineups]);
 
-  const gameTypeOptions = useMemo(() => {
-    return [{ value: "all", label: "All Game Types" }, ...gameTypes.map(g => ({ value: g, label: g }))];
-  }, [gameTypes]);
+  const contestTypeOptions = useMemo(() => {
+    return [{ value: "all", label: "All Contest Types" }, ...contestTypes.map(ct => ({ value: ct, label: ct }))];
+  }, [contestTypes]);
+
+  const resultOptions = [
+    { value: "all", label: "All" },
+    { value: "1", label: "Win" },
+    { value: "0", label: "Loss" }
+  ];
 
   const opponentOptions = useMemo(() => {
     const opponents = Array.from(
@@ -171,8 +179,8 @@ export default function ScoreboardPage() {
       filtered = allContests.filter(c => (c.week_number ?? -1) === num);
     }
 
-    if (gameTypeFilter !== "all") {
-      filtered = filtered.filter(c => c.game_type === gameTypeFilter);
+    if (contestTypeFilter !== "all") {
+      filtered = filtered.filter(c => c.contest_type === contestTypeFilter);
     }
     if (lineupFilter !== "all") {
       filtered = filtered.filter(c => c.lineup_name === lineupFilter);
@@ -180,6 +188,11 @@ export default function ScoreboardPage() {
 
     if (opponentFilter !== "all") {
       filtered = filtered.filter(c => (c.contest_opponent || "") === opponentFilter);
+    }
+
+    if (resultFilter !== "all") {
+      const targetResult = resultFilter === "1";
+      filtered = filtered.filter(c => Boolean(c.result) === targetResult);
     }
 
     const min = feeMinSel !== "none" ? parseFloat(feeMinSel) : undefined;
@@ -196,7 +209,7 @@ export default function ScoreboardPage() {
     });
 
     return filtered;
-  }, [allContests, weekFilter, gameTypeFilter, lineupFilter, opponentFilter, feeMinSel, feeMaxSel, sortBy, sortOrder]);
+  }, [allContests, weekFilter, contestTypeFilter, lineupFilter, opponentFilter, resultFilter, feeMinSel, feeMaxSel, sortBy, sortOrder]);
 
   const metrics = useMemo(() => {
     const totalEntries = filteredContests.length;
@@ -277,13 +290,13 @@ export default function ScoreboardPage() {
             </SelectContent>
           </Select>
 
-          <Select value={gameTypeFilter} onValueChange={setGameTypeFilter}>
+          <Select value={contestTypeFilter} onValueChange={setContestTypeFilter}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder="Game Type" />
+              <SelectValue placeholder="Contest Type" />
             </SelectTrigger>
             <SelectContent>
-              {gameTypeOptions.map(g => (
-                <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+              {contestTypeOptions.map(ct => (
+                <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -305,6 +318,17 @@ export default function ScoreboardPage() {
             </SelectTrigger>
             <SelectContent>
               {opponentOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={resultFilter} onValueChange={setResultFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Result" />
+            </SelectTrigger>
+            <SelectContent>
+              {resultOptions.map(opt => (
                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
               ))}
             </SelectContent>

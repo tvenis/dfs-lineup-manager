@@ -68,6 +68,7 @@ class Contest(Base):
     sport = relationship("Sport")
     lineup = relationship("Lineup")
     game_type = relationship("GameType")
+    contest_type = relationship("ContestType")
 
     # Constraints
     __table_args__ = (
