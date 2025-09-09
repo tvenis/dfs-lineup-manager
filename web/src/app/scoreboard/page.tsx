@@ -36,6 +36,7 @@ interface ContestRow {
   entry_fee_usd: number;
   prize_pool_usd: number;
   net_profit_usd: number;
+  result?: boolean;
 }
 
 // Dynamic options will be fetched from API
@@ -52,6 +53,9 @@ export default function ScoreboardPage() {
   const [lineupFilter, setLineupFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("contest_date_utc");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [opponentFilter, setOpponentFilter] = useState<string>("all");
+  const [feeMinSel, setFeeMinSel] = useState<string>("none");
+  const [feeMaxSel, setFeeMaxSel] = useState<string>("none");
 
   useEffect(() => {
     async function load() {
@@ -131,6 +135,29 @@ export default function ScoreboardPage() {
     return [{ value: "all", label: "All Game Types" }, ...gameTypes.map(g => ({ value: g, label: g }))];
   }, [gameTypes]);
 
+  const opponentOptions = useMemo(() => {
+    const opponents = Array.from(
+      new Set(
+        allContests
+          .map(c => (c.contest_opponent || "").trim())
+          .filter(v => v.length > 0)
+      )
+    ) as string[];
+    opponents.sort((a, b) => a.localeCompare(b));
+    return [{ value: "all", label: "All Opponents" }, ...opponents.map(o => ({ value: o, label: o }))];
+  }, [allContests]);
+
+  const feeOptions = useMemo(() => {
+    const values = Array.from(
+      new Set(
+        allContests
+          .map(c => Number(c.entry_fee_usd ?? 0))
+          .filter(v => Number.isFinite(v))
+      )
+    ).sort((a, b) => a - b);
+    return values;
+  }, [allContests]);
+
   const filteredContests = useMemo(() => {
     let filtered = [...allContests];
 
@@ -151,6 +178,15 @@ export default function ScoreboardPage() {
       filtered = filtered.filter(c => c.lineup_name === lineupFilter);
     }
 
+    if (opponentFilter !== "all") {
+      filtered = filtered.filter(c => (c.contest_opponent || "") === opponentFilter);
+    }
+
+    const min = feeMinSel !== "none" ? parseFloat(feeMinSel) : undefined;
+    const max = feeMaxSel !== "none" ? parseFloat(feeMaxSel) : undefined;
+    if (min !== undefined) filtered = filtered.filter(c => Number(c.entry_fee_usd ?? 0) >= min);
+    if (max !== undefined) filtered = filtered.filter(c => Number(c.entry_fee_usd ?? 0) <= max);
+
     filtered.sort((a: any, b: any) => {
       let aVal = a[sortBy];
       let bVal = b[sortBy];
@@ -160,7 +196,7 @@ export default function ScoreboardPage() {
     });
 
     return filtered;
-  }, [allContests, weekFilter, gameTypeFilter, lineupFilter, sortBy, sortOrder]);
+  }, [allContests, weekFilter, gameTypeFilter, lineupFilter, opponentFilter, feeMinSel, feeMaxSel, sortBy, sortOrder]);
 
   const metrics = useMemo(() => {
     const totalEntries = filteredContests.length;
@@ -169,9 +205,9 @@ export default function ScoreboardPage() {
     const totalProfit = filteredContests.reduce((sum, c) => sum + (c.net_profit_usd || 0), 0);
     const roi = totalFeesEntered > 0 ? (totalProfit / totalFeesEntered) * 100 : 0;
     const winRate = totalEntries > 0 ? (filteredContests.filter(c => (c.winnings_non_ticket || 0) + (c.winnings_ticket || 0) > 0).length / totalEntries) * 100 : 0;
-    const avgPoints = totalEntries > 0 ? filteredContests.reduce((sum, c) => sum + (c.contest_points || 0), 0) / totalEntries : 0;
+    const wins = filteredContests.reduce((sum, c) => sum + (c.result ? 1 : 0), 0);
     const avgPlace = totalEntries > 0 ? filteredContests.reduce((sum, c) => sum + (c.contest_place || 0), 0) / totalEntries : 0;
-    return { totalEntries, totalFeesEntered, totalWinnings, totalProfit, roi, winRate, avgPoints, avgPlace };
+    return { totalEntries, totalFeesEntered, totalWinnings, totalProfit, roi, winRate, wins, avgPlace };
   }, [filteredContests]);
 
   const profitChartData = useMemo(() => {
@@ -263,6 +299,44 @@ export default function ScoreboardPage() {
             </SelectContent>
           </Select>
 
+          <Select value={opponentFilter} onValueChange={setOpponentFilter}>
+            <SelectTrigger className="w-52">
+              <SelectValue placeholder="Opponent" />
+            </SelectTrigger>
+            <SelectContent>
+              {opponentOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Entry Fee:</span>
+            <Select value={feeMinSel} onValueChange={setFeeMinSel}>
+              <SelectTrigger className="w-28">
+                <SelectValue placeholder="Min" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Min</SelectItem>
+                {feeOptions.map((v) => (
+                  <SelectItem key={`fee-min-${v}`} value={String(v)}>{formatCurrency(v)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-muted-foreground">-</span>
+            <Select value={feeMaxSel} onValueChange={setFeeMaxSel}>
+              <SelectTrigger className="w-28">
+                <SelectValue placeholder="Max" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Max</SelectItem>
+                {feeOptions.map((v) => (
+                  <SelectItem key={`fee-max-${v}`} value={String(v)}>{formatCurrency(v)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex-1" />
           <div className="text-sm text-muted-foreground">{filteredContests.length} {filteredContests.length === 1 ? "contest" : "contests"}</div>
         </div>
@@ -317,19 +391,19 @@ export default function ScoreboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
+            <CardDescription>Wins</CardDescription>
+            <CardTitle className="text-2xl">{metrics.wins}</CardTitle>
+          </CardHeader>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
             <CardDescription>Cash Rate</CardDescription>
             <CardTitle className="text-2xl">{metrics.winRate.toFixed(1)}%</CardTitle>
           </CardHeader>
           <CardContent>
             <Progress value={metrics.winRate} className="h-2" />
           </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Avg Points</CardDescription>
-            <CardTitle className="text-2xl">{metrics.avgPoints.toFixed(1)}</CardTitle>
-          </CardHeader>
         </Card>
 
         <Card>

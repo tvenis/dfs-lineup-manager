@@ -357,6 +357,7 @@ async def list_contests(week_id: int | None = None, limit: int = 100, db: Sessio
                 "entry_fee_usd": to_number(c.entry_fee_usd),
                 "prize_pool_usd": to_number(c.prize_pool_usd),
                 "net_profit_usd": to_number(c.net_profit_usd),
+                "result": bool(getattr(c, "result", False)),
             })
 
         return {"contests": results, "count": len(results)}
