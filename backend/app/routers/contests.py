@@ -13,7 +13,7 @@ import io
 import re
 
 from app.database import get_db
-from app.models import Week, Sport, GameType, Contest, RecentActivity
+from app.models import Week, Sport, GameType, Contest, RecentActivity, Lineup
 
 router = APIRouter(prefix="/api/contests", tags=["contests"])
 
@@ -262,6 +262,15 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                     db.flush()
                     cache[entry_key] = obj
                     created += 1
+                # If lineup_id is provided, update lineup status to 'submitted'
+                try:
+                    lineup_id_val = r.get("lineup_id")
+                    if lineup_id_val:
+                        lineup_obj = db.query(Lineup).filter(Lineup.id == lineup_id_val).first()
+                        if lineup_obj and lineup_obj.status != 'submitted':
+                            lineup_obj.status = 'submitted'
+                except Exception:
+                    pass
             except Exception as e:
                 errors.append(f"Entry {r.get('entry_key')}: {str(e)}")
 
@@ -302,6 +311,52 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/")
+async def list_contests(week_id: int | None = None, limit: int = 100, db: Session = Depends(get_db)):
+    """List contests, optionally filtered by week, sorted by most recent first."""
+    try:
+        query = db.query(Contest)
+        if week_id is not None:
+            query = query.filter(Contest.week_id == week_id)
+        contests = query.order_by(Contest.contest_date_utc.desc()).limit(limit).all()
+
+        def to_number(n):
+            try:
+                return float(n) if n is not None else 0.0
+            except Exception:
+                return 0.0
+
+        results = []
+        for c in contests:
+            results.append({
+                "entry_key": int(c.entry_key) if c.entry_key is not None else None,
+                "contest_id": int(c.contest_id) if c.contest_id is not None else None,
+                "week_id": c.week_id,
+                "week_number": getattr(c.week, "week_number", None),
+                "year": getattr(c.week, "year", None),
+                "sport": getattr(c.sport, "code", None),
+                "game_type": getattr(c.game_type, "code", None),
+                "lineup_id": c.lineup_id,
+                "lineup_name": getattr(c.lineup, "name", None),
+                "contest_description": c.contest_description,
+                "contest_opponent": c.contest_opponent,
+                "contest_date_utc": c.contest_date_utc.isoformat() if c.contest_date_utc else None,
+                "contest_place": c.contest_place,
+                "contest_points": c.contest_points,
+                "winnings_non_ticket": to_number(c.winnings_non_ticket),
+                "winnings_ticket": to_number(c.winnings_ticket),
+                "contest_entries": c.contest_entries,
+                "places_paid": c.places_paid,
+                "entry_fee_usd": to_number(c.entry_fee_usd),
+                "prize_pool_usd": to_number(c.prize_pool_usd),
+                "net_profit_usd": to_number(c.net_profit_usd),
+            })
+
+        return {"contests": results, "count": len(results)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/activity")
 async def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
     try:
@@ -309,6 +364,15 @@ async def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
             RecentActivity.draftGroup == 'CONTEST_IMPORT'
         ).order_by(RecentActivity.timestamp.desc()).limit(limit).all()
         return activities
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/game-types")
+async def list_game_types(db: Session = Depends(get_db)):
+    try:
+        game_types = db.query(GameType).order_by(GameType.code.asc()).all()
+        return {"game_types": [gt.code for gt in game_types]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

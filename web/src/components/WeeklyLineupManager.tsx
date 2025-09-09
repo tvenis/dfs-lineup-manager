@@ -13,7 +13,7 @@ import { Separator } from "./ui/separator";
 import { PlusCircle, Download, Edit, Trash2, Search, Filter, X } from "lucide-react";
 import { WeekService } from "@/lib/weekService";
 import { LineupService } from "@/lib/lineupService";
-import { LineupDisplayData } from "@/types/prd";
+import { LineupDisplayData, LineupStatus } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
 import { getPositionBadgeClasses } from "@/lib/positionColors";
 
@@ -137,6 +137,25 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
   const [showFilters, setShowFilters] = useState(false);
   const [currentWeekId, setCurrentWeekId] = useState<number | null>(1); // Default to week 1
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<{ [key: string]: boolean }>({});
+  const [statusUpdating, setStatusUpdating] = useState<{ [key: string]: boolean }>({});
+
+  const STATUS_FLOW: LineupStatus[] = ['created', 'exported', 'uploaded', 'submitted'];
+  const getNextStatus = (current: LineupStatus): LineupStatus => {
+    const idx = STATUS_FLOW.indexOf(current);
+    return STATUS_FLOW[(idx + 1) % STATUS_FLOW.length];
+  };
+  const handleAdvanceStatus = async (id: string, current: LineupStatus) => {
+    try {
+      setStatusUpdating(prev => ({ ...prev, [id]: true }));
+      const next = getNextStatus(current);
+      await LineupService.updateLineup(id, { status: next });
+      setLineups(prev => prev.map(l => l.id === id ? { ...l, status: next } : l));
+    } catch (e) {
+      console.error('Failed to update lineup status', e);
+    } finally {
+      setStatusUpdating(prev => ({ ...prev, [id]: false }));
+    }
+  };
 
   // Load weeks and lineups from API
   useEffect(() => {
@@ -191,6 +210,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                 id: lineup.id,
                 name: lineup.name,
                 tags: lineup.tags || [],
+                status: (lineup as any).status || 'created',
                 salaryUsed: lineup.salary_used,
                 salaryCap: 50000,
                 projectedPoints: totalProjectedPoints,
@@ -231,6 +251,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                 id: lineup.id,
                 name: lineup.name,
                 tags: lineup.tags || [],
+                status: (lineup as any).status || 'created',
                 salaryUsed: lineup.salary_used,
                 salaryCap: 50000,
                 projectedPoints: totalProjectedPoints,
@@ -260,6 +281,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
               id: "fallback-1",
               name: "Lineup 8/26/2025",
               tags: ["Cash"],
+              status: 'created',
               salaryUsed: 50000,
               salaryCap: 50000,
               projectedPoints: 125.4,
@@ -269,6 +291,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
               id: "fallback-2",
               name: "Lineup 9/1/2025",
               tags: ["GPP"],
+              status: 'created',
               salaryUsed: 49900,
               salaryCap: 50000,
               projectedPoints: 130.2,
@@ -278,6 +301,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
               id: "fallback-3",
               name: "OPRK Based Lineup",
               tags: ["H2H"],
+              status: 'created',
               salaryUsed: 49600,
               salaryCap: 50000,
               projectedPoints: 128.7,
@@ -287,6 +311,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
               id: "fallback-4",
               name: "OPRK Based Lineup",
               tags: ["H2H"],
+              status: 'created',
               salaryUsed: 49600,
               salaryCap: 50000,
               projectedPoints: 128.7,
@@ -296,6 +321,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
               id: "fallback-5",
               name: "Projection Based Lineup",
               tags: ["Cash"],
+              status: 'created',
               salaryUsed: 50000,
               salaryCap: 50000,
               projectedPoints: 132.1,
@@ -377,6 +403,8 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+      // Optimistically update status to exported
+      setLineups(prev => prev.map(l => l.id === lineup.id ? { ...l, status: 'exported' } : l));
     } catch (error) {
       console.error('Failed to export lineup:', error);
     }
@@ -561,6 +589,23 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">{lineup.name}</CardTitle>
                         <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={
+                              `hover:bg-gray-100 ` +
+                              (lineup.status === 'submitted'
+                                ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200'
+                                : (lineup.status === 'exported' || lineup.status === 'uploaded')
+                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200'
+                                  : '')
+                            }
+                            onClick={() => handleAdvanceStatus(lineup.id, lineup.status)}
+                            disabled={statusUpdating[lineup.id]}
+                            title="Advance status"
+                          >
+                            {statusUpdating[lineup.id] ? 'Updating...' : `Status: ${lineup.status}`}
+                          </Button>
                           <Button 
                             variant="ghost" 
                             size="sm" 

@@ -200,6 +200,7 @@ class Lineup(Base):
     tags = Column(JSONString)  # string[] (free-form labels) - using custom JSON type
     game_style = Column(String(50))  # e.g., 'Classic', 'Showdown', etc.
     slots = Column(JSONString, nullable=False)  # QB, RB1, RB2, WR1, WR2, WR3, TE, FLEX, DST; each references playerId - using custom JSON type
+    status = Column(String(20), default="created")  # 'created' | 'exported' | 'uploaded' | 'submitted'
     salary_used = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

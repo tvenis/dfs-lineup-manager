@@ -21,6 +21,8 @@ export type LineupSlotId =
   | "FLEX"
   | "DST";
 
+export type LineupStatus = 'created' | 'exported' | 'uploaded' | 'submitted';
+
 export interface Lineup {
   id: string;
   week_id: number;
@@ -29,6 +31,7 @@ export interface Lineup {
   game_style?: string;
   slots: Partial<Record<LineupSlotId, number>>; // playerDkId per slot
   salary_used: number;
+  status?: LineupStatus;
   created_at: string;
   updated_at: string;
   week?: Week;
@@ -39,6 +42,7 @@ export interface LineupDisplayData {
   id: string;
   name: string;
   tags: string[];
+  status: LineupStatus;
   salaryUsed: number;
   salaryCap: number;
   projectedPoints: number;

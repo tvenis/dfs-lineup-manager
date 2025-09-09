@@ -214,6 +214,15 @@ def export_lineup_csv(lineup_id: str, db: Session = Depends(get_db)):
         print(f"Debug - Slots: {slots}")
         print(f"Debug - Player mapping: {player_to_draftable}")
         
+        # Update lineup status to exported
+        try:
+            lineup_obj = db.query(Lineup).filter(Lineup.id == lineup_id).first()
+            if lineup_obj and lineup_obj.status != 'exported':
+                lineup_obj.status = 'exported'
+                db.commit()
+        except Exception:
+            pass
+
         # Prepare response
         output.seek(0)
         csv_content = output.getvalue()
@@ -350,6 +359,17 @@ def export_all_lineups_csv(
                 writer.writerow([''] * 9)
                 continue
         
+        # Update status to exported for included lineups
+        try:
+            from sqlalchemy import text
+            if week_id:
+                db.execute(text("UPDATE lineups SET status = 'exported' WHERE week_id = :week_id"), {"week_id": week_id})
+            else:
+                db.execute(text("UPDATE lineups SET status = 'exported'"))
+            db.commit()
+        except Exception:
+            pass
+
         # Prepare response
         output.seek(0)
         csv_content = output.getvalue()

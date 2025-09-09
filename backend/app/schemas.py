@@ -182,6 +182,7 @@ class LineupBase(BaseModel):
     tags: List[str] = Field(default=[])  # string[] (free-form labels)
     game_style: Optional[str] = Field(None, max_length=50)  # e.g., 'Classic', 'Showdown', etc.
     slots: Dict[str, Optional[int]] = Field(..., description="QB, RB1, RB2, WR1, WR2, WR3, TE, FLEX, DST; each references playerDkId")
+    status: Optional[str] = Field(default="created", pattern="^(created|exported|uploaded|submitted)$")
     salary_used: int = Field(default=0)
 
 class LineupCreate(BaseModel):
@@ -190,12 +191,14 @@ class LineupCreate(BaseModel):
     tags: List[str] = Field(default=[])
     game_style: Optional[str] = Field(None, max_length=50)
     slots: Dict[str, Optional[int]] = Field(..., description="QB, RB1, RB2, WR1, WR2, WR3, TE, FLEX, DST; each references playerDkId")
+    status: Optional[str] = Field(default="created", pattern="^(created|exported|uploaded|submitted)$")
 
 class LineupUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     tags: Optional[List[str]] = None
     game_style: Optional[str] = Field(None, max_length=50)
     slots: Optional[Dict[str, Optional[str]]] = None
+    status: Optional[str] = Field(None, pattern="^(created|exported|uploaded|submitted)$")
     salary_used: Optional[int] = None
 
 class Lineup(LineupBase):
@@ -215,6 +218,7 @@ class LineupSimple(BaseModel):
     game_style: Optional[str] = Field(None, max_length=50)
     slots: Dict[str, Optional[int]] = Field(..., description="QB, RB1, RB2, WR1, WR2, WR3, TE, FLEX, DST; each references playerDkId")
     salary_used: int = Field(default=0)
+    status: Optional[str] = Field(default="created", pattern="^(created|exported|uploaded|submitted)$")
     created_at: datetime
     updated_at: Optional[datetime] = None
     

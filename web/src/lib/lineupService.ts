@@ -1,5 +1,5 @@
 import { buildApiUrl, API_CONFIG } from '@/config/api';
-import { Lineup, LineupSlotId, LineupDisplayData } from '@/types/prd';
+import { Lineup, LineupSlotId, LineupDisplayData, LineupStatus } from '@/types/prd';
 
 export interface LineupCreate {
   week_id: number;
@@ -14,6 +14,7 @@ export interface LineupUpdate {
   tags?: string[];
   game_style?: string;
   slots?: Partial<Record<LineupSlotId, number>>;
+  status?: LineupStatus;
 }
 
 export interface LineupValidationRequest {
