@@ -377,12 +377,19 @@ class ProjectionBase(BaseModel):
     week_id: int = Field(..., description="Week ID from weeks table")
     playerDkId: int = Field(..., description="DraftKings player ID")
     position: str = Field(..., min_length=1, max_length=10, description="Position from CSV file")
-    projStats: Optional[float] = Field(None, description="Proj Stats from CSV")
-    actualStats: Optional[float] = Field(None, description="Actual Stats from CSV")
-    date: Optional[str] = Field(None, max_length=50, description="Date from CSV")
-    pprProjection: Optional[float] = Field(None, description="PPR Projections")
-    hpprProjection: Optional[float] = Field(None, description="HPPR Projections (ignored)")
-    stdProjection: Optional[float] = Field(None, description="STD Projections")
+    attemps: Optional[float] = Field(None, description="Attempts")
+    comps: Optional[float] = Field(None, description="Completions")
+    passYards: Optional[float] = Field(None, description="Pass Yards")
+    passTDs: Optional[float] = Field(None, description="Pass TDs")
+    ints: Optional[float] = Field(None, description="Interceptions")
+    receptions: Optional[float] = Field(None, description="Receptions")
+    recYards: Optional[float] = Field(None, description="Receiving Yards")
+    recTDs: Optional[float] = Field(None, description="Receiving TDs")
+    rushYards: Optional[float] = Field(None, description="Rushing Yards")
+    rushTDs: Optional[float] = Field(None, description="Rushing TDs")
+    fumbles: Optional[float] = Field(None, description="Fumbles")
+    rank: Optional[int] = Field(None, description="Rank")
+    pprProjections: Optional[float] = Field(None, description="PPR Projections")
     actuals: Optional[float] = Field(None, description="Actuals")
     source: str = Field(..., min_length=1, max_length=100, description="Source column as text value")
 
@@ -391,12 +398,19 @@ class ProjectionCreate(ProjectionBase):
 
 class ProjectionUpdate(BaseModel):
     position: Optional[str] = Field(None, min_length=1, max_length=10)
-    projStats: Optional[float] = None
-    actualStats: Optional[float] = None
-    date: Optional[str] = Field(None, max_length=50)
-    pprProjection: Optional[float] = None
-    hpprProjection: Optional[float] = None
-    stdProjection: Optional[float] = None
+    attemps: Optional[float] = None
+    comps: Optional[float] = None
+    passYards: Optional[float] = None
+    passTDs: Optional[float] = None
+    ints: Optional[float] = None
+    receptions: Optional[float] = None
+    recYards: Optional[float] = None
+    recTDs: Optional[float] = None
+    rushYards: Optional[float] = None
+    rushTDs: Optional[float] = None
+    fumbles: Optional[float] = None
+    rank: Optional[int] = None
+    pprProjections: Optional[float] = None
     actuals: Optional[float] = None
     source: Optional[str] = Field(None, min_length=1, max_length=100)
 

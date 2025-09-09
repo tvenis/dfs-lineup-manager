@@ -11,12 +11,24 @@ import csv
 import io
 import json
 from datetime import datetime
+import logging
+from pathlib import Path
 
 from app.database import get_db
 from app.models import Player, Team, PlayerPoolEntry, Week, Projection, RecentActivity
 from app.schemas import ProjectionImportRequest, ProjectionImportResponse, ProjectionCreate
 
 router = APIRouter(prefix="/api/projections", tags=["projections"])
+
+# File logger for import debug
+_log_file = Path(__file__).resolve().parents[2] / "server.log"
+_logger = logging.getLogger("projection_import_debug")
+if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == str(_log_file) for h in _logger.handlers):
+    _logger.setLevel(logging.DEBUG)
+    _fh = logging.FileHandler(_log_file, mode='a', encoding='utf-8')
+    _fh.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+    _logger.addHandler(_fh)
+    _logger.propagate = False
 
 @router.get("/weeks")
 async def get_active_upcoming_weeks(db: Session = Depends(get_db)):
@@ -90,127 +102,82 @@ async def import_projections(
         raise HTTPException(status_code=500, detail=f"Error processing projections: {str(e)}")
 
 def parse_csv_data(csv_text: str, projection_source: str) -> List[Dict[str, Any]]:
-    """Parse CSV data and extract player information"""
-    lines = csv_text.split('\n')
-    if len(lines) < 2:
-        raise ValueError("CSV file must have at least a header row and one data row")
-    
-    # Parse headers
-    headers = [h.strip().lower() for h in lines[0].split(',')]
-    
-    # Debug logging
-    print(f"DEBUG: CSV Headers found: {headers}")
-    print(f"DEBUG: First few lines: {lines[:3]}")
-    
-    # Find column indices
-    player_index = find_column_index(headers, ['player', 'name'])
-    position_index = find_column_index(headers, ['position', 'pos'])
-    team_index = find_column_index(headers, ['team'])
-    
-    print(f"DEBUG: Column indices - Player: {player_index}, Position: {position_index}, Team: {team_index}")
-    
-    if player_index == -1 or position_index == -1:
-        raise ValueError("CSV must contain 'Player' and 'Position' columns")
-    
-    # Find projection columns
-    proj_stats_index = find_column_index(headers, ['proj stats', 'proj rank', 'rank'])
-    actual_stats_index = find_column_index(headers, ['actual stats'])
-    date_index = find_column_index(headers, ['date'])
-    ppr_index = find_column_index(headers, ['ppr projections', 'ppr'])
-    hppr_index = find_column_index(headers, ['hppr projections', 'hppr'])
-    std_index = find_column_index(headers, ['std projections', 'std'])
-    actuals_index = find_column_index(headers, ['actuals'])
-    
-    # Legacy column support
-    dkm_index = find_column_index(headers, ['dkm'])
-    dfs_index = find_column_index(headers, ['dfs projections', 'dfs'])
-    hfrc_index = find_column_index(headers, ['hfrc projections', 'hfrc'])
-    sld_index = find_column_index(headers, ['sld projections', 'sld'])
-    
-    players = []
-    
-    print(f"DEBUG: Processing {len(lines)-1} data lines")
-    
-    for i, line in enumerate(lines[1:], 1):
-        if not line.strip():
+    """Parse CSV using DictReader and map only the required columns robustly."""
+    reader = csv.DictReader(io.StringIO(csv_text))
+    if not reader.fieldnames:
+        raise ValueError("CSV has no header row")
+
+    header_map = { (h or '').strip().lower(): h for h in reader.fieldnames }
+    print(f"DEBUG: CSV Headers found: {reader.fieldnames}")
+    _logger.debug(f"CSV Headers found: {reader.fieldnames}")
+
+    def get_val(row: dict, key_variants: list[str]) -> str:
+        for k in key_variants:
+            real = header_map.get(k)
+            if real is not None:
+                return (row.get(real) or '').strip()
+        return ''
+
+    players: List[Dict[str, Any]] = []
+    for i, row in enumerate(reader, start=1):
+        name = get_val(row, ['player'])
+        position = get_val(row, ['pos', 'position']).upper()
+        # Strictly read PPR from 'Projections' header to avoid rank mix-ups
+        ppr_raw = get_val(row, ['projections'])
+        actuals_raw = get_val(row, ['actuals'])
+        rank_raw = get_val(row, ['rank'])
+        attemps_raw = get_val(row, ['attempts'])
+        comps_raw = get_val(row, ['comps', 'completions'])
+        pass_yards_raw = get_val(row, ['pass yards', 'passyards'])
+        pass_tds_raw = get_val(row, ['pass tds', 'passtds'])
+        ints_raw = get_val(row, ['ints', 'interceptions'])
+        receptions_raw = get_val(row, ['receptions'])
+        rec_yards_raw = get_val(row, ['rec yards', 'recyards'])
+        rec_tds_raw = get_val(row, ['rec tds', 'rectds'])
+        rush_yards_raw = get_val(row, ['rush yards', 'rushyards'])
+        rush_tds_raw = get_val(row, ['rush tds', 'rushtds'])
+        fumbles_raw = get_val(row, ['fumbles'])
+
+        if not name or not position:
             continue
-            
-        values = [v.strip() for v in line.split(',')]
-        if len(values) < max(player_index, position_index) + 1:
-            if i <= 3:  # Debug first 3 lines
-                print(f"DEBUG: Line {i} skipped - not enough values: {len(values)} < {max(player_index, position_index) + 1}")
-            continue
-        
-        player_name = values[player_index]
-        position = values[position_index].upper()
-        
-        if i <= 3:  # Debug first 3 lines
-            print(f"DEBUG: Line {i}: player='{player_name}', position='{position}', values={values}")
-        
-        # Extract team from player name if it includes team (e.g., "Josh Allen BUF")
-        name_parts = player_name.split(' ')
-        possible_team = name_parts[-1] if name_parts else ''
-        is_team_code = len(possible_team) in [2, 3] and possible_team.isupper()
-        
-        if is_team_code:
-            name = ' '.join(name_parts[:-1])
-            team = possible_team
-        else:
-            name = player_name
-            team = values[team_index] if team_index != -1 and len(values) > team_index else ''
-        
-        if i <= 3:  # Debug first 3 lines
-            print(f"DEBUG: Line {i}: final name='{name}', team='{team}', is_team_code={is_team_code}")
-        
-        # Parse projection values
-        proj_stats = parse_float_value(values, proj_stats_index)
-        ppr_proj = parse_float_value(values, ppr_index)
-        hppr_proj = parse_float_value(values, hppr_index)
-        std_proj = parse_float_value(values, std_index)
-        
-        # Legacy projection support
-        dkm_proj = parse_float_value(values, dkm_index)
-        dfs_proj = parse_float_value(values, dfs_index)
-        hfrc_proj = parse_float_value(values, hfrc_index)
-        sld_proj = parse_float_value(values, sld_index)
-        
-        # Determine which projection to use based on source name
-        selected_projection = determine_projection_new(projection_source, proj_stats, ppr_proj, hppr_proj, std_proj, dkm_proj, dfs_proj, hfrc_proj, sld_proj)
-        
-        if i <= 3:  # Debug first 3 lines
-            print(f"DEBUG: Line {i}: selected_projection={selected_projection}, proj_stats={proj_stats}, ppr_proj={ppr_proj}, std_proj={std_proj}")
-        
-        if selected_projection <= 0:
-            if i <= 3:  # Debug first 3 lines
-                print(f"DEBUG: Line {i}: SKIPPED - selected_projection <= 0")
-            continue  # Skip players with no valid projection
-        
-        player_data = {
-            'name': name.strip(),
-            'team': team.upper().strip(),
+
+        ppr = float(ppr_raw) if ppr_raw not in ('', None) else 0.0
+        actuals = float(actuals_raw) if actuals_raw not in ('', None) else 0.0
+        player = {
+            'name': name,
+            'team': '',
             'position': position,
-            'proj_stats': proj_stats,
-            'actual_stats': parse_float_value(values, actual_stats_index),
-            'date': values[date_index] if date_index != -1 and len(values) > date_index else '',
-            'ppr_projection': ppr_proj,
-            'hppr_projection': hppr_proj,
-            'std_projection': std_proj,
-            'actuals': parse_float_value(values, actuals_index),
-            'selected_projection': selected_projection,
+            'attemps': float(attemps_raw) if attemps_raw else 0.0,
+            'comps': float(comps_raw) if comps_raw else 0.0,
+            'passYards': float(pass_yards_raw) if pass_yards_raw else 0.0,
+            'passTDs': float(pass_tds_raw) if pass_tds_raw else 0.0,
+            'ints': float(ints_raw) if ints_raw else 0.0,
+            'receptions': float(receptions_raw) if receptions_raw else 0.0,
+            'recYards': float(rec_yards_raw) if rec_yards_raw else 0.0,
+            'recTDs': float(rec_tds_raw) if rec_tds_raw else 0.0,
+            'rushYards': float(rush_yards_raw) if rush_yards_raw else 0.0,
+            'rushTDs': float(rush_tds_raw) if rush_tds_raw else 0.0,
+            'fumbles': float(fumbles_raw) if fumbles_raw else 0.0,
+            'rank': int(float(rank_raw)) if rank_raw else 0,
+            'pprProjections': ppr,
+            'actuals': actuals,
+            'selected_projection': ppr,
+            'selectedProjection': ppr,
             'projection_source': projection_source,
-            # Legacy fields
-            'dkm_projection': dkm_proj,
-            'dfs_projection': dfs_proj,
-            'hfrc_projection': hfrc_proj,
-            'sld_projection': sld_proj
         }
-        
-        players.append(player_data)
-    
-    print(f"DEBUG: Successfully parsed {len(players)} players from CSV")
+
+        if i <= 3:
+            msg = f"Row {i} name={name} pos={position} raw_ppr='{ppr_raw}' parsed_ppr={ppr}"
+            print(f"DEBUG: {msg}")
+            _logger.debug(msg)
+
+        players.append(player)
+
+    print(f"DEBUG: Successfully parsed {len(players)} players from CSV (DictReader)")
+    _logger.debug(f"Successfully parsed {len(players)} players from CSV (DictReader)")
     if len(players) > 0:
         print(f"DEBUG: First player example: {players[0]}")
-    
+        _logger.debug(f"First player example: {players[0]}")
     return players
 
 def find_column_index(headers: List[str], possible_names: List[str]) -> int:
@@ -239,6 +206,22 @@ def parse_int_value(values: List[str], index: int) -> int:
         return int(float(values[index])) if values[index] else 0
     except (ValueError, TypeError):
         return 0
+
+def _safe_float(value: Any) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+        return float(value)
+    except Exception:
+        return None
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        if value is None or value == "":
+            return None
+        return int(float(value))
+    except Exception:
+        return None
 
 def determine_projection_new(source: str, proj_stats: float, ppr: float, hppr: float, std: float, dkm: float, dfs: float, hfrc: float, sld: float) -> float:
     """Determine which projection to use based on source name"""
@@ -274,40 +257,91 @@ def determine_projection(source: str, dkm: float, dfs: float, hfrc: float, sld: 
     """Legacy function for backward compatibility"""
     return determine_projection_new(source, 0, 0, 0, 0, dkm, dfs, hfrc, sld)
 
-def find_player_match(db: Session, name: str, team: str, position: str) -> tuple[Player | None, str]:
-    """Find matching player in database"""
-    # Try exact match first (case insensitive)
-    exact_match = db.query(Player).filter(
+def find_player_match(db: Session, name: str, team: str, position: str) -> tuple[Player | None, str, list[dict]]:
+    """Find matching player in database. If multiple candidates are found, return ambiguous with candidates list."""
+    position_upper = position.upper()
+    team_upper = (team or '').upper()
+
+    if team_upper:
+        # Exact match with team
+        exact_with_team_list = db.query(Player).filter(
+            and_(
+                func.lower(Player.displayName) == name.lower(),
+                Player.position == position_upper,
+                Player.team == team_upper,
+            )
+        ).all()
+        if len(exact_with_team_list) == 1:
+            return exact_with_team_list[0], 'exact', []
+        if len(exact_with_team_list) > 1:
+            return None, 'ambiguous_exact_with_team', [
+                {
+                    'playerDkId': p.playerDkId,
+                    'name': p.displayName,
+                    'position': p.position,
+                    'team': p.team,
+                }
+                for p in exact_with_team_list
+            ]
+
+    # Exact match without team (name + position)
+    exact_no_team_list = db.query(Player).filter(
         and_(
             func.lower(Player.displayName) == name.lower(),
-            Player.position == position.upper(),
-            Player.team == team.upper()
+            Player.position == position_upper,
         )
-    ).first()
-    
-    if exact_match:
-        return exact_match, 'exact'
-    
-    # Try partial match with name and position (using ILIKE for partial matching)
-    partial_match = db.query(Player).filter(
+    ).all()
+    if len(exact_no_team_list) == 1:
+        return exact_no_team_list[0], 'exact_no_team', []
+    if len(exact_no_team_list) > 1:
+        return None, 'ambiguous_exact_no_team', [
+            {
+                'playerDkId': p.playerDkId,
+                'name': p.displayName,
+                'position': p.position,
+                'team': p.team,
+            }
+            for p in exact_no_team_list
+        ]
+
+    # Partial match with name and position
+    partial_list = db.query(Player).filter(
         and_(
             Player.displayName.ilike(f"%{name}%"),
-            Player.position == position.upper()
+            Player.position == position_upper,
         )
-    ).first()
-    
-    if partial_match:
-        return partial_match, 'partial'
-    
-    # Try name only match
-    name_match = db.query(Player).filter(
+    ).all()
+    if len(partial_list) == 1:
+        return partial_list[0], 'partial', []
+    if len(partial_list) > 1:
+        return None, 'ambiguous_partial', [
+            {
+                'playerDkId': p.playerDkId,
+                'name': p.displayName,
+                'position': p.position,
+                'team': p.team,
+            }
+            for p in partial_list
+        ]
+
+    # Name only match
+    name_only_list = db.query(Player).filter(
         Player.displayName.ilike(f"%{name}%")
-    ).first()
-    
-    if name_match:
-        return name_match, 'name_only'
-    
-    return None, 'none'
+    ).all()
+    if len(name_only_list) == 1:
+        return name_only_list[0], 'name_only', []
+    if len(name_only_list) > 1:
+        return None, 'ambiguous_name_only', [
+            {
+                'playerDkId': p.playerDkId,
+                'name': p.displayName,
+                'position': p.position,
+                'team': p.team,
+            }
+            for p in name_only_list
+        ]
+
+    return None, 'none', []
 
 def process_matched_players(db: Session, week_id: int, projection_source: str, matched_players: List[Dict[str, Any]]) -> ProjectionImportResponse:
     """Process pre-matched players directly"""
@@ -335,22 +369,26 @@ def process_matched_players(db: Session, week_id: int, projection_source: str, m
     for i, player_data in enumerate(matched_players):
         try:
             playerDkId = player_data['playerDkId']
-            selected_projection = float(player_data['selectedProjection'])
+            selected_projection = float(
+                player_data.get('selectedProjection')
+                or player_data.get('selected_projection')
+                or player_data.get('pprProjections')
+                or player_data.get('pprProjection')
+                or 0
+            )
             
-            # Get the actual projection values from the CSV
-            # CSV structure: name, position, proj stats, date, PPR Projections, HPPR Projections, STD Projections, Actuals
-            # But the actual field names from the CSV parsing are different
-            ppr_projection = float(player_data.get('pprProjection', 0))
-            actuals = float(player_data.get('actuals', 0))
-            
-            # Get the JSON fields
-            proj_stats_json = player_data.get('projStatsJson')
-            actual_stats_json = player_data.get('actualStatsJson')
+            # New-format fields
+            ppr_projection = float(
+                player_data.get('pprProjections')
+                or player_data.get('pprProjection')
+                or player_data.get('ppr_projection')
+                or 0
+            )
+            actuals = float(player_data.get('actuals') or 0)
             
             if i < 3:  # Debug first 3 players
                 print(f"DEBUG: Player {i+1}: Available fields: {list(player_data.keys())}")
                 print(f"DEBUG: Player {i+1}: pprProjection = {ppr_projection}, actuals = {actuals}")
-                print(f"DEBUG: Player {i+1}: projStatsJson = {proj_stats_json is not None}, actualStatsJson = {actual_stats_json is not None}")
             
             # Skip if we've already processed this player
             if playerDkId in processed_players:
@@ -377,29 +415,49 @@ def process_matched_players(db: Session, week_id: int, projection_source: str, m
             if existing_projection:
                 # Update existing projection
                 existing_projection.position = player_data['position']
-                existing_projection.projStats = proj_stats_json  # JSON field from CSV
-                existing_projection.actualStats = actual_stats_json  # JSON field from CSV
-                existing_projection.pprProjection = ppr_projection  # Use PPR Projections from CSV
-                existing_projection.actuals = actuals  # Use Actuals from CSV
+                existing_projection.attemps = _safe_float(player_data.get('attemps'))
+                existing_projection.comps = _safe_float(player_data.get('comps'))
+                existing_projection.passYards = _safe_float(player_data.get('passYards'))
+                existing_projection.passTDs = _safe_float(player_data.get('passTDs'))
+                existing_projection.ints = _safe_float(player_data.get('ints'))
+                existing_projection.receptions = _safe_float(player_data.get('receptions'))
+                existing_projection.recYards = _safe_float(player_data.get('recYards'))
+                existing_projection.recTDs = _safe_float(player_data.get('recTDs'))
+                existing_projection.rushYards = _safe_float(player_data.get('rushYards'))
+                existing_projection.rushTDs = _safe_float(player_data.get('rushTDs'))
+                existing_projection.fumbles = _safe_float(player_data.get('fumbles'))
+                existing_projection.rank = _safe_int(player_data.get('rank'))
+                existing_projection.pprProjections = ppr_projection
+                existing_projection.actuals = actuals
                 projections_updated += 1
                 if i < 3:
-                    print(f"DEBUG: Player {i+1}: UPDATED existing projection (PPR: {ppr_projection}, Actuals: {actuals}, ProjStats: {proj_stats_json is not None}, ActualStats: {actual_stats_json is not None})")
+                    print(f"DEBUG: Player {i+1}: UPDATED existing projection (PPR: {ppr_projection}, Actuals: {actuals})")
             else:
                 # Create new projection
                 new_projection = Projection(
                     week_id=week_id,
                     playerDkId=playerDkId,
                     position=player_data['position'],
-                    projStats=proj_stats_json,  # JSON field from CSV
-                    actualStats=actual_stats_json,  # JSON field from CSV
-                    pprProjection=ppr_projection,  # Use PPR Projections from CSV
-                    actuals=actuals,  # Use Actuals from CSV
+                    attemps=_safe_float(player_data.get('attemps')),
+                    comps=_safe_float(player_data.get('comps')),
+                    passYards=_safe_float(player_data.get('passYards')),
+                    passTDs=_safe_float(player_data.get('passTDs')),
+                    ints=_safe_float(player_data.get('ints')),
+                    receptions=_safe_float(player_data.get('receptions')),
+                    recYards=_safe_float(player_data.get('recYards')),
+                    recTDs=_safe_float(player_data.get('recTDs')),
+                    rushYards=_safe_float(player_data.get('rushYards')),
+                    rushTDs=_safe_float(player_data.get('rushTDs')),
+                    fumbles=_safe_float(player_data.get('fumbles')),
+                    rank=_safe_int(player_data.get('rank')),
+                    pprProjections=ppr_projection,
+                    actuals=actuals,
                     source=projection_source
                 )
                 db.add(new_projection)
                 projections_created += 1
                 if i < 3:
-                    print(f"DEBUG: Player {i+1}: CREATED new projection (PPR: {ppr_projection}, Actuals: {actuals}, ProjStats: {proj_stats_json is not None}, ActualStats: {actual_stats_json is not None})")
+                    print(f"DEBUG: Player {i+1}: CREATED new projection (PPR: {ppr_projection}, Actuals: {actuals})")
             
             # Update player pool entry if it exists
             pool_entry = db.query(PlayerPoolEntry).filter(
@@ -411,6 +469,10 @@ def process_matched_players(db: Session, week_id: int, projection_source: str, m
             
             if pool_entry:
                 pool_entry.projectedPoints = selected_projection
+                try:
+                    pool_entry.actuals = float(player_data.get('actuals')) if player_data.get('actuals') is not None else pool_entry.actuals
+                except Exception:
+                    pass
                 player_pool_updated += 1
             
         except Exception as e:
@@ -450,10 +512,10 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
     for i, player_data in enumerate(csv_data):
         try:
             # Find matching player
-            matched_player, match_confidence = find_player_match(
-                db, 
-                player_data['name'], 
-                player_data['team'], 
+            matched_player, match_confidence, candidates = find_player_match(
+                db,
+                player_data['name'],
+                player_data.get('team', ''),
                 player_data['position']
             )
             
@@ -464,6 +526,15 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
                 else:
                     print(f"DEBUG: No match found")
             
+            if match_confidence.startswith('ambiguous'):
+                failed_matches += 1
+                unmatched_players.append({
+                    'csv_data': player_data,
+                    'match_confidence': match_confidence,
+                    'possible_matches': candidates,
+                })
+                continue
+
             if not matched_player:
                 failed_matches += 1
                 unmatched_players.append({
@@ -484,28 +555,40 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
                 )
             ).first()
             
+            # Minimal mapping per spec: map Projections -> pprProjections and include Actuals
             projection_data = {
                 'week_id': week_id,
                 'playerDkId': matched_player.playerDkId,
                 'position': player_data['position'],
-                'projStats': player_data['proj_stats'],
-                'actualStats': player_data['actual_stats'],
-                'date': player_data['date'],
-                'pprProjection': player_data['ppr_projection'],
-                'hpprProjection': player_data['hppr_projection'],  # Ignored as requested
-                'stdProjection': player_data['std_projection'],
-                'actuals': player_data['actuals'],
-                'source': projection_source
+                'pprProjections': player_data.get('pprProjections'),
+                'actuals': player_data.get('actuals'),
+                'source': projection_source,
             }
             
             if existing_projection:
-                # Update existing projection
-                for key, value in projection_data.items():
-                    if key not in ['week_id', 'playerDkId', 'source']:
-                        setattr(existing_projection, key, value)
+                if i < 3:
+                    msg = (
+                        f"Upsert(existing) {matched_player.displayName} src='{projection_source}' prev_ppr={getattr(existing_projection, 'pprProjections', None)} new_ppr={projection_data['pprProjections']}"
+                    )
+                    print(f"DEBUG: {msg}")
+                    _logger.debug(msg)
+                # Update only position, pprProjections, and actuals
+                existing_projection.position = projection_data['position']
+                existing_projection.pprProjections = projection_data['pprProjections']
+                if projection_data.get('actuals') is not None:
+                    try:
+                        existing_projection.actuals = float(projection_data['actuals'])
+                    except Exception:
+                        pass
                 projections_updated += 1
             else:
-                # Create new projection
+                # Create new projection with minimal fields
+                if i < 3:
+                    msg = (
+                        f"Upsert(create) {matched_player.displayName} src='{projection_source}' new_ppr={projection_data['pprProjections']}"
+                    )
+                    print(f"DEBUG: {msg}")
+                    _logger.debug(msg)
                 new_projection = Projection(**projection_data)
                 db.add(new_projection)
                 projections_created += 1
@@ -520,6 +603,10 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
             
             if pool_entry:
                 pool_entry.projectedPoints = player_data['selected_projection']
+                try:
+                    pool_entry.actuals = float(player_data.get('actuals')) if player_data.get('actuals') is not None else pool_entry.actuals
+                except Exception:
+                    pass
                 player_pool_updated += 1
             
         except Exception as e:

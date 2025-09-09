@@ -35,6 +35,17 @@ export default function PlayerPoolPage() {
   const [qbPassingTdsProps, setQbPassingTdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
   const [qbPassAttemptsProps, setQbPassAttemptsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
   const [qbPassCompletionsProps, setQbPassCompletionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [qbRushYardsProps, setQbRushYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [qbTdsOverProps, setQbTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [rbRushAttemptsProps, setRbRushAttemptsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [rbRushYardsProps, setRbRushYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [rbTdsOverProps, setRbTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [wrTdsOverProps, setWrTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [teTdsOverProps, setTeTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [wrReceptionsProps, setWrReceptionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [teReceptionsProps, setTeReceptionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [wrRecYdsProps, setWrRecYdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [teRecYdsProps, setTeRecYdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
 
   // Function to fetch QB passing yards props
   const fetchQbPassYardsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
@@ -74,6 +85,305 @@ export default function PlayerPoolPage() {
       console.log(`🎯 Fetched passing yards props for ${Object.keys(propsMap).length} QBs`);
     } catch (error) {
       console.error('Error fetching QB passing yards props:', error);
+    }
+  };
+
+  // Function to fetch WR/TE 1+ TD (player_tds_over) props with betonlineag Over 0.5 preference
+  const fetchWrTeTdsOverProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const wrPlayers = entries.filter(e => e.player.position === 'WR');
+      const tePlayers = entries.filter(e => e.player.position === 'TE');
+      const wrMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const teMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+
+      const fetchFor = async (playerDkId: number) => {
+        // Prefer betonlineag Over 0.5, fallback betonlineag Over any, then DK Over 0.5, then DK Over any
+        const betResp = await PlayerService.getPlayerProps(playerDkId, {
+          week_id: weekId,
+          bookmaker: 'betonlineag',
+          market: 'player_tds_over'
+        });
+        let chosen = betResp.props.find(p => p.outcome_name === 'Over' && p.bookmaker === 'betonlineag' && p.market === 'player_tds_over' && Number(p.outcome_point) === 0.5)
+          || betResp.props.find(p => p.outcome_name === 'Over' && p.bookmaker === 'betonlineag' && p.market === 'player_tds_over');
+        if (!chosen) {
+          const dkResp = await PlayerService.getPlayerProps(playerDkId, {
+            week_id: weekId,
+            bookmaker: 'draftkings',
+            market: 'player_tds_over'
+          });
+          chosen = dkResp.props.find(p => p.outcome_name === 'Over' && p.bookmaker === 'draftkings' && p.market === 'player_tds_over' && Number(p.outcome_point) === 0.5)
+            || dkResp.props.find(p => p.outcome_name === 'Over' && p.bookmaker === 'draftkings' && p.market === 'player_tds_over');
+        }
+        return chosen ? {
+          point: chosen.outcome_point || undefined,
+          price: chosen.outcome_price || undefined,
+          bookmaker: chosen.bookmaker || undefined
+        } : undefined;
+      };
+
+      for (const wr of wrPlayers) {
+        try {
+          const res = await fetchFor(wr.player.playerDkId);
+          if (res) wrMap[wr.player.playerDkId] = res;
+        } catch (e) {
+          console.error(`Error fetching 1+ TD props for WR ${wr.player.displayName}:`, e);
+        }
+      }
+      for (const te of tePlayers) {
+        try {
+          const res = await fetchFor(te.player.playerDkId);
+          if (res) teMap[te.player.playerDkId] = res;
+        } catch (e) {
+          console.error(`Error fetching 1+ TD props for TE ${te.player.displayName}:`, e);
+        }
+      }
+
+      setWrTdsOverProps(wrMap);
+      setTeTdsOverProps(teMap);
+      console.log(`🎯 Fetched 1+ TD props for WR: ${Object.keys(wrMap).length}, TE: ${Object.keys(teMap).length}`);
+    } catch (error) {
+      console.error('Error fetching WR/TE 1+ TD props:', error);
+    }
+  };
+
+  // Function to fetch WR/TE receptions (player_receptions) props from DraftKings Over
+  const fetchWrTeReceptionsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const wrPlayers = entries.filter(e => e.player.position === 'WR');
+      const tePlayers = entries.filter(e => e.player.position === 'TE');
+      const wrMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const teMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+
+      const fetchFor = async (playerDkId: number) => {
+        const resp = await PlayerService.getPlayerProps(playerDkId, {
+          week_id: weekId,
+          bookmaker: 'draftkings',
+          market: 'player_receptions'
+        });
+        const over = resp.props.find(p => p.outcome_name === 'Over' && p.bookmaker === 'draftkings' && p.market === 'player_receptions');
+        return over ? {
+          point: over.outcome_point || undefined,
+          price: over.outcome_price || undefined,
+          bookmaker: over.bookmaker || undefined
+        } : undefined;
+      };
+
+      for (const wr of wrPlayers) {
+        try {
+          const res = await fetchFor(wr.player.playerDkId);
+          if (res) wrMap[wr.player.playerDkId] = res;
+        } catch (e) {
+          console.error(`Error fetching receptions props for WR ${wr.player.displayName}:`, e);
+        }
+      }
+      for (const te of tePlayers) {
+        try {
+          const res = await fetchFor(te.player.playerDkId);
+          if (res) teMap[te.player.playerDkId] = res;
+        } catch (e) {
+          console.error(`Error fetching receptions props for TE ${te.player.displayName}:`, e);
+        }
+      }
+
+      setWrReceptionsProps(wrMap);
+      setTeReceptionsProps(teMap);
+      console.log(`🎯 Fetched receptions props for WR: ${Object.keys(wrMap).length}, TE: ${Object.keys(teMap).length}`);
+    } catch (error) {
+      console.error('Error fetching WR/TE receptions props:', error);
+    }
+  };
+
+  // Function to fetch WR/TE receiving yards (player_reception_yds) props from DraftKings Over
+  const fetchWrTeRecYdsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const wrPlayers = entries.filter(e => e.player.position === 'WR');
+      const tePlayers = entries.filter(e => e.player.position === 'TE');
+      const wrMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const teMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+
+      const fetchFor = async (playerDkId: number) => {
+        const resp = await PlayerService.getPlayerProps(playerDkId, {
+          week_id: weekId,
+          bookmaker: 'draftkings',
+          market: 'player_reception_yds'
+        });
+        const over = resp.props.find(p => p.outcome_name === 'Over' && p.bookmaker === 'draftkings' && p.market === 'player_reception_yds');
+        return over ? {
+          point: over.outcome_point || undefined,
+          price: over.outcome_price || undefined,
+          bookmaker: over.bookmaker || undefined
+        } : undefined;
+      };
+
+      for (const wr of wrPlayers) {
+        try {
+          const res = await fetchFor(wr.player.playerDkId);
+          if (res) wrMap[wr.player.playerDkId] = res;
+        } catch (e) {
+          console.error(`Error fetching rec yds props for WR ${wr.player.displayName}:`, e);
+        }
+      }
+      for (const te of tePlayers) {
+        try {
+          const res = await fetchFor(te.player.playerDkId);
+          if (res) teMap[te.player.playerDkId] = res;
+        } catch (e) {
+          console.error(`Error fetching rec yds props for TE ${te.player.displayName}:`, e);
+        }
+      }
+
+      setWrRecYdsProps(wrMap);
+      setTeRecYdsProps(teMap);
+      console.log(`🎯 Fetched rec yds props for WR: ${Object.keys(wrMap).length}, TE: ${Object.keys(teMap).length}`);
+    } catch (error) {
+      console.error('Error fetching WR/TE rec yds props:', error);
+    }
+  };
+
+  // Function to fetch RB rush attempts props
+  const fetchRbRushAttemptsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const rbPlayers = entries.filter(entry => entry.player.position === 'RB');
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+
+      for (const rb of rbPlayers) {
+        try {
+          const propsData = await PlayerService.getPlayerProps(rb.player.playerDkId, {
+            week_id: weekId,
+            bookmaker: 'draftkings',
+            market: 'player_rush_attempts'
+          });
+
+          const overProp = propsData.props.find(prop =>
+            prop.outcome_name === 'Over' &&
+            prop.bookmaker === 'draftkings' &&
+            prop.market === 'player_rush_attempts'
+          );
+
+          if (overProp) {
+            propsMap[rb.player.playerDkId] = {
+              point: overProp.outcome_point || undefined,
+              price: overProp.outcome_price || undefined,
+              bookmaker: overProp.bookmaker || undefined
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching rush attempts props for RB ${rb.player.displayName}:`, error);
+        }
+      }
+
+      setRbRushAttemptsProps(propsMap);
+      console.log(`🎯 Fetched rush attempts props for ${Object.keys(propsMap).length} RBs`);
+    } catch (error) {
+      console.error('Error fetching RB rush attempts props:', error);
+    }
+  };
+
+  // Function to fetch RB rush yards props
+  const fetchRbRushYardsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const rbPlayers = entries.filter(entry => entry.player.position === 'RB');
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+
+      for (const rb of rbPlayers) {
+        try {
+          const propsData = await PlayerService.getPlayerProps(rb.player.playerDkId, {
+            week_id: weekId,
+            bookmaker: 'draftkings',
+            market: 'player_rush_yds'
+          });
+
+          const overProp = propsData.props.find(prop =>
+            prop.outcome_name === 'Over' &&
+            prop.bookmaker === 'draftkings' &&
+            prop.market === 'player_rush_yds'
+          );
+
+          if (overProp) {
+            propsMap[rb.player.playerDkId] = {
+              point: overProp.outcome_point || undefined,
+              price: overProp.outcome_price || undefined,
+              bookmaker: overProp.bookmaker || undefined
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching rush yards props for RB ${rb.player.displayName}:`, error);
+        }
+      }
+
+      setRbRushYardsProps(propsMap);
+      console.log(`🎯 Fetched rush yards props for ${Object.keys(propsMap).length} RBs`);
+    } catch (error) {
+      console.error('Error fetching RB rush yards props:', error);
+    }
+  };
+
+  // Function to fetch RB 1+ TD (player_tds_over) props
+  const fetchRbTdsOverProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const rbPlayers = entries.filter(entry => entry.player.position === 'RB');
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+
+      for (const rb of rbPlayers) {
+        try {
+          // Prefer betonlineag Over 0.5
+          const propsDataBetOnline = await PlayerService.getPlayerProps(rb.player.playerDkId, {
+            week_id: weekId,
+            bookmaker: 'betonlineag',
+            market: 'player_tds_over'
+          });
+
+          let chosen = propsDataBetOnline.props.find(prop =>
+            prop.outcome_name === 'Over' &&
+            prop.bookmaker === 'betonlineag' &&
+            prop.market === 'player_tds_over' &&
+            Number(prop.outcome_point) === 0.5
+          );
+
+          // Fallback: any Over on betonlineag
+          if (!chosen) {
+            chosen = propsDataBetOnline.props.find(prop =>
+              prop.outcome_name === 'Over' &&
+              prop.bookmaker === 'betonlineag' &&
+              prop.market === 'player_tds_over'
+            );
+          }
+
+          // Fallback to DraftKings if nothing on betonlineag
+          if (!chosen) {
+            const propsDataDK = await PlayerService.getPlayerProps(rb.player.playerDkId, {
+              week_id: weekId,
+              bookmaker: 'draftkings',
+              market: 'player_tds_over'
+            });
+            chosen = propsDataDK.props.find(prop =>
+              prop.outcome_name === 'Over' &&
+              prop.bookmaker === 'draftkings' &&
+              prop.market === 'player_tds_over' &&
+              Number(prop.outcome_point) === 0.5
+            ) || propsDataDK.props.find(prop =>
+              prop.outcome_name === 'Over' &&
+              prop.bookmaker === 'draftkings' &&
+              prop.market === 'player_tds_over'
+            );
+          }
+
+          if (chosen) {
+            propsMap[rb.player.playerDkId] = {
+              point: chosen.outcome_point || undefined,
+              price: chosen.outcome_price || undefined,
+              bookmaker: chosen.bookmaker || undefined
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching 1+ TD props for RB ${rb.player.displayName}:`, error);
+        }
+      }
+
+      setRbTdsOverProps(propsMap);
+      console.log(`🎯 Fetched 1+ TD props for ${Object.keys(propsMap).length} RBs`);
+    } catch (error) {
+      console.error('Error fetching RB 1+ TD props:', error);
     }
   };
 
@@ -185,6 +495,114 @@ export default function PlayerPoolPage() {
     }
   };
 
+  // Function to fetch QB rush yards props
+  const fetchQbRushYardsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+
+      for (const qb of qbPlayers) {
+        try {
+          const propsData = await PlayerService.getPlayerProps(qb.player.playerDkId, {
+            week_id: weekId,
+            bookmaker: 'draftkings',
+            market: 'player_rush_yds'
+          });
+
+          const overProp = propsData.props.find(prop =>
+            prop.outcome_name === 'Over' &&
+            prop.bookmaker === 'draftkings' &&
+            prop.market === 'player_rush_yds'
+          );
+
+          if (overProp) {
+            propsMap[qb.player.playerDkId] = {
+              point: overProp.outcome_point || undefined,
+              price: overProp.outcome_price || undefined,
+              bookmaker: overProp.bookmaker || undefined
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching rush yards props for QB ${qb.player.displayName}:`, error);
+        }
+      }
+
+      setQbRushYardsProps(propsMap);
+      console.log(`🎯 Fetched rush yards props for ${Object.keys(propsMap).length} QBs`);
+    } catch (error) {
+      console.error('Error fetching QB rush yards props:', error);
+    }
+  };
+
+  // Function to fetch QB 1+ TD (player_tds_over) props
+  const fetchQbTdsOverProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    try {
+      const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+
+      for (const qb of qbPlayers) {
+        try {
+          // Prefer betonlineag Over 0.5
+          const propsDataBetOnline = await PlayerService.getPlayerProps(qb.player.playerDkId, {
+            week_id: weekId,
+            bookmaker: 'betonlineag',
+            market: 'player_tds_over'
+          });
+
+          let chosen = propsDataBetOnline.props.find(prop =>
+            prop.outcome_name === 'Over' &&
+            prop.bookmaker === 'betonlineag' &&
+            prop.market === 'player_tds_over' &&
+            Number(prop.outcome_point) === 0.5
+          );
+
+          // Fallback: any Over on betonlineag
+          if (!chosen) {
+            chosen = propsDataBetOnline.props.find(prop =>
+              prop.outcome_name === 'Over' &&
+              prop.bookmaker === 'betonlineag' &&
+              prop.market === 'player_tds_over'
+            );
+          }
+
+          // Fallback to DraftKings if nothing on betonlineag
+          if (!chosen) {
+            const propsDataDK = await PlayerService.getPlayerProps(qb.player.playerDkId, {
+              week_id: weekId,
+              bookmaker: 'draftkings',
+              market: 'player_tds_over'
+            });
+            chosen = propsDataDK.props.find(prop =>
+              prop.outcome_name === 'Over' &&
+              prop.bookmaker === 'draftkings' &&
+              prop.market === 'player_tds_over' &&
+              Number(prop.outcome_point) === 0.5
+            ) || propsDataDK.props.find(prop =>
+              prop.outcome_name === 'Over' &&
+              prop.bookmaker === 'draftkings' &&
+              prop.market === 'player_tds_over'
+            );
+          }
+
+          if (chosen) {
+            propsMap[qb.player.playerDkId] = {
+              point: chosen.outcome_point || undefined,
+              price: chosen.outcome_price || undefined,
+              bookmaker: chosen.bookmaker || undefined
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching 1+ TD props for QB ${qb.player.displayName}:`, error);
+        }
+      }
+
+      setQbTdsOverProps(propsMap);
+      console.log(`🎯 Fetched 1+ TD props for ${Object.keys(propsMap).length} QBs`);
+    } catch (error) {
+      console.error('Error fetching QB 1+ TD props:', error);
+    }
+  };
+
   // Fetch data on component mount
   useEffect(() => {
     const fetchData = async () => {
@@ -220,6 +638,20 @@ export default function PlayerPoolPage() {
           await fetchQbPassYardsProps(poolData.entries || [], defaultWeek.id);
           await fetchQbPassingTdsProps(poolData.entries || [], defaultWeek.id);
           await fetchQbPassAttemptsCompletionsProps(poolData.entries || [], defaultWeek.id);
+          await fetchQbRushYardsProps(poolData.entries || [], defaultWeek.id);
+          await fetchQbTdsOverProps(poolData.entries || [], defaultWeek.id);
+          // Fetch RB rush attempts props
+          await fetchRbRushAttemptsProps(poolData.entries || [], defaultWeek.id);
+          // Fetch RB rush yards props
+          await fetchRbRushYardsProps(poolData.entries || [], defaultWeek.id);
+          // Fetch RB 1+ TD props
+          await fetchRbTdsOverProps(poolData.entries || [], defaultWeek.id);
+          // Fetch WR/TE 1+ TD props
+          await fetchWrTeTdsOverProps(poolData.entries || [], defaultWeek.id);
+          // Fetch WR/TE receptions props
+          await fetchWrTeReceptionsProps(poolData.entries || [], defaultWeek.id);
+          // Fetch WR/TE rec yds props
+          await fetchWrTeRecYdsProps(poolData.entries || [], defaultWeek.id);
 
           // Prefer server-side joined analysis for accuracy
           try {
@@ -292,6 +724,20 @@ export default function PlayerPoolPage() {
         await fetchQbPassYardsProps(poolData.entries || [], selectedWeek);
         await fetchQbPassingTdsProps(poolData.entries || [], selectedWeek);
         await fetchQbPassAttemptsCompletionsProps(poolData.entries || [], selectedWeek);
+        await fetchQbRushYardsProps(poolData.entries || [], selectedWeek);
+        await fetchQbTdsOverProps(poolData.entries || [], selectedWeek);
+        // Fetch RB rush attempts props
+        await fetchRbRushAttemptsProps(poolData.entries || [], selectedWeek);
+        // Fetch RB rush yards props
+        await fetchRbRushYardsProps(poolData.entries || [], selectedWeek);
+        // Fetch RB 1+ TD props
+        await fetchRbTdsOverProps(poolData.entries || [], selectedWeek);
+        // Fetch WR/TE 1+ TD props
+        await fetchWrTeTdsOverProps(poolData.entries || [], selectedWeek);
+        // Fetch WR/TE receptions props
+        await fetchWrTeReceptionsProps(poolData.entries || [], selectedWeek);
+        // Fetch WR/TE rec yds props
+        await fetchWrTeRecYdsProps(poolData.entries || [], selectedWeek);
         try {
           const analysis = await PlayerService.getPlayerPoolWithAnalysis(selectedWeek);
           const mapByTeam: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
@@ -584,6 +1030,115 @@ export default function PlayerPoolPage() {
           const bPassAttempts = qbPassAttemptsProps[b.player.playerDkId]?.point;
           aValue = aPassAttempts || 0;
           bValue = bPassAttempts || 0;
+          break;
+        }
+        case 'qbRushYds': {
+          // Sort by QB rush yards line
+          const aRushYds = qbRushYardsProps[a.player.playerDkId]?.point;
+          const bRushYds = qbRushYardsProps[b.player.playerDkId]?.point;
+          aValue = aRushYds || 0;
+          bValue = bRushYds || 0;
+          break;
+        }
+        case 'qbTdsOver': {
+          // Sort by QB 1+ TD (prefer point 0.5), then odds
+          const aPoint = qbTdsOverProps[a.player.playerDkId]?.point;
+          const bPoint = qbTdsOverProps[b.player.playerDkId]?.point;
+          const aPrice = qbTdsOverProps[a.player.playerDkId]?.price;
+          const bPrice = qbTdsOverProps[b.player.playerDkId]?.price;
+          const normalize = (pt?: number, pr?: number) => {
+            const pointScore = pt == null ? -1 : pt;
+            const priceScore = pr == null ? -99999 : pr;
+            return pointScore * 100000 + priceScore;
+          };
+          aValue = normalize(aPoint, aPrice);
+          bValue = normalize(bPoint, bPrice);
+          break;
+        }
+        case 'wrteTdsOver': {
+          // Sort WR/TE 1+ TD using preference for point 0.5 then odds
+          const resolve = (entry: PlayerPoolEntry) => {
+            const map = entry.player.position === 'WR' ? wrTdsOverProps : teTdsOverProps;
+            const data = map[entry.player.playerDkId];
+            return { pt: data?.point, pr: data?.price };
+          };
+          const aRes = resolve(a);
+          const bRes = resolve(b);
+          const normalize = (pt?: number, pr?: number) => {
+            const pointScore = pt == null ? -1 : pt;
+            const priceScore = pr == null ? -99999 : pr;
+            return pointScore * 100000 + priceScore;
+          };
+          aValue = normalize(aRes.pt, aRes.pr);
+          bValue = normalize(bRes.pt, bRes.pr);
+          break;
+        }
+        case 'wrteReceptions': {
+          // Sort WR/TE receptions by line, then odds
+          const resolve = (entry: PlayerPoolEntry) => {
+            const map = entry.player.position === 'WR' ? wrReceptionsProps : teReceptionsProps;
+            const data = map[entry.player.playerDkId];
+            return { pt: data?.point, pr: data?.price };
+          };
+          const aRes = resolve(a);
+          const bRes = resolve(b);
+          const normalize = (pt?: number, pr?: number) => {
+            const pointScore = pt == null ? -1 : pt;
+            const priceScore = pr == null ? -99999 : pr;
+            return pointScore * 100000 + priceScore;
+          };
+          aValue = normalize(aRes.pt, aRes.pr);
+          bValue = normalize(bRes.pt, bRes.pr);
+          break;
+        }
+        case 'wrteRecYds': {
+          // Sort WR/TE rec yards by line, then odds
+          const resolve = (entry: PlayerPoolEntry) => {
+            const map = entry.player.position === 'WR' ? wrRecYdsProps : teRecYdsProps;
+            const data = map[entry.player.playerDkId];
+            return { pt: data?.point, pr: data?.price };
+          };
+          const aRes = resolve(a);
+          const bRes = resolve(b);
+          const normalize = (pt?: number, pr?: number) => {
+            const pointScore = pt == null ? -1 : pt;
+            const priceScore = pr == null ? -99999 : pr;
+            return pointScore * 100000 + priceScore;
+          };
+          aValue = normalize(aRes.pt, aRes.pr);
+          bValue = normalize(bRes.pt, bRes.pr);
+          break;
+        }
+        case 'rushAttmpts': {
+          // Sort by rush attempts point value (the attempts line)
+          const aRushAttempts = rbRushAttemptsProps[a.player.playerDkId]?.point;
+          const bRushAttempts = rbRushAttemptsProps[b.player.playerDkId]?.point;
+          aValue = aRushAttempts || 0;
+          bValue = bRushAttempts || 0;
+          break;
+        }
+        case 'rushYds': {
+          // Sort by rush yards point value (the yards line)
+          const aRushYds = rbRushYardsProps[a.player.playerDkId]?.point;
+          const bRushYds = rbRushYardsProps[b.player.playerDkId]?.point;
+          aValue = aRushYds || 0;
+          bValue = bRushYds || 0;
+          break;
+        }
+        case 'rbTdsOver': {
+          // Sort by 1+ TD Over odds/point (prefer point 0.5)
+          const aPoint = rbTdsOverProps[a.player.playerDkId]?.point;
+          const bPoint = rbTdsOverProps[b.player.playerDkId]?.point;
+          const aPrice = rbTdsOverProps[a.player.playerDkId]?.price;
+          const bPrice = rbTdsOverProps[b.player.playerDkId]?.price;
+          // Primary sort: point (0.5 preferred higher than 0 or undefined), Secondary: price
+          const normalize = (pt?: number, pr?: number) => {
+            const pointScore = pt == null ? -1 : pt; // 0.5 > 0 > undefined
+            const priceScore = pr == null ? -99999 : pr;
+            return pointScore * 100000 + priceScore;
+          };
+          aValue = normalize(aPoint, aPrice);
+          bValue = normalize(bPoint, bPrice);
           break;
         }
         default:
@@ -938,7 +1493,7 @@ export default function PlayerPoolPage() {
                 <div className="overflow-x-auto">
                   {/* Table Header */}
                   <div className="bg-muted/10 border-b">
-                    <div className={`grid gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}`}>
+                    <div className={`grid gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(16,_1fr)]' : position === 'RB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : (position === 'WR' || position === 'TE') ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}`}>
                       <div 
                         className="col-span-1 cursor-pointer hover:bg-muted/20 transition-colors flex items-center gap-1"
                         onClick={() => handleSort('player')}
@@ -948,6 +1503,7 @@ export default function PlayerPoolPage() {
                           sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
+                      
                       <div 
                         className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
                         onClick={() => handleSort('opponent')}
@@ -984,6 +1540,39 @@ export default function PlayerPoolPage() {
                           sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
+                      {position === 'RB' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('rushAttmpts')}
+                        >
+                          <span className="italic">Rush Attmpts</span>
+                          {sortField === 'rushAttmpts' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {position === 'RB' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('rushYds')}
+                        >
+                          <span className="italic">Rush Yards</span>
+                          {sortField === 'rushYds' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {position === 'RB' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('rbTdsOver')}
+                        >
+                          <span className="italic">1+ TD</span>
+                          {sortField === 'rbTdsOver' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
                       {position === 'QB' && (
                         <TooltipProvider>
                           <Tooltip>
@@ -1022,6 +1611,61 @@ export default function PlayerPoolPage() {
                         >
                           <span className="italic">Passing TDs</span>
                           {sortField === 'passingTds' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {position === 'QB' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('qbRushYds')}
+                        >
+                          <span className="italic">Rush Yards</span>
+                          {sortField === 'qbRushYds' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {position === 'QB' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('qbTdsOver')}
+                        >
+                          <span className="italic">1+ TD</span>
+                          {sortField === 'qbTdsOver' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {(position === 'WR' || position === 'TE') && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('wrteRecYds')}
+                        >
+                          <span className="italic">Rec Yds</span>
+                          {sortField === 'wrteRecYds' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {(position === 'WR' || position === 'TE') && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('wrteReceptions')}
+                        >
+                          <span className="italic">Receptions</span>
+                          {sortField === 'wrteReceptions' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {(position === 'WR' || position === 'TE') && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('wrteTdsOver')}
+                        >
+                          <span className="italic">1+ TD</span>
+                          {sortField === 'wrteTdsOver' && (
                             sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                           )}
                         </div>
@@ -1074,7 +1718,15 @@ export default function PlayerPoolPage() {
                           sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
                         )}
                       </div>
-                      <div className="col-span-1 text-center">TIER</div>
+                      <div 
+                        className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                        onClick={() => handleSort('tier')}
+                      >
+                        TIER
+                        {sortField === 'tier' && (
+                          sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                        )}
+                      </div>
                       <div className="col-span-1 text-center">EXCLUDE</div>
                     </div>
                   </div>
@@ -1084,7 +1736,7 @@ export default function PlayerPoolPage() {
                     <div
                       key={player.id}
                       className={`
-                        grid gap-2 px-6 py-3 border-b border-border/50 last:border-b-0 items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}
+                        grid gap-2 px-6 py-3 border-b border-border/50 last:border-b-0 items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(16,_1fr)]' : position === 'RB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : (position === 'WR' || position === 'TE') ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}
                         ${player.excluded === true ? 'opacity-50 bg-muted/30' : ''} 
                         hover:bg-muted/50 transition-colors
                       `}
@@ -1152,6 +1804,64 @@ export default function PlayerPoolPage() {
                           return <PlayerWeekAnalysis weekAnalysis={data} column="implied" />
                         })()}
                       </div>
+                      {/* Rush Attmpts (RB only) */
+                      }
+                      {position === 'RB' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const rushAttemptsData = rbRushAttemptsProps[player.player.playerDkId];
+                            if (rushAttemptsData?.point && rushAttemptsData?.price !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{rushAttemptsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{rushAttemptsData.price > 0 ? '+' : ''}{rushAttemptsData.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Rush Yards (RB only) */}
+                      {position === 'RB' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const rushYdsData = rbRushYardsProps[player.player.playerDkId];
+                            if (rushYdsData?.point && rushYdsData?.price !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{rushYdsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{rushYdsData.price > 0 ? '+' : ''}{rushYdsData.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* 1+ TD (RB only) */}
+                      {position === 'RB' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const tdsData = rbTdsOverProps[player.player.playerDkId];
+                            if (tdsData?.price !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{tdsData.point ?? 0.5}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{tdsData.price > 0 ? '+' : ''}{tdsData.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
                       {/* Passing (QB only) */}
                       {position === 'QB' && (
                         <div className="col-span-1 text-center">
@@ -1207,6 +1917,101 @@ export default function PlayerPoolPage() {
                                   <div className="font-medium">{passingTdsData.point}</div>
                                   <div className="text-xs text-muted-foreground">
                                     O{passingTdsData.price > 0 ? '+' : ''}{passingTdsData.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Rush Yards (QB only) */}
+                      {position === 'QB' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const qbRushYdsData = qbRushYardsProps[player.player.playerDkId];
+                            if (qbRushYdsData?.point && qbRushYdsData?.price !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{qbRushYdsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{qbRushYdsData.price > 0 ? '+' : ''}{qbRushYdsData.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* 1+ TD (QB only) */}
+                      {position === 'QB' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const tdsData = qbTdsOverProps[player.player.playerDkId];
+                            if (tdsData?.price !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{tdsData.point ?? 0.5}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{tdsData.price > 0 ? '+' : ''}{tdsData.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Rec Yds (WR/TE only) */}
+                      {(position === 'WR' || position === 'TE') && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const data = position === 'WR' ? wrRecYdsProps[player.player.playerDkId] : teRecYdsProps[player.player.playerDkId];
+                            if (data?.point && data?.price !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{data.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{data.price > 0 ? '+' : ''}{data.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Receptions (WR/TE only) */}
+                      {(position === 'WR' || position === 'TE') && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const data = position === 'WR' ? wrReceptionsProps[player.player.playerDkId] : teReceptionsProps[player.player.playerDkId];
+                            if (data?.point && data?.price !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{data.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{data.price > 0 ? '+' : ''}{data.price}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* 1+ TD (WR/TE only) */}
+                      {(position === 'WR' || position === 'TE') && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const data = position === 'WR' ? wrTdsOverProps[player.player.playerDkId] : teTdsOverProps[player.player.playerDkId];
+                            if (data?.price !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">{data.point ?? 0.5}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    O{data.price > 0 ? '+' : ''}{data.price}
                                   </div>
                                 </div>
                               );

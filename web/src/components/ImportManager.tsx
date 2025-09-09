@@ -13,6 +13,7 @@ import { Calendar } from './ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Badge } from './ui/badge'
 import { ImportPlayerProjections } from './ImportPlayerProjections'
+import { ImportContests } from './ImportContests'
 
 // Mock data for the component
 const mockImportHistory = [
@@ -614,7 +615,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
 
       {/* Import Tabs */}
       <Tabs defaultValue="import-pool" className="space-y-6" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="import-pool" className="gap-2">
             <Database className="w-4 h-4" />
             Import Player Pool
@@ -622,6 +623,10 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           <TabsTrigger value="import-projections" className="gap-2">
             <FileText className="w-4 h-4" />
             Import Projections
+          </TabsTrigger>
+          <TabsTrigger value="import-contests" className="gap-2">
+            <FileText className="w-4 h-4" />
+            Import Contests
           </TabsTrigger>
           <TabsTrigger value="odds-api" className="gap-2">
             <Globe className="w-4 h-4" />
@@ -737,6 +742,10 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
 
         <TabsContent value="import-projections">
           <ImportPlayerProjections onImportComplete={handleProjectionImportComplete} />
+        </TabsContent>
+
+        <TabsContent value="import-contests">
+          <ImportContests />
         </TabsContent>
 
         <TabsContent value="odds-api">
@@ -1317,6 +1326,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
             {activeTab === 'import-pool' && 'Your recent player pool imports'}
             {activeTab === 'import-projections' && 'Your recent projection imports'}
             {activeTab === 'odds-api' && 'Your recent Odds-API imports'}
+            {activeTab === 'import-contests' && 'Your recent contest imports'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1333,6 +1343,8 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                     return item.importType === 'projections' || (!item.importType && item.fileType === 'CSV')
                   case 'odds-api':
                     return item.importType === 'odds-api' || (!item.importType && item.draftGroup === 'Odds-API')
+                  case 'import-contests':
+                    return item.draftGroup === 'CONTEST_IMPORT'
                   default:
                     return true
                 }

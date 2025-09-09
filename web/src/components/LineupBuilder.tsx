@@ -17,6 +17,7 @@ import { LineupDisplayData, LineupPlayer } from '@/types/prd'
 import { PlayerPoolEntry, Player, Week, LineupSlotId } from '@/types/prd'
 import { getPositionBadgeClasses } from '@/lib/positionColors'
 import { LineupOptimizer } from './LineupOptimizer'
+import { PlayerWeekAnalysis } from './PlayerWeekAnalysis'
 
 // Get tier configuration
 const getTierConfig = (tier: number) => {
@@ -114,6 +115,7 @@ export function LineupBuilder({
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [savedLineup, setSavedLineup] = useState<LineupDisplayData | null>(null)
   const [showOptimizer, setShowOptimizer] = useState(false)
+  const [gamesMap, setGamesMap] = useState<Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }>>({})
 
   // Always use the active week
   const weekId = useMemo(() => {
@@ -237,6 +239,45 @@ export function LineupBuilder({
         console.log('Player pool entries count:', response.entries?.length || 0)
         console.log('Player pool entries sample:', response.entries?.slice(0, 3))
         setPlayerPool(response.entries || [])
+
+        // Load opponent analysis like Player Pool page
+        try {
+          const analysis = await PlayerService.getPlayerPoolWithAnalysis(weekId)
+          const mapByTeam: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {}
+          ;(analysis.entries || []).forEach((e: any) => {
+            const team = e.entry?.player?.team
+            if (team) {
+              mapByTeam[team] = {
+                opponentAbbr: e.analysis?.opponent_abbr ?? null,
+                homeOrAway: (e.analysis?.homeoraway as 'H' | 'A' | 'N') || 'N',
+                proj_spread: e.analysis?.proj_spread ?? null,
+                proj_total: e.analysis?.proj_total ?? null,
+                implied_team_total: e.analysis?.implied_team_total ?? null
+              }
+            }
+          })
+          setGamesMap(mapByTeam)
+        } catch (e) {
+          console.error('Failed to load joined analysis; falling back to games map', e)
+          try {
+            const gamesResp = await WeekService.getGamesForWeek(weekId)
+            const fallback: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {}
+            ;(gamesResp.games || []).forEach((g: any) => {
+              if (g.team_abbr) {
+                fallback[g.team_abbr] = {
+                  opponentAbbr: g.opponent_abbr ?? null,
+                  homeOrAway: g.homeoraway as 'H' | 'A' | 'N',
+                  proj_spread: g.proj_spread ?? null,
+                  proj_total: g.proj_total ?? null,
+                  implied_team_total: g.implied_team_total ?? null
+                }
+              }
+            })
+            setGamesMap(fallback)
+          } catch (e2) {
+            console.error('Failed to load games map fallback', e2)
+          }
+        }
       } catch (error) {
         console.error('Error loading player pool:', error)
         console.error('Error details:', error)
@@ -1013,10 +1054,10 @@ export function LineupBuilder({
                   <div className="overflow-x-auto">
                     {/* Table Header */}
                     <div className="bg-muted/10 border-b">
-                      <div className="grid grid-cols-9 gap-4 px-6 py-3 text-sm font-medium text-muted-foreground">
+                      <div className="grid gap-4 px-6 py-3 text-sm font-medium text-muted-foreground grid-cols-[28px_1.2fr_0.8fr_0.5fr_0.7fr_0.8fr_0.5fr_0.6fr]">
                         <div className="col-span-1"></div>
-                        <div className="col-span-2">PLAYER NAME</div>
-                        <div className="col-span-1 text-center">TEAM</div>
+                        <div className="col-span-1">PLAYER</div>
+                        <div className="col-span-1 text-center">OPPONENT</div>
                         <div className="col-span-1 text-center">POS</div>
                         <div className="col-span-1 text-right">SALARY</div>
                         <div className="col-span-1 text-right">PROJECTION</div>
@@ -1046,7 +1087,7 @@ export function LineupBuilder({
                             <div
                               key={player.id}
                               className={`
-                                grid grid-cols-9 gap-4 px-6 py-3 border-b border-border/50 last:border-b-0
+                                grid gap-4 px-6 py-3 border-b border-border/50 last:border-b-0 grid-cols-[28px_1.2fr_0.8fr_0.5fr_0.7fr_0.8fr_0.5fr_0.6fr]
                                 ${player.isUsed ? 'bg-muted/50' : ''} 
                                 ${!player.canAfford ? 'opacity-50' : ''}
                                 hover:bg-muted/50 transition-colors
@@ -1064,11 +1105,11 @@ export function LineupBuilder({
                                 </Button>
                               </div>
 
-                              <div className="col-span-2">
-                                <div className="flex items-center gap-2">
+                              <div className="col-span-1 min-w-0">
+                                <div className="flex items-center gap-2 min-w-0">
                                   <Link
                                     href={`/profile/${player.player.playerDkId}`}
-                                    className="text-primary hover:underline text-left text-sm font-medium"
+                                    className="text-primary hover:underline text-left text-sm font-medium truncate"
                                   >
                                     {player.player.displayName}
                                   </Link>
@@ -1077,11 +1118,21 @@ export function LineupBuilder({
                                       {player.player.position}
                                     </span>
                                   )}
+                                  <span className="text-muted-foreground ml-1 truncate">({player.player.team})</span>
                                 </div>
                               </div>
 
-                              <div className="col-span-1 text-center text-sm font-medium text-muted-foreground">
-                                {player.player.team}
+                              {/* Opponent */}
+                              <div className="col-span-1 text-center text-sm">
+                                {(() => {
+                                  const g = gamesMap[player.player.team]
+                                  return (
+                                    <PlayerWeekAnalysis
+                                      weekAnalysis={{ opponent: { opponentAbbr: g?.opponentAbbr || null, homeOrAway: g?.homeOrAway || 'N' } }}
+                                      column="opponent"
+                                    />
+                                  )
+                                })()}
                               </div>
 
                               <div className="col-span-1 text-center text-sm font-medium">

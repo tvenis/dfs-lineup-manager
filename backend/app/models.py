@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean, Text, JSON, ForeignKey, Date, Index
+from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean, Text, JSON, ForeignKey, Date, Index, CheckConstraint, Numeric, BigInteger
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.types import TypeDecorator
@@ -18,6 +18,64 @@ class JSONString(TypeDecorator):
         if value is not None:
             return json.loads(value)
         return None
+
+class Sport(Base):
+    __tablename__ = "sport"
+    
+    sport_id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String, unique=True, nullable=False)
+    name = Column(String)
+
+class ContestType(Base):
+    __tablename__ = "contest_type"
+    
+    contest_type_id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String, unique=True, nullable=False)
+
+class GameType(Base):
+    __tablename__ = "game_type"
+    
+    game_type_id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String, unique=True, nullable=False)
+
+class Contest(Base):
+    __tablename__ = "contest"
+    
+    contest_id = Column(BigInteger, primary_key=True)  # Maps to Contest_Key (external id)
+    week_id = Column(Integer, ForeignKey("weeks.id"))  # Passed from UI, optional
+    sport_id = Column(Integer, ForeignKey("sport.sport_id"), nullable=False)
+    lineup_id = Column(String(50), ForeignKey("lineups.id"))  # Nullable
+    game_type_id = Column(Integer, ForeignKey("game_type.game_type_id"), nullable=False)
+    contest_description = Column(String(500))  # maps to Entry column
+    contest_opponent = Column(String(200))
+    contest_date_utc = Column(DateTime(timezone=True), nullable=False)
+    contest_place = Column(Integer)
+    contest_points = Column(Float)
+    winnings_non_ticket = Column(Numeric(12, 2))
+    winnings_ticket = Column(Numeric(12, 2))
+    contest_entries = Column(Integer, nullable=False)
+    places_paid = Column(Integer, nullable=False)
+    entry_fee_usd = Column(Numeric(12, 2), nullable=False)
+    prize_pool_usd = Column(Numeric(12, 2), nullable=False)
+    net_profit_usd = Column(Numeric(12, 2), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    week = relationship("Week")
+    sport = relationship("Sport")
+    lineup = relationship("Lineup")
+    game_type = relationship("GameType")
+
+    # Constraints
+    __table_args__ = (
+        Index('idx_contest_week', 'week_id'),
+        Index('idx_contest_sport', 'sport_id'),
+        Index('idx_contest_game_type', 'game_type_id'),
+        CheckConstraint('contest_entries > 0', name='ck_contest_entries_positive'),
+        CheckConstraint('places_paid >= 0', name='ck_places_paid_nonnegative'),
+        CheckConstraint('entry_fee_usd >= 0', name='ck_entry_fee_nonnegative'),
+        CheckConstraint('prize_pool_usd >= 0', name='ck_prize_pool_nonnegative'),
+    )
 
 class Team(Base):
     __tablename__ = "teams"
@@ -82,6 +140,7 @@ class PlayerPoolEntry(Base):
     playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=False)
     draftableId = Column(String(50))  # DraftKings draftable ID for this player pool entry
     projectedPoints = Column(Float)  # Extracted projection value from draftStatAttributes
+    actuals = Column(Float)
     salary = Column(Integer, nullable=False)  # from DraftKings API
     status = Column(String(20), default="Available")  # player status
     isDisabled = Column(Boolean, default=False)  # if player is disabled
@@ -153,9 +212,20 @@ class Projection(Base):
     week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
     playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=False)
     position = Column(String(10), nullable=False)  # Position from CSV file
-    projStats = Column(JSON)  # Proj Stats as JSON (ignored for now)
-    actualStats = Column(JSON)  # Actual Stats as JSON
-    pprProjection = Column(Float)  # PPR Projections
+    # New projection detail columns mapped from CSV
+    attemps = Column(Float)  # Attempts (intentional spelling per spec)
+    comps = Column(Float)  # Completions
+    passYards = Column(Float)  # Pass Yards
+    passTDs = Column(Float)  # Pass TDs
+    ints = Column(Float)  # Interceptions
+    receptions = Column(Float)  # Receptions
+    recYards = Column(Float)  # Receiving Yards
+    recTDs = Column(Float)  # Receiving TDs
+    rushYards = Column(Float)  # Rushing Yards
+    rushTDs = Column(Float)  # Rushing TDs
+    fumbles = Column(Float)  # Fumbles
+    rank = Column(Integer)  # Rank
+    pprProjections = Column(Float)  # PPR Projections from CSV 'Projections'
     actuals = Column(Float)  # Actuals
     source = Column(String(100), nullable=False)  # Source column as text value
     created_at = Column(DateTime(timezone=True), server_default=func.now())

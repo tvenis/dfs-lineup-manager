@@ -642,24 +642,37 @@ class DraftKingsImportService:
         if not draft_stat_attributes:
             return None
         
-        try:
-            # Handle both dict and list formats
-            if isinstance(draft_stat_attributes, list):
-                # Find the attribute with id=90
-                for attr in draft_stat_attributes:
-                    if isinstance(attr, dict) and attr.get('id') == 90:
-                        value = attr.get('value')
-                        if value is not None:
-                            return float(value)
-            elif isinstance(draft_stat_attributes, dict):
-                # Handle single dict format
-                if draft_stat_attributes.get('id') == 90:
-                    value = draft_stat_attributes.get('value')
-                    if value is not None:
-                        return float(value)
-            
+        def _to_float_or_none(v: Optional[Union[str, int, float]]) -> Optional[float]:
+            if v is None:
+                return None
+            # Common DK placeholders for missing values
+            if isinstance(v, str) and v.strip() in {"", "-", "—", "N/A", "None"}:
+                return None
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                return None
+
+        # Handle both dict and list formats
+        if isinstance(draft_stat_attributes, list):
+            for attr in draft_stat_attributes:
+                if isinstance(attr, dict) and attr.get('id') == 90:
+                    # Prefer 'value'; fall back to 'sortValue' if needed
+                    val = _to_float_or_none(attr.get('value'))
+                    if val is not None:
+                        return val
+                    sort_val = _to_float_or_none(attr.get('sortValue'))
+                    if sort_val is not None:
+                        return sort_val
             return None
-            
-        except (ValueError, TypeError) as e:
-            logger.warning(f"Failed to extract projected points: {str(e)}")
+        elif isinstance(draft_stat_attributes, dict):
+            if draft_stat_attributes.get('id') == 90:
+                val = _to_float_or_none(draft_stat_attributes.get('value'))
+                if val is not None:
+                    return val
+                sort_val = _to_float_or_none(draft_stat_attributes.get('sortValue'))
+                if sort_val is not None:
+                    return sort_val
+            return None
+        else:
             return None

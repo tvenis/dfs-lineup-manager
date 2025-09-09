@@ -149,83 +149,35 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
       console.log('CSV lines:', lines.length) // Debug: show number of lines
       const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase())
       console.log('CSV headers:', headers) // Debug: show headers
-      
+
+      const findIndex = (candidates: string[]): number => {
+        for (const c of candidates) {
+          const idx = headers.indexOf(c)
+          if (idx !== -1) return idx
+        }
+        return -1
+      }
+
       const players: CSVPlayer[] = []
-      
-      // Find column indices for different data types (more flexible matching)
-      const playerIndex = Math.max(
-        headers.indexOf('player'), 
-        headers.indexOf('name'), 
-        headers.findIndex(h => h.includes('player') || h.includes('name')), 
-        0
-      )
-      const positionIndex = Math.max(
-        headers.indexOf('position'), 
-        headers.findIndex(h => h.includes('position') || h.includes('pos')), 
-        1
-      )
-      const projStatsIndex = Math.max(
-        headers.indexOf('proj stats'), 
-        headers.indexOf('proj rank'), 
-        headers.indexOf('rank'),
-        headers.findIndex(h => h.includes('proj') || h.includes('rank')),
-        -1
-      )
-      const actualStatsIndex = Math.max(
-        headers.indexOf('actual stats'),
-        headers.findIndex(h => h.includes('actual') && h.includes('stats')),
-        -1
-      )
-      const dateIndex = Math.max(
-        headers.indexOf('date'),
-        headers.findIndex(h => h.includes('date')),
-        -1
-      )
-      const pprIndex = Math.max(
-        headers.indexOf('ppr projections'), 
-        headers.indexOf('ppr'),
-        headers.findIndex(h => h.includes('ppr')),
-        -1
-      )
-      const hpprIndex = Math.max(
-        headers.indexOf('hppr projections'), 
-        headers.indexOf('hppr'),
-        headers.findIndex(h => h.includes('hppr')),
-        -1
-      )
-      const stdIndex = Math.max(
-        headers.indexOf('std projections'), 
-        headers.indexOf('std'),
-        headers.findIndex(h => h.includes('std')),
-        -1
-      )
-      const actualsIndex = Math.max(
-        headers.indexOf('actuals'),
-        headers.findIndex(h => h.includes('actuals')),
-        -1
-      )
-      
-      // Legacy column support
-      const dkmIndex = headers.indexOf('dkm')
-      const dfsIndex = Math.max(headers.indexOf('dfs projections'), headers.indexOf('dfs'))
-      const hfrcIndex = Math.max(headers.indexOf('hfrc projections'), headers.indexOf('hfrc'))
-      const sldIndex = Math.max(headers.indexOf('sld projections'), headers.indexOf('sld'))
-      
-      console.log('Column indices:', {
-        playerIndex, positionIndex, projStatsIndex, actualStatsIndex, dateIndex,
-        pprIndex, hpprIndex, stdIndex, actualsIndex, dkmIndex, dfsIndex, hfrcIndex, sldIndex
-      }) // Debug: show column indices
+
+      // New format indices (strict)
+      const playerIndex = findIndex(['player'])
+      const positionIndex = findIndex(['pos', 'position'])
+      const projectionsIndex = findIndex(['projections'])
+      const actualsIndex = findIndex(['actuals'])
+      const rankIndex = findIndex(['rank'])
+
+      console.log('Column indices (new):', {
+        playerIndex, positionIndex, projectionsIndex, actualsIndex, rankIndex
+      })
       
       // Debug: show what values are being extracted for first few players
       if (lines.length > 1) {
         const firstLineValues = parseCSVLine(lines[1])
         console.log('First line values:', firstLineValues)
-        console.log('PPR value at index', pprIndex, ':', firstLineValues[pprIndex])
+        console.log('Projections value at index', projectionsIndex, ':', firstLineValues[projectionsIndex])
         console.log('Actuals value at index', actualsIndex, ':', firstLineValues[actualsIndex])
-        console.log('ProjStats value at index', projStatsIndex, ':', firstLineValues[projStatsIndex])
-        console.log('ActualStats value at index', actualStatsIndex, ':', firstLineValues[actualStatsIndex])
-        console.log('ProjStats raw length:', firstLineValues[projStatsIndex]?.length)
-        console.log('ActualStats raw length:', firstLineValues[actualStatsIndex]?.length)
+        console.log('Rank value at index', rankIndex, ':', firstLineValues[rankIndex])
       }
       
       for (let i = 1; i < lines.length; i++) {
@@ -244,112 +196,17 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
           const name = isTeamCode ? nameParts.slice(0, -1).join(' ') : playerName
           const team = isTeamCode ? possibleTeam : ''
           
-          // Parse projection values
-          const projStatsRaw = projStatsIndex >= 0 ? values[projStatsIndex] : ''
-          const actualStatsRaw = actualStatsIndex >= 0 ? values[actualStatsIndex] : ''
-          const pprProjection = pprIndex >= 0 ? parseFloat(values[pprIndex]) || 0 : 0
-          const hpprProjection = hpprIndex >= 0 ? parseFloat(values[hpprIndex]) || 0 : 0
-          const stdProjection = stdIndex >= 0 ? parseFloat(values[stdIndex]) || 0 : 0
+          // Parse new-format projection values
+          const pprProjection = projectionsIndex >= 0 ? parseFloat(values[projectionsIndex]) || 0 : 0
+          const actualsVal = actualsIndex >= 0 ? parseFloat(values[actualsIndex]) || 0 : 0
           
-          // Parse JSON fields
-          let projStatsJson = null
-          let actualStatsJson = null
+          // No JSON fields in new format
+          const projStatsJson = null
+          const actualStatsJson = null
           
-          try {
-            if (projStatsRaw && projStatsRaw.trim() !== '') {
-              // Convert Python dictionary format to JSON format
-              // Replace single quotes with double quotes, but be careful with apostrophes in strings
-              const jsonString = projStatsRaw
-                .replace(/'/g, '"')  // Replace all single quotes with double quotes
-                .replace(/True/g, 'true')  // Convert Python boolean
-                .replace(/False/g, 'false')  // Convert Python boolean
-                .replace(/None/g, 'null')  // Convert Python None to JSON null
-              
-              projStatsJson = JSON.parse(jsonString)
-              if (i < 3) { // Debug first 3 players
-                console.log(`DEBUG: Player ${i+1} (${playerName}) - ProjStats JSON parsed successfully:`, projStatsJson)
-              }
-            }
-          } catch (e) {
-            console.warn(`Failed to parse projStats JSON for ${playerName}:`, e)
-            console.log(`DEBUG: Player ${i+1} (${playerName}) - ProjStats raw data:`, JSON.stringify(projStatsRaw))
-            console.log(`DEBUG: Player ${i+1} (${playerName}) - ProjStats raw data length:`, projStatsRaw?.length)
-            console.log(`DEBUG: Player ${i+1} (${playerName}) - ProjStats raw data first 100 chars:`, projStatsRaw?.substring(0, 100))
-          }
-          
-          try {
-            if (actualStatsRaw && actualStatsRaw.trim() !== '') {
-              // Convert Python dictionary format to JSON format
-              // Replace single quotes with double quotes, but be careful with apostrophes in strings
-              const jsonString = actualStatsRaw
-                .replace(/'/g, '"')  // Replace all single quotes with double quotes
-                .replace(/True/g, 'true')  // Convert Python boolean
-                .replace(/False/g, 'false')  // Convert Python boolean
-                .replace(/None/g, 'null')  // Convert Python None to JSON null
-              
-              actualStatsJson = JSON.parse(jsonString)
-              if (i < 3) { // Debug first 3 players
-                console.log(`DEBUG: Player ${i+1} (${playerName}) - ActualStats JSON parsed successfully:`, actualStatsJson)
-              }
-            }
-          } catch (e) {
-            console.warn(`Failed to parse actualStats JSON for ${playerName}:`, e)
-            console.log(`DEBUG: Player ${i+1} (${playerName}) - ActualStats raw data:`, JSON.stringify(actualStatsRaw))
-            console.log(`DEBUG: Player ${i+1} (${playerName}) - ActualStats raw data length:`, actualStatsRaw?.length)
-            console.log(`DEBUG: Player ${i+1} (${playerName}) - ActualStats raw data first 100 chars:`, actualStatsRaw?.substring(0, 100))
-          }
-          
-          // Legacy projection support
-          const dkmProjection = dkmIndex >= 0 ? parseFloat(values[dkmIndex]) || 0 : 0
-          const dfsProjection = dfsIndex >= 0 ? parseFloat(values[dfsIndex]) || 0 : 0
-          const hfrcProjection = hfrcIndex >= 0 ? parseFloat(values[hfrcIndex]) || 0 : 0
-          const sldProjection = sldIndex >= 0 ? parseFloat(values[sldIndex]) || 0 : 0
-          
-          // Determine which projection to use based on source name or first available
-          let selectedProjection = 0
-          let source = projectionSource || 'Auto-detected'
-          
-          // Try to match the projection source name to a column
-          const sourceLower = projectionSource.toLowerCase()
-          if (sourceLower.includes('ppr') && pprProjection > 0) {
-            selectedProjection = pprProjection
-          } else if (sourceLower.includes('std') && stdProjection > 0) {
-            selectedProjection = stdProjection
-          } else if (sourceLower.includes('proj') && projStatsRaw && projStatsRaw.trim() !== '') {
-            selectedProjection = parseFloat(projStatsRaw) || 0
-          } else if (sourceLower.includes('dkm') && dkmProjection > 0) {
-            selectedProjection = dkmProjection
-          } else if (sourceLower.includes('dfs') && dfsProjection > 0) {
-            selectedProjection = dfsProjection
-          } else if (sourceLower.includes('hfrc') && hfrcProjection > 0) {
-            selectedProjection = hfrcProjection
-          } else if (sourceLower.includes('sld') && sldProjection > 0) {
-            selectedProjection = sldProjection
-          } else {
-            // Use the first available projection and update source accordingly
-            if (pprProjection > 0) {
-              selectedProjection = pprProjection
-              source = projectionSource || 'PPR Projections'
-            } else if (stdProjection > 0) {
-              selectedProjection = stdProjection
-              source = projectionSource || 'STD Projections'
-            } else if (projStatsRaw && projStatsRaw.trim() !== '') {
-              selectedProjection = parseFloat(projStatsRaw) || 0
-              source = projectionSource || 'Proj Stats'
-            } else if (dfsProjection > 0) {
-              selectedProjection = dfsProjection
-              source = projectionSource || 'DFS Projections'
-            } else if (dkmProjection > 0) {
-              selectedProjection = dkmProjection
-              source = projectionSource || 'DKM'
-            } else if (hfrcProjection > 0) {
-              selectedProjection = hfrcProjection
-              source = projectionSource || 'HFRC Projections'
-            } else if (sldProjection > 0) {
-              selectedProjection = sldProjection
-              source = projectionSource || 'SLD Projections'
-            }
-          }
+          // Selected projection is strictly the Projections column
+          let selectedProjection = pprProjection
+          let source = projectionSource || 'Projections'
           
           // If still no projection found, try to use any numeric value from the row
           if (selectedProjection === 0) {
@@ -367,20 +224,13 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
             name: name.trim(),
             team: team.toUpperCase(),
             position: position.toUpperCase(),
-            projRank: projStatsIndex >= 0 ? parseInt(values[projStatsIndex]) || undefined : undefined,
-            actualStats: actualStatsIndex >= 0 ? parseFloat(values[actualStatsIndex]) || undefined : undefined,
-            dkmProjection,
-            dfsProjection,
-            hfrcProjection,
-            sldProjection,
-            actuals: actualsIndex >= 0 ? parseFloat(values[actualsIndex]) || undefined : undefined,
+            projRank: rankIndex >= 0 ? (parseInt(values[rankIndex]) || undefined) : undefined,
+            actuals: actualsVal || undefined,
             selectedProjection,
             projectionSource: source,
             // Add the individual projection values for debugging
             pprProjection: pprProjection,
-            hpprProjection: hpprProjection,
-            stdProjection: stdProjection,
-            // Add the parsed JSON fields
+            // No JSON fields in new format
             projStatsJson: projStatsJson,
             actualStatsJson: actualStatsJson
           }
@@ -553,11 +403,11 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
           <Alert>
             <FileText className="h-4 w-4" />
             <AlertDescription>
-              <strong>Expected CSV format:</strong> Player, Position, Proj Stats, Actual Stats, Date, PPR Projections, HPPR Projections, STD Projections, Actuals
+              <strong>Expected CSV format:</strong> Player, Pos, Attempts, Comps, Pass Yards, Pass TDs, Ints, Receptions, Rec Yards, Rec TDs, Rush Yards, Rush TDs, Fumbles, Projections, Actuals, Rank
               <br />
-              <strong>Example:</strong> Josh Allen BUF, QB, 24.2, 24.1, 2024-01-15, 24.5, 24.3, 24.0, 26.3
+              <strong>Example:</strong> Jayden Daniels, QB, 31.38, 21.72, 229.5, 1.71, 0.45, , , , 43.5, 0.48, 0.23, 22.82, 0, 4
               <br />
-              <em>Player names can include team codes (e.g., &quot;Josh Allen BUF&quot;) or be separate columns. The system will automatically detect and use the best matching projection column based on your source name. HPPR Projections are ignored as requested.</em>
+              <em>Player names can include team codes (e.g., &quot;Josh Allen BUF&quot;) or be separate columns. The importer reads Projections strictly from the "Projections" column.</em>
               <br />
               <br />
               <strong>Download CSV files:</strong> Visit{' '}
