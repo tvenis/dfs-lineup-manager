@@ -54,7 +54,7 @@ export default function ContestReviewPage() {
     const fetchLineups = async () => {
       if (!weekId) return
       try {
-        const res = await fetch(`http://localhost:8000/api/lineups?week_id=${weekId}&limit=1000`)
+        const res = await fetch(`http://localhost:8000/api/lineups?week_id=${weekId}&status=submitted&limit=1000`)
         if (!res.ok) return
         const data = await res.json()
         const items = (data.lineups || []).map((l: any) => ({ id: l.id, name: l.name }))

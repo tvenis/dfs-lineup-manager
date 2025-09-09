@@ -34,6 +34,7 @@ def migrate() -> bool:
                 sport_id INTEGER NOT NULL,
                 lineup_id VARCHAR(50),
                 game_type_id INTEGER NOT NULL,
+                contest_type_id INTEGER,
                 contest_description VARCHAR(500),
                 contest_opponent VARCHAR(200),
                 contest_date_utc DATETIME NOT NULL,
@@ -51,7 +52,8 @@ def migrate() -> bool:
                 FOREIGN KEY (week_id) REFERENCES weeks(id),
                 FOREIGN KEY (sport_id) REFERENCES sport(sport_id),
                 FOREIGN KEY (lineup_id) REFERENCES lineups(id),
-                FOREIGN KEY (game_type_id) REFERENCES game_type(game_type_id)
+                FOREIGN KEY (game_type_id) REFERENCES game_type(game_type_id),
+                FOREIGN KEY (contest_type_id) REFERENCES contest_type(contest_type_id)
             )
             """
         )
@@ -63,13 +65,13 @@ def migrate() -> bool:
                 entry_key, contest_id, week_id, sport_id, lineup_id, game_type_id, contest_description,
                 contest_opponent, contest_date_utc, contest_place, contest_points,
                 winnings_non_ticket, winnings_ticket, contest_entries, places_paid,
-                entry_fee_usd, prize_pool_usd, net_profit_usd, result, created_at
+                entry_fee_usd, prize_pool_usd, net_profit_usd, result, created_at, contest_type_id
             )
             SELECT 
                 contest_id as entry_key, contest_id, week_id, sport_id, lineup_id, game_type_id, contest_description,
                 contest_opponent, contest_date_utc, contest_place, contest_points,
                 winnings_non_ticket, winnings_ticket, contest_entries, places_paid,
-                entry_fee_usd, prize_pool_usd, net_profit_usd, 0 as result, created_at
+                entry_fee_usd, prize_pool_usd, net_profit_usd, 0 as result, created_at, NULL as contest_type_id
             FROM contest_old
             """
         )
@@ -79,6 +81,7 @@ def migrate() -> bool:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_contest_sport ON contest(sport_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_contest_game_type ON contest(game_type_id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_contest_contest_id ON contest(contest_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_contest_contest_type ON contest(contest_type_id)")
 
         # 5) Drop old table
         cur.execute("DROP TABLE contest_old")

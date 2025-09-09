@@ -47,6 +47,7 @@ class Contest(Base):
     sport_id = Column(Integer, ForeignKey("sport.sport_id"), nullable=False)
     lineup_id = Column(String(50), ForeignKey("lineups.id"))  # Nullable
     game_type_id = Column(Integer, ForeignKey("game_type.game_type_id"), nullable=False)
+    contest_type_id = Column(Integer, ForeignKey("contest_type.contest_type_id"))
     contest_description = Column(String(500))  # maps to Entry column
     contest_opponent = Column(String(200))
     contest_date_utc = Column(DateTime(timezone=True), nullable=False)
@@ -73,6 +74,7 @@ class Contest(Base):
         Index('idx_contest_week', 'week_id'),
         Index('idx_contest_sport', 'sport_id'),
         Index('idx_contest_game_type', 'game_type_id'),
+        Index('idx_contest_contest_type', 'contest_type_id'),
         Index('idx_contest_contest_id', 'contest_id'),
         CheckConstraint('contest_entries > 0', name='ck_contest_entries_positive'),
         CheckConstraint('places_paid >= 0', name='ck_places_paid_nonnegative'),
@@ -312,4 +314,36 @@ class PlayerPropBet(Base):
     # Indexes for common lookup patterns
     __table_args__ = (
         Index('ux_prop_bets_unique', 'week_id', 'game_id', 'bookmaker', 'market', 'outcome_name', 'playerDkId', 'outcome_point', unique=True),
+    )
+
+class DKContestDetail(Base):
+    __tablename__ = "dk_contest_detail"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contest_id = Column(String(50), nullable=False)  # maps to Contest_Key from file
+    name = Column(String(250))
+    sport_id = Column(Integer, ForeignKey("sport.sport_id"))
+    contest_type_id = Column(Integer, ForeignKey("contest_type.contest_type_id"))
+    summary = Column(Text)
+    draftGroupId = Column(Integer)
+    payoutDescription = Column(Text)
+    rake_percentage = Column(Float)  # ((max_entries*entry_fee)-total_payouts)/total_payouts
+    total_payouts = Column(Numeric(12, 2))
+    is_guaranteed = Column(Boolean)
+    is_private = Column(Boolean)
+    is_cashprize_only = Column(Boolean)
+    entry_fee = Column(Numeric(12, 2))
+    entries = Column(Integer)
+    max_entries = Column(Integer)
+    max_entries_per_user = Column(Integer)
+    contest_state = Column(String(50))
+    contest_start_time = Column(DateTime(timezone=True))
+    attributes = Column(JSON)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    __table_args__ = (
+        Index('idx_dkdetail_contest_id', 'contest_id', unique=True),
+        Index('idx_dkdetail_sport', 'sport_id'),
+        Index('idx_dkdetail_contest_type', 'contest_type_id'),
     )

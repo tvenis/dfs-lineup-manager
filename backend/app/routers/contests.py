@@ -5,15 +5,17 @@ Handles endpoints for importing DraftKings contest results from CSV with a revie
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import csv
 import io
 import re
+from datetime import datetime as _dt
 
 from app.database import get_db
-from app.models import Week, Sport, GameType, Contest, RecentActivity, Lineup
+from app.models import Week, Sport, GameType, Contest, RecentActivity, Lineup, DKContestDetail
+import httpx
 
 router = APIRouter(prefix="/api/contests", tags=["contests"])
 
@@ -82,6 +84,122 @@ def _get_stripped(row: dict, header_map: dict, names: List[str]) -> str:
     return ""
 
 
+async def _ensure_dk_contest_details(db: Session, contest_ids: Set[str]):
+    """Ensure dk_contest_detail has rows for contest_ids by calling DK API for missing ones."""
+    if not contest_ids:
+        return
+    existing_ids = {
+        r[0] for r in db.query(DKContestDetail.contest_id).filter(DKContestDetail.contest_id.in_(list(contest_ids))).all()
+    }
+    missing = [cid for cid in contest_ids if cid and cid not in existing_ids]
+    if not missing:
+        return
+
+    # Lookups
+    sport_code_to_id = {s.code.upper(): s.sport_id for s in db.query(Sport).all()}
+    from app.models import ContestType as ContestTypeModel
+    ctype_code_to_id = {c.code.lower(): c.contest_type_id for c in db.query(ContestTypeModel).all()}
+
+    def _parse_dt(value: str):
+        if not value:
+            return None
+        try:
+            s = value.strip().replace('Z', '+00:00')
+            if '.' in s:
+                left, right = s.split('.', 1)
+                # split on timezone sign if present
+                tz_sign = '+' if '+' in right else ('-' if '-' in right else None)
+                if tz_sign:
+                    frac, tz = right.split(tz_sign, 1)
+                    if len(frac) > 6:
+                        frac = frac[:6]
+                    s = f"{left}.{frac}{tz_sign}{tz}"
+                else:
+                    frac = right
+                    if len(frac) > 6:
+                        frac = frac[:6]
+                    s = f"{left}.{frac}"
+            return _dt.fromisoformat(s)
+        except Exception:
+            return None
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        for cid in missing:
+            try:
+                url = f"https://api.draftkings.com/contests/v1/contests/{cid}?format=json"
+                resp = await client.get(url, headers={"Accept": "application/json"})
+                resp.raise_for_status()
+                detail = (resp.json() or {}).get("contestDetail", {})
+                if not detail:
+                    continue
+
+                name = detail.get("name")
+                sport_id = sport_code_to_id.get(str(detail.get("sport") or "").upper())
+                draft_group_id = detail.get("draftGroupId")
+                payout_desc = (detail.get("payoutDescriptions") or {}).get("Cash") or detail.get("PayoutDescription")
+                total_payouts = detail.get("totalPayouts")
+                is_guaranteed = bool(detail.get("isGuaranteed"))
+                is_private = bool(detail.get("isPrivate"))
+                is_cashprize_only = bool(detail.get("IsCashPrizeOnly") or detail.get("isCashPrizeOnly"))
+                entry_fee = detail.get("entryFee")
+                entries = detail.get("entries")
+                max_entries = detail.get("maximumEntries")
+                max_entries_per_user = detail.get("maximumEntriesPerUser")
+                contest_state = detail.get("contestState") or detail.get("contestStateDetail")
+                cstart_raw = detail.get("contestStartTime")
+                cstart = _parse_dt(cstart_raw)
+                summary = detail.get("contestSummary")
+                attributes = detail.get("attributes") or {}
+
+                # Detect contest type strictly from attributes
+                at = {str(k).lower(): str(v).lower() for k, v in attributes.items()}
+                inferred_code = None
+                if at.get("is h2h") == "true":
+                    inferred_code = "h2h"
+                elif at.get("isdoubleup") == "true":
+                    inferred_code = "double-up"
+                elif at.get("istournament") == "true":
+                    inferred_code = "tournament"
+                contest_type_id = ctype_code_to_id.get(inferred_code) if inferred_code else None
+
+                # Rake
+                rake_percentage = None
+                try:
+                    if max_entries and entry_fee and total_payouts and float(total_payouts) != 0:
+                        calculated_rake = ((float(max_entries) * float(entry_fee)) - float(total_payouts)) / float(total_payouts)
+                        rake_percentage = round(calculated_rake * 100, 2)  # Convert to percentage
+                except Exception as e:
+                    print(f"Rake calculation error for {cid}: {e}")
+                    rake_percentage = None
+
+                row = DKContestDetail(
+                    contest_id=str(cid),
+                    name=name,
+                    sport_id=sport_id,
+                    contest_type_id=contest_type_id,
+                    summary=summary,
+                    draftGroupId=draft_group_id,
+                    payoutDescription=payout_desc,
+                    rake_percentage=rake_percentage,
+                    total_payouts=total_payouts,
+                    is_guaranteed=is_guaranteed,
+                    is_private=is_private,
+                    is_cashprize_only=is_cashprize_only,
+                    entry_fee=entry_fee,
+                    entries=entries,
+                    max_entries=max_entries,
+                    max_entries_per_user=max_entries_per_user,
+                    contest_state=contest_state,
+                    contest_start_time=cstart,
+                    attributes=attributes,
+                )
+                db.add(row)
+                db.commit()
+            except Exception:
+                db.rollback()
+                continue
+
+
 @router.get("/weeks")
 async def get_active_upcoming_weeks(db: Session = Depends(get_db)):
     try:
@@ -128,12 +246,14 @@ async def parse_contests_csv(
     header_map = { (h or '').strip().lower(): h for h in reader.fieldnames }
 
     staged: List[Dict[str, Any]] = []
+    contest_keys: Set[str] = set()
     for row in reader:
         # Map by provided spec names with variants
         entry_key_raw = _get_stripped(row, header_map, ["entry_key", "entry id", "entry key"]) or "0"
         contest_id_raw = _get_stripped(row, header_map, ["contest_key", "contest id", "contest_id"]) or "0"
         sport_code = _get_stripped(row, header_map, ["sport"]).upper() or "NFL"
         game_type_code = _get_stripped(row, header_map, ["game_type", "game type"]).strip() or "Classic"
+        contest_type_code = _get_stripped(row, header_map, ["contest_type", "contest type"]).strip() or ""
         entry_label = _get_stripped(row, header_map, ["entry", "entry label", "contest_description"]) or ""
         opponent = _get_stripped(row, header_map, ["contest_opponent", "opponent"]) or ""
         date_est = _get_stripped(row, header_map, ["contest_date_est", "date", "contest_date"]) or ""
@@ -155,6 +275,9 @@ async def parse_contests_csv(
         except Exception:
             contest_id = 0
 
+        if contest_id:
+            contest_keys.add(str(contest_id))
+
         # Compute result flag: 1 if any winnings > 0
         result_flag = 1 if (_parse_money(win_cash) > 0 or _parse_money(win_ticket) > 0) else 0
 
@@ -164,6 +287,7 @@ async def parse_contests_csv(
             "week_id": week_id,
             "sport_code": sport_code,
             "game_type_code": game_type_code,
+            "contest_type_code": contest_type_code,
             "lineup_id": _get_stripped(row, header_map, ["lineup_id", "lineup id"]) or None,
             "contest_description": entry_label,
             "contest_opponent": opponent,
@@ -178,6 +302,14 @@ async def parse_contests_csv(
             "prize_pool_usd": _parse_money(prize_pool),
             "result": result_flag,
         })
+
+    # Ensure dk_contest_detail contains details for these contests
+    # Populate DK contest details for any missing contests
+    try:
+        await _ensure_dk_contest_details(db, contest_keys)
+    except Exception as e:
+        # Swallow but return a hint in response for debugging
+        return {"staged": staged, "count": len(staged), "dk_detail_error": str(e)}
 
     return {"staged": staged, "count": len(staged)}
 
@@ -196,6 +328,14 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
         # Build lookup maps
         code_to_sport: Dict[str, int] = {s.code.upper(): s.sport_id for s in db.query(Sport).all()}
         code_to_game_type: Dict[str, int] = {g.code: g.game_type_id for g in db.query(GameType).all()}
+        # contest_type is in models module; import lazily to avoid circular import at top
+        from app.models import ContestType as ContestTypeModel
+        code_to_contest_type: Dict[str, int] = {c.code: c.contest_type_id for c in db.query(ContestTypeModel).all()}
+        
+        # Build DK contest detail lookup map
+        contest_ids = [str(r.get("contest_id")) for r in rows if r.get("contest_id")]
+        dk_details = db.query(DKContestDetail).filter(DKContestDetail.contest_id.in_(contest_ids)).all()
+        dk_detail_map = {d.contest_id: d for d in dk_details}
 
         created = 0
         updated = 0
@@ -211,6 +351,21 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                     continue
                 sport_id = code_to_sport.get(str(r.get("sport_code", "")).upper())
                 game_type_id = code_to_game_type.get(str(r.get("game_type_code", "Classic")))
+                
+                # Get contest_type_id and opponent from dk_contest_detail
+                contest_type_id = None
+                contest_opponent = None
+                dk_detail = dk_detail_map.get(str(contest_id))
+                if dk_detail:
+                    contest_type_id = dk_detail.contest_type_id
+                    # Extract opponent from attributes if it's H2H
+                    if dk_detail.contest_type_id == code_to_contest_type.get("h2h"):
+                        attributes = dk_detail.attributes or {}
+                        contest_opponent = attributes.get("Head to Head Opponent Name")
+                
+                # Fallback to CSV contest_type_code if no DK detail
+                if not contest_type_id and r.get("contest_type_code"):
+                    contest_type_id = code_to_contest_type.get(str(r.get("contest_type_code")))
                 if not sport_id:
                     errors.append(f"Entry {entry_key}: Unknown sport code '{r.get('sport_code')}'")
                     continue
@@ -227,9 +382,10 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                     existing.sport_id = sport_id
                     existing.lineup_id = r.get("lineup_id")
                     existing.game_type_id = game_type_id
+                    existing.contest_type_id = contest_type_id
                     existing.contest_id = contest_id
                     existing.contest_description = r.get("contest_description")
-                    existing.contest_opponent = r.get("contest_opponent")
+                    existing.contest_opponent = contest_opponent or r.get("contest_opponent")
                     existing.contest_date_utc = datetime.fromisoformat(r.get("contest_date_utc")).astimezone(ZoneInfo("UTC"))
                     existing.contest_place = r.get("contest_place")
                     existing.contest_points = r.get("contest_points")
@@ -250,8 +406,9 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                         sport_id=sport_id,
                         lineup_id=r.get("lineup_id"),
                         game_type_id=game_type_id,
+                        contest_type_id=contest_type_id,
                         contest_description=r.get("contest_description"),
-                        contest_opponent=r.get("contest_opponent"),
+                        contest_opponent=contest_opponent or r.get("contest_opponent"),
                         contest_date_utc=datetime.fromisoformat(r.get("contest_date_utc")).astimezone(ZoneInfo("UTC")),
                         contest_place=r.get("contest_place"),
                         contest_points=r.get("contest_points"),
@@ -269,13 +426,22 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                     db.flush()
                     cache[entry_key] = obj
                     created += 1
-                # If lineup_id is provided, update lineup status to 'submitted'
+                # If lineup_id is provided, update lineup status to 'submitted'. If H2H, set contest_opponent from DK attributes if available
                 try:
                     lineup_id_val = r.get("lineup_id")
                     if lineup_id_val:
                         lineup_obj = db.query(Lineup).filter(Lineup.id == lineup_id_val).first()
                         if lineup_obj and lineup_obj.status != 'submitted':
                             lineup_obj.status = 'submitted'
+                    # If H2H per DK detail attributes, parse opponent
+                    if contest_id:
+                        dk = db.query(DKContestDetail).filter(DKContestDetail.contest_id == str(contest_id)).first()
+                        if dk and dk.attributes:
+                            at = {str(k).lower(): str(v) for k, v in dk.attributes.items()}
+                            if at.get('ish2h', '').lower() == 'true':
+                                opp = dk.attributes.get('Head to Head Opponent Name') or dk.attributes.get('opponent')
+                                if opp:
+                                    (existing if existing else obj).contest_opponent = opp
                 except Exception:
                     pass
             except Exception as e:
