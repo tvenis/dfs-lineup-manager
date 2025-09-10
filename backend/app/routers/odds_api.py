@@ -29,6 +29,17 @@ class OddsApiService:
             # Negative American odds: decimal = (100 / abs(american)) + 1
             return (100 / abs(american_odds)) + 1
     
+    def calculate_outcome_likelihood(self, american_odds: float) -> float:
+        """Calculate outcome likelihood (probability) from American odds"""
+        if american_odds is None:
+            return None
+        
+        decimal_odds = self.american_to_decimal(american_odds)
+        # Convert decimal odds to probability: probability = 1 / decimal_odds
+        probability = 1 / decimal_odds
+        # Convert to percentage (e.g., 0.625 -> 62.5)
+        return probability * 100
+    
     async def get_participants(self, sport: str) -> List[Dict[str, Any]]:
         """Fetch participants from Odds-API"""
         url = f"{self.base_url}/sports/{sport}/participants"
@@ -826,6 +837,7 @@ async def import_player_props(
                                     existing.outcome_description = outcome_description
                                     existing.outcome_price = outcome_price
                                     existing.outcome_point = outcome_point
+                                    existing.outcome_likelihood = odds_service.calculate_outcome_likelihood(outcome_price)
                                     existing.last_prop_update = last_update_dt
                                     existing.updated_by = "API"
                                     existing.updated_at = datetime.utcnow()
@@ -841,7 +853,7 @@ async def import_player_props(
                                         playerDkId=player_obj.playerDkId,
                                         outcome_price=outcome_price,
                                         outcome_point=outcome_point,
-                                        outcome_likelihood=None,
+                                        outcome_likelihood=odds_service.calculate_outcome_likelihood(outcome_price),
                                         updated_by="API",
                                         last_prop_update=last_update_dt,
                                     )
