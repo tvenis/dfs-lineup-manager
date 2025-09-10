@@ -348,3 +348,57 @@ class DKContestDetail(Base):
         Index('idx_dkdetail_sport', 'sport_id'),
         Index('idx_dkdetail_contest_type', 'contest_type_id'),
     )
+
+class PlayerActuals(Base):
+    __tablename__ = "player_actuals"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
+    playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=False)
+    team = Column(String(10), nullable=False)  # Team abbreviation from CSV
+    position = Column(String(10), nullable=False)  # Position from CSV
+    
+    # Passing statistics
+    completions = Column(Float)
+    attempts = Column(Float)
+    pass_yds = Column(Float)
+    pass_tds = Column(Float)
+    interceptions = Column(Float)
+    
+    # Rushing statistics
+    rush_att = Column(Float)
+    rush_yds = Column(Float)
+    rush_tds = Column(Float)
+    
+    # Receiving statistics
+    rec_tgt = Column(Float)
+    receptions = Column(Float)
+    rec_yds = Column(Float)
+    rec_tds = Column(Float)
+    
+    # Other statistics
+    fumbles = Column(Float)
+    fumbles_lost = Column(Float)
+    total_tds = Column(Float)
+    two_pt_md = Column(Float)
+    two_pt_pass = Column(Float)
+    
+    # Fantasy scoring and rankings
+    dk_actuals = Column(Float)  # DraftKings actual points
+    vbd = Column(Float)  # Value Based Draft
+    pos_rank = Column(Integer)  # Position rank
+    ov_rank = Column(Integer)  # Overall rank
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    week = relationship("Week")
+    player = relationship("Player")
+    
+    # Composite unique index on (week_id, playerDkId) for upserts
+    __table_args__ = (
+        Index('idx_player_actuals_week_player', 'week_id', 'playerDkId', unique=True),
+        Index('idx_player_actuals_week', 'week_id'),
+        Index('idx_player_actuals_player', 'playerDkId'),
+    )

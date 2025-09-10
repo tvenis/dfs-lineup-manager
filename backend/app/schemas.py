@@ -580,3 +580,98 @@ class PlayerPropBetWithMeta(BaseModel):
 class PlayerPropsResponse(BaseModel):
     props: List[PlayerPropBetWithMeta]
     total: int
+
+# Player Actuals schemas
+class PlayerActualsBase(BaseModel):
+    week_id: int = Field(..., description="Week ID from weeks table")
+    playerDkId: int = Field(..., description="DraftKings player ID")
+    team: str = Field(..., min_length=1, max_length=10, description="Team abbreviation from CSV")
+    position: str = Field(..., min_length=1, max_length=10, description="Position from CSV")
+    
+    # Passing statistics
+    completions: Optional[float] = Field(None, description="Completions")
+    attempts: Optional[float] = Field(None, description="Attempts")
+    pass_yds: Optional[float] = Field(None, description="Pass Yards")
+    pass_tds: Optional[float] = Field(None, description="Pass TDs")
+    interceptions: Optional[float] = Field(None, description="Interceptions")
+    
+    # Rushing statistics
+    rush_att: Optional[float] = Field(None, description="Rush Attempts")
+    rush_yds: Optional[float] = Field(None, description="Rush Yards")
+    rush_tds: Optional[float] = Field(None, description="Rush TDs")
+    
+    # Receiving statistics
+    rec_tgt: Optional[float] = Field(None, description="Receiving Targets")
+    receptions: Optional[float] = Field(None, description="Receptions")
+    rec_yds: Optional[float] = Field(None, description="Receiving Yards")
+    rec_tds: Optional[float] = Field(None, description="Receiving TDs")
+    
+    # Other statistics
+    fumbles: Optional[float] = Field(None, description="Fumbles")
+    fumbles_lost: Optional[float] = Field(None, description="Fumbles Lost")
+    total_tds: Optional[float] = Field(None, description="Total TDs")
+    two_pt_md: Optional[float] = Field(None, description="2-Point Conversions Made")
+    two_pt_pass: Optional[float] = Field(None, description="2-Point Conversion Passes")
+    
+    # Fantasy scoring and rankings
+    dk_actuals: Optional[float] = Field(None, description="DraftKings actual points")
+    vbd: Optional[float] = Field(None, description="Value Based Draft")
+    pos_rank: Optional[int] = Field(None, description="Position rank")
+    ov_rank: Optional[int] = Field(None, description="Overall rank")
+
+class PlayerActualsCreate(PlayerActualsBase):
+    pass
+
+class PlayerActualsUpdate(BaseModel):
+    team: Optional[str] = Field(None, min_length=1, max_length=10)
+    position: Optional[str] = Field(None, min_length=1, max_length=10)
+    completions: Optional[float] = None
+    attempts: Optional[float] = None
+    pass_yds: Optional[float] = None
+    pass_tds: Optional[float] = None
+    interceptions: Optional[float] = None
+    rush_att: Optional[float] = None
+    rush_yds: Optional[float] = None
+    rush_tds: Optional[float] = None
+    rec_tgt: Optional[float] = None
+    receptions: Optional[float] = None
+    rec_yds: Optional[float] = None
+    rec_tds: Optional[float] = None
+    fumbles: Optional[float] = None
+    fumbles_lost: Optional[float] = None
+    total_tds: Optional[float] = None
+    two_pt_md: Optional[float] = None
+    two_pt_pass: Optional[float] = None
+    dk_actuals: Optional[float] = None
+    vbd: Optional[float] = None
+    pos_rank: Optional[int] = None
+    ov_rank: Optional[int] = None
+
+class PlayerActuals(PlayerActualsBase):
+    id: int
+    week: Week
+    player: Player
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+# Player Actuals import schemas
+class PlayerActualsImportRequest(BaseModel):
+    week_id: int = Field(..., description="Week ID from weeks table")
+    csv_data: List[Dict[str, Any]] = Field(..., description="Parsed CSV data")
+
+class PlayerActualsImportResponse(BaseModel):
+    total_processed: int = Field(..., ge=0, description="Total number of records processed")
+    successful_matches: int = Field(..., ge=0, description="Number of successful player matches")
+    failed_matches: int = Field(..., ge=0, description="Number of failed player matches")
+    actuals_created: int = Field(..., ge=0, description="Number of new actuals created")
+    actuals_updated: int = Field(..., ge=0, description="Number of existing actuals updated")
+    errors: List[str] = Field(default=[], description="List of error messages")
+    unmatched_players: List[Dict[str, Any]] = Field(default=[], description="List of unmatched players for manual review")
+
+class PlayerActualsListResponse(BaseModel):
+    actuals: List[PlayerActuals]
+    total: int
+    week_id: int

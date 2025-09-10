@@ -13,6 +13,7 @@ import { Calendar } from './ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { Badge } from './ui/badge'
 import { ImportPlayerProjections } from './ImportPlayerProjections'
+import { ImportPlayerActuals } from './ImportPlayerActuals'
 import { ImportContests } from './ImportContests'
 
 // Mock data for the component
@@ -367,6 +368,33 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
     setHistory(prev => [newHistoryItem, ...prev])
   }
 
+  const handleActualsImportComplete = (importData: {
+    filename: string;
+    timestamp: string;
+    failedImports: number;
+    successfulImports: number;
+    week: number;
+  }) => {
+    const newHistoryItem: RecentActivity = {
+      id: Date.now(),
+      timestamp: importData.timestamp,
+      action: 'import',
+      fileType: 'CSV',
+      fileName: importData.filename,
+      week_id: importData.week,
+      draftGroup: 'Player Actuals',
+      recordsAdded: importData.successfulImports,
+      recordsUpdated: 0,
+      recordsSkipped: importData.failedImports,
+      errors: importData.failedImports > 0 ? [`${importData.failedImports} failed to match`] : [],
+      user: null,
+      details: null,
+      importType: 'actuals'
+    }
+    
+    setHistory(prev => [newHistoryItem, ...prev])
+  }
+
   const handleOddsApiImport = async (endpoint: string) => {
     if (!oddsApiKey.trim()) {
       alert('Please enter your Odds-API key')
@@ -615,7 +643,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
 
       {/* Import Tabs */}
       <Tabs defaultValue="import-pool" className="space-y-6" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="import-pool" className="gap-2">
             <Database className="w-4 h-4" />
             Import Player Pool
@@ -623,6 +651,10 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           <TabsTrigger value="import-projections" className="gap-2">
             <FileText className="w-4 h-4" />
             Import Projections
+          </TabsTrigger>
+          <TabsTrigger value="import-actuals" className="gap-2">
+            <FileText className="w-4 h-4" />
+            Import Actuals
           </TabsTrigger>
           <TabsTrigger value="import-contests" className="gap-2">
             <FileText className="w-4 h-4" />
@@ -742,6 +774,10 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
 
         <TabsContent value="import-projections">
           <ImportPlayerProjections onImportComplete={handleProjectionImportComplete} />
+        </TabsContent>
+
+        <TabsContent value="import-actuals">
+          <ImportPlayerActuals onImportComplete={handleActualsImportComplete} />
         </TabsContent>
 
         <TabsContent value="import-contests">
