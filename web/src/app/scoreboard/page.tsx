@@ -240,11 +240,17 @@ export default function ScoreboardPage() {
   const entryTypeBreakdown = useMemo(() => {
     const counts = new Map<string, number>();
     for (const c of filteredContests) {
-      const key = c.game_type || "Unknown";
+      const key = c.contest_type || "Unknown";
       counts.set(key, (counts.get(key) || 0) + 1);
     }
+    const total = filteredContests.length;
     const colors = ["#3b82f6", "#10b981", "#a855f7", "#f59e0b", "#ef4444"]; // shadcn-ish palette
-    return Array.from(counts.entries()).map(([name, value], idx) => ({ name, value, color: colors[idx % colors.length] }));
+    return Array.from(counts.entries()).map(([name, count], idx) => ({ 
+      name, 
+      value: total > 0 ? Math.round((count / total) * 100) : 0, 
+      count,
+      color: colors[idx % colors.length] 
+    }));
   }, [filteredContests]);
 
   const getPlacementColor = (place: number, placesPaid: number) => {
@@ -488,7 +494,7 @@ export default function ScoreboardPage() {
                   {entryTypeBreakdown.map((entry, index) => (
                     <div key={index} className="flex items-center space-x-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                      <span className="text-sm">{entry.name}: {entry.value}%</span>
+                      <span className="text-sm">{entry.name}: {entry.value}% ({entry.count})</span>
                     </div>
                   ))}
                 </div>
