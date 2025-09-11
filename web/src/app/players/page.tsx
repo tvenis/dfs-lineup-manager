@@ -619,9 +619,9 @@ export default function PlayerPoolPage() {
         setWeeks(weeksData.weeks);
         
         if (weeksData.weeks.length > 0) {
-          // Find Week 1 specifically, or default to the first week
-          const week1 = weeksData.weeks.find(w => w.week_number === 1);
-          const defaultWeek = week1 || weeksData.weeks[0];
+          // Find Active week specifically, or default to the first week
+          const activeWeek = weeksData.weeks.find(w => w.status === 'Active');
+          const defaultWeek = activeWeek || weeksData.weeks[0];
           console.log('🎯 Selected week:', defaultWeek);
           setSelectedWeek(defaultWeek.id);
           
