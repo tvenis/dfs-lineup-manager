@@ -229,6 +229,7 @@ export class LineupService {
             id: lineup.id,
             name: lineup.name,
             tags: lineup.tags || [],
+            status: lineup.status || 'created',
             salaryUsed: analysis.total_salary,
             salaryCap: 50000,
             projectedPoints: totalProjectedPoints,

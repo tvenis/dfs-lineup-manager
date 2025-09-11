@@ -30,6 +30,7 @@ export default function PlayerPoolPage() {
   const [sortField, setSortField] = useState<string>('projection');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [tierFilter, setTierFilter] = useState<number | 'all'>('all');
+  const [draftGroupFilter, setDraftGroupFilter] = useState<string>('all');
   const [gamesMap, setGamesMap] = useState<Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }>>({});
   const [qbPassYardsProps, setQbPassYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
   const [qbPassingTdsProps, setQbPassingTdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
@@ -824,6 +825,20 @@ export default function PlayerPoolPage() {
     }
   };
 
+  // Get unique draft groups from player pool data
+  const getUniqueDraftGroups = useMemo(() => {
+    const draftGroups = new Set<string>();
+    playerPool.forEach(entry => {
+      if (entry.draftGroup) {
+        draftGroups.add(entry.draftGroup);
+      }
+    });
+    const uniqueGroups = Array.from(draftGroups).sort();
+    console.log('🎯 Unique draft groups found:', uniqueGroups);
+    console.log('🎯 Player pool sample:', playerPool.slice(0, 3).map(p => ({ name: p.player.displayName, draftGroup: p.draftGroup })));
+    return uniqueGroups;
+  }, [playerPool]);
+
   // Filter players for current tab
   const getFilteredPlayers = (position: string) => {
     let players = getAllPlayersForPosition(position);
@@ -832,6 +847,8 @@ export default function PlayerPoolPage() {
       initialCount: players.length,
       searchTerm,
       hideExcluded,
+      tierFilter,
+      draftGroupFilter,
       databaseExcludedCount: players.filter(p => p.excluded === true).length
     });
 
@@ -860,6 +877,12 @@ export default function PlayerPoolPage() {
     if (tierFilter !== 'all') {
       players = players.filter(entry => entry.tier === tierFilter);
       console.log(`🎯 After tier filter: ${players.length} players`);
+    }
+
+    // Apply draft group filter
+    if (draftGroupFilter !== 'all') {
+      players = players.filter(entry => entry.draftGroup === draftGroupFilter);
+      console.log(`🎯 After draft group filter: ${players.length} players`);
     }
 
     console.log(`🎯 Final filtered players for ${position}: ${players.length}`);
@@ -1242,23 +1265,45 @@ export default function PlayerPoolPage() {
         </div>
       </div>
 
-      {/* Week Selection */}
+      {/* Week Selection and Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <label htmlFor="week-select" className="block text-sm font-medium text-gray-700 mb-2">
-          Select Week:
-        </label>
-        <select
-          id="week-select"
-          value={selectedWeek || ''}
-          onChange={(e) => setSelectedWeek(Number(e.target.value))}
-          className="block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-        >
-          {weeks.map((week) => (
-            <option key={week.id} value={week.id}>
-              Week {week.week_number} - {week.year}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-wrap gap-4 items-end">
+          <div className="flex-shrink-0">
+            <label htmlFor="week-select" className="block text-sm font-medium text-gray-700 mb-2">
+              Select Week:
+            </label>
+            <select
+              id="week-select"
+              value={selectedWeek || ''}
+              onChange={(e) => setSelectedWeek(Number(e.target.value))}
+              className="block w-auto min-w-[200px] px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              {weeks.map((week) => (
+                <option key={week.id} value={week.id}>
+                  Week {week.week_number} - {week.year}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-shrink-0">
+            <label htmlFor="draft-group-select" className="block text-sm font-medium text-gray-700 mb-2">
+              Draft Group:
+            </label>
+            <Select value={draftGroupFilter} onValueChange={setDraftGroupFilter}>
+              <SelectTrigger className="w-auto min-w-[200px]">
+                <SelectValue placeholder="All Draft Groups" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Draft Groups</SelectItem>
+                {getUniqueDraftGroups.map((draftGroup) => (
+                  <SelectItem key={draftGroup} value={draftGroup}>
+                    Draft Group {draftGroup}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {/* Tier Legend */}
@@ -1469,6 +1514,18 @@ export default function PlayerPoolPage() {
                         <span>Filtered to Tier {tierFilter}</span>
                         <button 
                           onClick={() => setTierFilter('all')}
+                          className="ml-1 hover:bg-destructive/20 rounded-full w-4 h-4 flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    )}
+                    
+                    {draftGroupFilter !== 'all' && (
+                      <Badge variant="secondary" className="gap-1">
+                        <span>Draft Group {draftGroupFilter}</span>
+                        <button 
+                          onClick={() => setDraftGroupFilter('all')}
                           className="ml-1 hover:bg-destructive/20 rounded-full w-4 h-4 flex items-center justify-center"
                         >
                           <X className="w-3 h-3" />

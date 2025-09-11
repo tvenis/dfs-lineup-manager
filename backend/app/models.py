@@ -136,6 +136,28 @@ class Week(Base):
     lineups = relationship("Lineup", back_populates="week")
     player_pool_entries = relationship("PlayerPoolEntry", back_populates="week")
     recent_activities = relationship("RecentActivity", back_populates="week")
+    draftgroups = relationship("DraftGroup", back_populates="week")
+
+class DraftGroup(Base):
+    __tablename__ = "draftgroups"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    draftGroup = Column(Integer, nullable=False)  # Draft Group ID
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)  # Foreign key to weeks table
+    draftGroup_description = Column(String(255))  # Description of the draft group
+    games = Column(Integer, default=0)  # Number of games in this draft group
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    week = relationship("Week", back_populates="draftgroups")
+    
+    # Constraints
+    __table_args__ = (
+        Index('idx_draftgroups_week_id', 'week_id'),
+        Index('idx_draftgroups_draftgroup', 'draftGroup'),
+        Index('idx_draftgroups_unique', 'draftGroup', 'week_id', unique=True),
+    )
 
 class PlayerPoolEntry(Base):
     __tablename__ = "player_pool_entries"

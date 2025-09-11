@@ -103,6 +103,29 @@ class Week(WeekBase):
     class Config:
         from_attributes = True
 
+class DraftGroupBase(BaseModel):
+    draftGroup: int = Field(..., description="Draft Group ID")
+    week_id: int = Field(..., description="Week ID from weeks table")
+    draftGroup_description: Optional[str] = Field(None, max_length=255, description="Description of the draft group")
+    games: int = Field(default=0, ge=0, description="Number of games in this draft group")
+
+class DraftGroupCreate(DraftGroupBase):
+    pass
+
+class DraftGroupUpdate(BaseModel):
+    draftGroup: Optional[int] = Field(None, description="Draft Group ID")
+    week_id: Optional[int] = Field(None, description="Week ID from weeks table")
+    draftGroup_description: Optional[str] = Field(None, max_length=255, description="Description of the draft group")
+    games: Optional[int] = Field(None, ge=0, description="Number of games in this draft group")
+
+class DraftGroup(DraftGroupBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
 class PlayerPoolEntryBase(BaseModel):
     week_id: int = Field(..., description="Week ID from weeks table")
     draftGroup: str = Field(..., description="Draft Group ID from DraftKings")

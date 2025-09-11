@@ -57,7 +57,7 @@ interface RecentActivity {
   errors: string[]
   user: string | null
   details: unknown
-  importType?: 'player-pool' | 'projections' | 'odds-api' // New field for tab-specific tracking
+  importType?: 'player-pool' | 'projections' | 'odds-api' | 'actuals' // New field for tab-specific tracking
 }
 
 export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string }) {
@@ -65,6 +65,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   const [weeks, setWeeks] = useState<Week[]>([])
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null)
   const [draftGroup, setDraftGroup] = useState<string>('')
+  const [draftGroups, setDraftGroups] = useState<Array<{draftGroup: number, draftGroup_description: string}>>([])
   const [isImporting, setIsImporting] = useState(false)
   const [, setLastImportResult] = useState<DraftKingsImportResponse | null>(null)
   
@@ -133,6 +134,31 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       }
     }
     fetchGamesForWeek()
+  }, [selectedWeekId])
+
+  // When week changes, fetch draft groups for the week
+  useEffect(() => {
+    const fetchDraftGroups = async () => {
+      if (!selectedWeekId) {
+        setDraftGroups([])
+        return
+      }
+      try {
+        const response = await fetch(`http://localhost:8000/api/draftgroups/?week_id=${selectedWeekId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setDraftGroups(Array.isArray(data) ? data : [])
+        } else {
+          console.error('Failed to fetch draft groups:', response.statusText)
+          setDraftGroups([])
+        }
+      } catch (error) {
+        console.error('Error loading draft groups:', error)
+        setDraftGroups([])
+      }
+    }
+    
+    fetchDraftGroups()
   }, [selectedWeekId])
 
   const fetchWeeks = async () => {
@@ -234,8 +260,8 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   }
 
   const handleImportPlayerData = async () => {
-    if (!selectedWeekId || !draftGroup.trim()) {
-      alert('Please select a week and enter a Draft Group number')
+    if (!selectedWeekId || !draftGroup) {
+      alert('Please select a week and draft group')
       return
     }
 
@@ -326,6 +352,8 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           return 'Import Projections'
         case 'odds-api':
           return 'Odds-API Integration'
+        case 'actuals':
+          return 'Import Actuals'
         default:
           return 'Import'
       }
@@ -682,13 +710,13 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Week Selection Dropdown */}
-                <div className="space-y-2">
+                <div className="space-y-2 w-auto min-w-[200px] max-w-[400px]">
                   <Label>Import Week</Label>
                   <Select 
                     value={selectedWeekId?.toString()} 
                     onValueChange={(value) => setSelectedWeekId(parseInt(value))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-auto min-w-[200px]">
                       <SelectValue placeholder="Select week for import" />
                     </SelectTrigger>
                     <SelectContent>
@@ -704,22 +732,33 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   </p>
                 </div>
 
-                {/* Draft Group Input */}
-                <div className="space-y-2">
+                {/* Draft Group Dropdown */}
+                <div className="space-y-2 w-auto min-w-[200px] max-w-[400px]">
                   <Label htmlFor="draft-group">Draft Group</Label>
-                  <Input
-                    id="draft-group"
-                    type="number"
-                    placeholder="Enter Draft Group number"
-                    value={draftGroup}
-                    onChange={(e) => setDraftGroup(e.target.value)}
-                  />
+                  <Select 
+                    value={draftGroup} 
+                    onValueChange={setDraftGroup}
+                  >
+                    <SelectTrigger id="draft-group" className="w-auto min-w-[200px]">
+                      <SelectValue placeholder="Select draft group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {draftGroups.map((group) => (
+                        <SelectItem key={group.draftGroup} value={group.draftGroup.toString()}>
+                          {group.draftGroup_description || `Group ${group.draftGroup}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    Select from available draft groups for the selected week
+                  </p>
                 </div>
 
                 {/* Import Button */}
                 <Button 
                   onClick={handleImportPlayerData}
-                  disabled={isImporting || !draftGroup.trim()}
+                  disabled={isImporting || !draftGroup || draftGroups.length === 0}
                   className="w-full gap-2"
                 >
                   {isImporting ? (
@@ -827,7 +866,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                       <SelectContent>
                         {weeks.map((week) => (
                           <SelectItem key={week.id} value={week.id.toString()}>
-                            {week.label} {week.status === 'Active' ? '(Active)' : ''}
+                            {getWeekLabel(week)} {week.status === 'Active' ? '(Active)' : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>

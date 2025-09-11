@@ -295,4 +295,39 @@ export class PlayerService {
       default: return 'bg-gray-100 text-gray-800';
     }
   }
+
+  /**
+   * Fetch all player props in a single batch request
+   * This replaces 11+ individual API calls with 1 batch call
+   */
+  static async getPlayerPropsBatch(
+    playerIds: number[],
+    weekId: number,
+    markets: string[] = [
+      'player_pass_yds',
+      'player_pass_tds', 
+      'player_pass_att',
+      'player_pass_cmp',
+      'player_rush_yds',
+      'player_tds_over',
+      'player_rush_att',
+      'player_reception_yds',
+      'player_receptions'
+    ]
+  ): Promise<Record<number, Record<string, any>>> {
+    const params = new URLSearchParams();
+    params.append('week_id', String(weekId));
+    params.append('player_ids', playerIds.join(','));
+    params.append('markets', markets.join(','));
+    params.append('bookmakers', 'draftkings,betonlineag');
+
+    const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
+    const url = `${baseUrl.slice(0, -1)}/props/batch?${params.toString()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  }
 }

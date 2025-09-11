@@ -10,6 +10,7 @@ import { Save, Trash2, Download, RotateCcw, User, DollarSign, ArrowUpDown, Plus,
 import { Progress } from './ui/progress'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { PlayerService } from '@/lib/playerService'
 import { LineupService } from '@/lib/lineupService'
 import { WeekService } from '@/lib/weekService'
@@ -95,6 +96,8 @@ export function LineupBuilder({
   const [selectedPosition, setSelectedPosition] = useState<string>('QB')
   const [sortField, setSortField] = useState<SortField>('projectedPoints')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [draftGroupFilter, setDraftGroupFilter] = useState<string>('all')
+  const [draftGroups, setDraftGroups] = useState<Array<{draftGroup: number, draftGroup_description: string}>>([])
   const [roster, setRoster] = useState<RosterSlot[]>([
     { position: 'QB', player: null, eligiblePositions: ['QB'] },
     { position: 'RB1', player: null, eligiblePositions: ['RB'] },
@@ -289,6 +292,33 @@ export function LineupBuilder({
     loadPlayerPool()
   }, [weekId])
 
+  // Load draft groups for the active week
+  useEffect(() => {
+    const loadDraftGroups = async () => {
+      if (!currentWeek) {
+        console.log('No current week, skipping draft groups load')
+        return
+      }
+      
+      console.log('Loading draft groups for weekId:', currentWeek.id)
+      try {
+        const response = await fetch(`http://localhost:8000/api/draftgroups/?week_id=${currentWeek.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          console.log('Draft groups response:', data)
+          // The API returns an array directly, not an object with draftgroups property
+          setDraftGroups(Array.isArray(data) ? data : [])
+        } else {
+          console.error('Failed to fetch draft groups:', response.statusText)
+        }
+      } catch (error) {
+        console.error('Error loading draft groups:', error)
+      }
+    }
+    
+    loadDraftGroups()
+  }, [currentWeek])
+
   // Load existing lineup if lineupId is provided (after player pool is loaded)
   useEffect(() => {
     const loadExistingLineup = async () => {
@@ -390,9 +420,15 @@ export function LineupBuilder({
     const grouped: Record<string, PlayerPoolEntry[]> = {}
     
     console.log('Grouping players by position. Total playerPool entries:', playerPool.length)
+    console.log('Draft group filter:', draftGroupFilter)
     
     playerPool.forEach(entry => {
       if (!entry.excluded && !entry.isDisabled) {
+        // Filter by draft group if not 'all'
+        if (draftGroupFilter !== 'all' && entry.draftGroup !== parseInt(draftGroupFilter)) {
+          return
+        }
+        
         const pos = entry.player.position
         if (!grouped[pos]) grouped[pos] = []
         grouped[pos].push(entry)
@@ -401,7 +437,7 @@ export function LineupBuilder({
     
     console.log('Grouped players by position:', grouped)
     return grouped
-  }, [playerPool])
+  }, [playerPool, draftGroupFilter])
 
   const totalSalary = roster.reduce((sum, slot) => {
     if (!slot.player) return sum
@@ -647,6 +683,7 @@ export function LineupBuilder({
         id: 'temp-' + Date.now(), // Temporary ID for display
         name: lineupName.trim(),
         tags: tags.split(',').map(t => t.trim()).filter(t => t.length > 0),
+        status: 'created',
         salaryUsed: totalSalary,
         salaryCap: SALARY_CAP,
         projectedPoints: totalProjected,
@@ -1010,6 +1047,26 @@ export function LineupBuilder({
               <p className="text-sm text-muted-foreground mt-1">Note: Excluded players not available in Player Pool.</p>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Draft Group Filter */}
+              <div className="w-auto min-w-[200px] max-w-[300px]">
+                <Label htmlFor="draft-group-filter" className="text-sm font-medium mb-2 block">
+                  Draft Group
+                </Label>
+                <Select value={draftGroupFilter} onValueChange={setDraftGroupFilter}>
+                  <SelectTrigger id="draft-group-filter" className="w-auto min-w-[200px]">
+                    <SelectValue placeholder="Select draft group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Draft Groups</SelectItem>
+                    {draftGroups.map((group) => (
+                      <SelectItem key={group.draftGroup} value={group.draftGroup.toString()}>
+                        {group.draftGroup_description || `Group ${group.draftGroup}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Position Filters */}
               <Tabs value={selectedPosition} onValueChange={setSelectedPosition}>
                 <TabsList className="grid w-full grid-cols-6">

@@ -201,8 +201,8 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
           const actualsVal = actualsIndex >= 0 ? parseFloat(values[actualsIndex]) || 0 : 0
           
           // No JSON fields in new format
-          const projStatsJson = null
-          const actualStatsJson = null
+          const projStatsJson = undefined
+          const actualStatsJson = undefined
           
           // Selected projection is strictly the Projections column
           let selectedProjection = pprProjection
