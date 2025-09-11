@@ -122,11 +122,17 @@ export function LineupBuilder({
 
   // Always use the active week
   const weekId = useMemo(() => {
-    const id = currentWeek?.id || 1
+    // Only return a weekId if we have a currentWeek set
+    // This prevents loading player pool with wrong week during initialization
+    if (!currentWeek) {
+      console.log('🎯 No currentWeek set yet, returning null')
+      return null
+    }
+    const id = currentWeek.id
     console.log('🎯 weekId calculated:', id, 'from currentWeek:', currentWeek)
-    console.log('🎯 currentWeek.id:', currentWeek?.id)
-    console.log('🎯 currentWeek.status:', currentWeek?.status)
-    console.log('🎯 currentWeek.week_number:', currentWeek?.week_number)
+    console.log('🎯 currentWeek.id:', currentWeek.id)
+    console.log('🎯 currentWeek.status:', currentWeek.status)
+    console.log('🎯 currentWeek.week_number:', currentWeek.week_number)
     return id
   }, [currentWeek])
 
