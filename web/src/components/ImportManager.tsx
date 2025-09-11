@@ -15,40 +15,9 @@ import { Badge } from './ui/badge'
 import { ImportPlayerProjections } from './ImportPlayerProjections'
 import { ImportPlayerActuals } from './ImportPlayerActuals'
 import { ImportContests } from './ImportContests'
+import { Week } from '@/types/prd'
 
-// Mock data for the component
-const mockImportHistory = [
-  {
-    id: 1,
-    type: 'import' as const,
-    filename: 'Draft Group 12345',
-    format: 'API',
-    timestamp: new Date('2024-01-15T10:30:00'),
-    status: 'success' as const,
-    details: '150 players imported successfully for Week 1',
-    week: 'Week 1'
-  },
-  {
-    id: 2,
-    type: 'import' as const,
-    filename: 'projections_week1.csv',
-    format: 'CSV',
-    timestamp: new Date('2024-01-15T09:15:00'),
-    status: 'success' as const,
-    details: '120 projections imported successfully',
-    week: 'Week 1'
-  }
-]
 
-const mockWeeks = [
-  { value: '1', label: 'Week 1', isActive: true },
-  { value: '2', label: 'Week 2', isActive: false },
-  { value: '3', label: 'Week 3', isActive: false },
-  { value: 'wc', label: 'Wild Card', isActive: false },
-  { value: 'div', label: 'Divisional', isActive: false },
-  { value: 'conf', label: 'Conference Championship', isActive: false },
-  { value: 'sb', label: 'Super Bowl', isActive: false }
-]
 
 // Dynamic games will be fetched per week; keep type here for convenience
 interface GameOption {
@@ -73,13 +42,6 @@ interface DraftKingsImportResponse {
   total_processed: number
 }
 
-interface Week {
-  id: number
-  label: string
-  week_number: number
-  year: number
-  status: string
-}
 
 interface RecentActivity {
   id: number
@@ -175,18 +137,61 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
 
   const fetchWeeks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/draftkings/weeks')
+      const response = await fetch('http://localhost:8000/api/weeks/')
       if (response.ok) {
         const data = await response.json()
         setWeeks(data.weeks)
-        // Set first week as default if available
-        if (data.weeks.length > 0) {
+        // Set active week as default, or first week if no active week
+        const activeWeek = data.weeks.find((w: Week) => w.status === 'Active')
+        if (activeWeek) {
+          setSelectedWeekId(activeWeek.id)
+        } else if (data.weeks.length > 0) {
           setSelectedWeekId(data.weeks[0].id)
         }
       }
     } catch (error) {
       console.error('Failed to fetch weeks:', error)
     }
+  }
+
+  // Helper function to format week labels
+  const getWeekLabel = (week: Week) => {
+    const weekLabel = week.week_number === 1 ? "Week 1" :
+                     week.week_number === 2 ? "Week 2" :
+                     week.week_number === 3 ? "Week 3" :
+                     week.week_number === 4 ? "Week 4" :
+                     week.week_number === 5 ? "Week 5" :
+                     week.week_number === 6 ? "Week 6" :
+                     week.week_number === 7 ? "Week 7" :
+                     week.week_number === 8 ? "Week 8" :
+                     week.week_number === 9 ? "Week 9" :
+                     week.week_number === 10 ? "Week 10" :
+                     week.week_number === 11 ? "Week 11" :
+                     week.week_number === 12 ? "Week 12" :
+                     week.week_number === 13 ? "Week 13" :
+                     week.week_number === 14 ? "Week 14" :
+                     week.week_number === 15 ? "Week 15" :
+                     week.week_number === 16 ? "Week 16" :
+                     week.week_number === 17 ? "Week 17" :
+                     week.week_number === 18 ? "Week 18" :
+                     week.week_number === 19 ? "Wild Card" :
+                     week.week_number === 20 ? "Divisional" :
+                     week.week_number === 21 ? "Conference Championship" :
+                     week.week_number === 22 ? "Super Bowl" :
+                     `Week ${week.week_number}`
+    
+    return `${weekLabel} (${week.year}) - ${week.status}`
+  }
+
+  // Filter weeks to show only past and active weeks (no upcoming)
+  const availableWeeks = weeks.filter(week => 
+    week.status === 'Completed' || week.status === 'Active'
+  )
+
+  // Helper function to get week label by week ID
+  const getWeekLabelById = (weekId: number) => {
+    const week = weeks.find(w => w.id === weekId)
+    return week ? getWeekLabel(week) : `Week ID: ${weekId}`
   }
 
   const fetchRecentActivity = async () => {
@@ -311,10 +316,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
     }
   }
 
-  const getWeekLabel = (weekId: number) => {
-    const week = weeks.find(w => w.id === weekId)
-    return week ? week.label : `Week ID: ${weekId}`
-  }
 
   const getImportTypeLabel = (activity: RecentActivity) => {
     if (activity.importType) {
@@ -680,22 +681,27 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Current Week Display */}
+                {/* Week Selection Dropdown */}
                 <div className="space-y-2">
                   <Label>Import Week</Label>
-                  <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
-                    <span className="text-sm font-medium">
-                      {selectedWeek === "1" ? "Week 1" :
-                       selectedWeek === "wc" ? "Wild Card" :
-                       selectedWeek === "div" ? "Divisional" :
-                       selectedWeek === "conf" ? "Conference Championship" :
-                       selectedWeek === "sb" ? "Super Bowl" :
-                       `Week ${selectedWeek}`}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      Data will be imported for the selected week
-                    </span>
-                  </div>
+                  <Select 
+                    value={selectedWeekId?.toString()} 
+                    onValueChange={(value) => setSelectedWeekId(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select week for import" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableWeeks.map((week) => (
+                        <SelectItem key={week.id} value={week.id.toString()}>
+                          {getWeekLabel(week)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    Data will be imported for the selected week
+                  </p>
                 </div>
 
                 {/* Draft Group Input */}
@@ -1410,7 +1416,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                         </span>
                         {item.week_id > 0 && (
                           <span className="text-xs bg-muted px-2 py-1 rounded">
-                            {getWeekLabel(item.week_id)}
+                            {getWeekLabelById(item.week_id)}
                           </span>
                         )}
                         <span className="text-xs bg-muted px-2 py-1 rounded">
@@ -1474,7 +1480,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   <span className="text-muted-foreground">Type:</span> {detailsActivity.fileType}
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Week:</span> {detailsActivity.week_id > 0 ? getWeekLabel(detailsActivity.week_id) : '—'}
+                  <span className="text-muted-foreground">Week:</span> {detailsActivity.week_id > 0 ? getWeekLabelById(detailsActivity.week_id) : '—'}
                 </div>
                 <div>
                   <span className="text-muted-foreground">Draft Group:</span> {detailsActivity.draftGroup}
