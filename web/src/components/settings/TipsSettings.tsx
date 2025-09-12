@@ -20,7 +20,8 @@ import {
   CheckCircle,
   AlertTriangle,
   Lightbulb,
-  Zap
+  Zap,
+  Shield
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { tipsService, TipsConfigData } from '@/lib/tipsService'
@@ -473,6 +474,22 @@ export function TipsSettings() {
     setHasChanges
   } = useTipsConfig()
 
+  // Icon mapping for position tips
+  const iconMap = {
+    Lightbulb,
+    AlertTriangle,
+    Target,
+    DollarSign,
+    Trophy,
+    Shield,
+    Zap
+  }
+
+  const getIcon = (iconName: string) => {
+    const IconComponent = iconMap[iconName as keyof typeof iconMap] || Target
+    return <IconComponent className="w-4 h-4" />
+  }
+
   const handleSave = () => {
     saveConfig(config)
   }
@@ -659,7 +676,7 @@ export function TipsSettings() {
               <AccordionItem key={position} value={position}>
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4" />
+                    {getIcon(positionData.icon)}
                     <span>{position} Position Tips</span>
                   </div>
                 </AccordionTrigger>
