@@ -19,7 +19,8 @@ import {
   Trophy,
   CheckCircle,
   AlertTriangle,
-  Lightbulb
+  Lightbulb,
+  Zap
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { tipsService, TipsConfigData } from '@/lib/tipsService'
@@ -113,7 +114,7 @@ export const defaultTipsConfig = {
       ]
     },
     WR: {
-      icon: 'Zap',
+      icon: 'DollarSign',
       color: 'purple',
       tips: [
         {
@@ -140,6 +141,39 @@ export const defaultTipsConfig = {
             'Stack WRs with their QBs for ceiling games',
             'Bring-back stacks work in shootout scenarios',
             'Multiple WRs from same team risky but high ceiling'
+          ]
+        }
+      ]
+    },
+    FLEX: {
+      icon: 'Zap',
+      color: 'indigo',
+      tips: [
+        {
+          category: 'Position Flexibility',
+          items: [
+            'Consider RBs in pass-heavy game scripts',
+            'Look for WRs with rushing upside in creative offenses',
+            'TEs can provide value in high-scoring games',
+            'Matchup-based decisions over position bias'
+          ]
+        },
+        {
+          category: 'Value & Leverage',
+          items: [
+            'Target lower-owned players in good matchups',
+            'Consider TEs in high-scoring games for FLEX spots',
+            'Look for players with multiple ways to score',
+            'Avoid players with limited upside in FLEX spots'
+          ]
+        },
+        {
+          category: 'Game Script Analysis',
+          items: [
+            'Favor pass-catchers in shootout games',
+            'Target RBs in games with positive game script',
+            'Consider weather impact on position selection',
+            'Use FLEX for contrarian plays in tournaments'
           ]
         }
       ]

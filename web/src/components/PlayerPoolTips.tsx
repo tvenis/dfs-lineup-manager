@@ -62,6 +62,15 @@ const defaultTipsConfig = {
         { category: 'Matchup & Usage', items: ['Exploit matchups vs defenses weak to TEs', 'Consider TEs in games with high implied totals'] },
       ],
     },
+    FLEX: {
+      icon: 'Zap',
+      color: 'indigo',
+      tips: [
+        { category: 'Position Flexibility', items: ['Consider RBs in pass-heavy game scripts', 'Look for WRs with rushing upside in creative offenses'] },
+        { category: 'Value & Leverage', items: ['Target lower-owned players in good matchups', 'Consider TEs in high-scoring games for FLEX spots'] },
+        { category: 'Game Script Analysis', items: ['Favor pass-catchers in shootout games', 'Target RBs in games with positive game script'] },
+      ],
+    },
     DEF: {
       icon: 'Shield',
       color: 'gray',
@@ -74,7 +83,9 @@ const defaultTipsConfig = {
   gameTypeTips: {
     cash: {
       icon: 'DollarSign',
+      title: 'Cash Game Strategy',
       color: 'green',
+      description: 'Focus on consistency and high floors',
       tips: [
         { category: 'Strategy', items: ['Prioritize high floor players', 'Focus on consistent volume and safe matchups'] },
         { category: 'Player Selection', items: ['Avoid highly volatile players', 'Look for players with secure roles'] },
@@ -82,7 +93,9 @@ const defaultTipsConfig = {
     },
     tournament: {
       icon: 'Trophy',
-      color: 'gold',
+      title: 'Tournament Strategy',
+      color: 'purple',
+      description: 'Focus on ceiling and differentiation',
       tips: [
         { category: 'Strategy', items: ['Embrace calculated risk', 'Look for leverage spots and lower-owned players'] },
         { category: 'Player Selection', items: ['Target high ceiling players', 'Consider game stacks and correlation plays'] },
