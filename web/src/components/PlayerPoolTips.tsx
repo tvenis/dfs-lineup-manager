@@ -218,35 +218,28 @@ function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
     console.log('PlayerPoolTips: useEffect triggered, selectedWeek:', selectedWeek)
     console.log('PlayerPoolTips: About to call loadActiveConfiguration')
     
-    // Simple test first
-    console.log('PlayerPoolTips: Testing simple state update')
-    setConfig(defaultTipsConfig)
-    setIsLoading(false)
-    
-    // Try direct API call first to debug
-    const testApiCall = async () => {
+    // Use the tipsService method instead of direct fetch
+    const loadConfig = async () => {
       try {
-        console.log('PlayerPoolTips: Testing direct API call')
-        const response = await fetch('http://localhost:8000/api/tips/active/default')
-        console.log('PlayerPoolTips: Direct API response status:', response.status)
-        const data = await response.json()
-        console.log('PlayerPoolTips: Direct API response data:', data)
+        console.log('PlayerPoolTips: Calling tipsService.getActiveConfiguration()')
+        const activeConfig = await tipsService.getActiveConfiguration()
+        console.log('PlayerPoolTips: Raw API response:', activeConfig)
         
-        // Parse the configuration data
-        const configData = tipsService.parseConfigurationData(data.configuration_data)
+        const configData = tipsService.parseConfigurationData(activeConfig.configuration_data)
         console.log('PlayerPoolTips: Parsed config data:', configData)
         console.log('PlayerPoolTips: QB tips count:', configData.positionTips?.QB?.tips?.length)
         
         setConfig(configData)
         setIsLoading(false)
       } catch (error) {
-        console.error('PlayerPoolTips: Direct API call failed:', error)
+        console.error('PlayerPoolTips: Failed to load tips config:', error)
+        console.log('PlayerPoolTips: Falling back to default config')
         setConfig(defaultTipsConfig)
         setIsLoading(false)
       }
     }
     
-    testApiCall()
+    loadConfig()
   }, []) // Remove selectedWeek dependency since tips config is global
 
   const loadActiveConfiguration = async () => {
@@ -272,8 +265,10 @@ function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
     } catch (error) {
       console.error('PlayerPoolTips: Error in loadActiveConfiguration:', error)
       console.error('PlayerPoolTips: Error type:', typeof error)
-      console.error('PlayerPoolTips: Error message:', error?.message)
-      console.error('PlayerPoolTips: Error stack:', error?.stack)
+      if (error instanceof Error) {
+        console.error('PlayerPoolTips: Error message:', error.message)
+        console.error('PlayerPoolTips: Error stack:', error.stack)
+      }
       console.log('PlayerPoolTips: Falling back to default config')
       console.log('PlayerPoolTips: Default QB tips count:', defaultTipsConfig.positionTips.QB.tips.length)
       setConfig(defaultTipsConfig)
