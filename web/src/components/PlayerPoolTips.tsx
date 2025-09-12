@@ -218,6 +218,11 @@ function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
     console.log('PlayerPoolTips: useEffect triggered, selectedWeek:', selectedWeek)
     console.log('PlayerPoolTips: About to call loadActiveConfiguration')
     
+    // Simple test first
+    console.log('PlayerPoolTips: Testing simple state update')
+    setConfig(defaultTipsConfig)
+    setIsLoading(false)
+    
     // Try direct API call first to debug
     const testApiCall = async () => {
       try {
@@ -226,9 +231,17 @@ function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
         console.log('PlayerPoolTips: Direct API response status:', response.status)
         const data = await response.json()
         console.log('PlayerPoolTips: Direct API response data:', data)
+        
+        // Parse the configuration data
+        const configData = tipsService.parseConfigurationData(data.configuration_data)
+        console.log('PlayerPoolTips: Parsed config data:', configData)
+        console.log('PlayerPoolTips: QB tips count:', configData.positionTips?.QB?.tips?.length)
+        
+        setConfig(configData)
         setIsLoading(false)
       } catch (error) {
         console.error('PlayerPoolTips: Direct API call failed:', error)
+        setConfig(defaultTipsConfig)
         setIsLoading(false)
       }
     }

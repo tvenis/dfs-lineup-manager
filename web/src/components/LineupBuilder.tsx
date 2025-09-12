@@ -431,7 +431,7 @@ export function LineupBuilder({
     playerPool.forEach(entry => {
       if (!entry.excluded && !entry.isDisabled) {
         // Filter by draft group if not 'all'
-        if (draftGroupFilter !== 'all' && entry.draftGroup !== parseInt(draftGroupFilter)) {
+        if (draftGroupFilter !== 'all' && entry.draftGroup !== draftGroupFilter) {
           return
         }
         

@@ -424,3 +424,20 @@ class PlayerActuals(Base):
         Index('idx_player_actuals_week', 'week_id'),
         Index('idx_player_actuals_player', 'playerDkId'),
     )
+
+class TipsConfiguration(Base):
+    __tablename__ = "tips_configuration"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False, default="Default")
+    description = Column(Text)
+    is_active = Column(Boolean, default=True)
+    configuration_data = Column(Text, nullable=False)  # JSON stored as TEXT for SQLite compatibility
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Indexes for common lookup patterns
+    __table_args__ = (
+        Index('idx_tips_config_active', 'is_active'),
+        Index('idx_tips_config_name', 'name'),
+    )

@@ -25,6 +25,7 @@ import {
   Settings,
   User,
 } from "lucide-react";
+import { Toaster } from "sonner";
 
 // Simple layout component - let Next.js handle routing
 export default function App({ children }: { children: React.ReactNode }) {
@@ -152,6 +153,7 @@ export default function App({ children }: { children: React.ReactNode }) {
         
         <SidebarTrigger className="fixed left-4 top-4 z-50" />
       </div>
+      <Toaster />
     </SidebarProvider>
   );
 }

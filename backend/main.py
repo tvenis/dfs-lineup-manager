@@ -5,7 +5,7 @@ import uvicorn
 
 from app.database import engine
 from app.models import Base
-from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch
+from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -38,7 +38,8 @@ app.include_router(games.router, prefix="/api/games", tags=["games"])
 app.include_router(contests.router, prefix="", tags=["contests"])
 app.include_router(actuals.router, prefix="", tags=["actuals"])
 app.include_router(draftgroups.router, prefix="", tags=["draftgroups"])
-app.include_router(players_batch.router, prefix="", tags=["players-batch"]) 
+app.include_router(players_batch.router, prefix="", tags=["players-batch"])
+app.include_router(tips.router, prefix="", tags=["tips"]) 
 
 @app.get("/")
 async def root():

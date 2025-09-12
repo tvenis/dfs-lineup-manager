@@ -5,6 +5,7 @@ import { PlayerService } from '@/lib/playerService';
 import { WeekService } from '@/lib/weekService';
 import type { PlayerPoolEntry, Week } from '@/types/prd';
 import { PlayerWeekAnalysis, WeekAnalysisData } from '@/components/PlayerWeekAnalysis';
+import { PlayerPoolTips } from '@/components/PlayerPoolTips';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,27 +33,27 @@ export default function PlayerPoolPage() {
   const [tierFilter, setTierFilter] = useState<number | 'all'>('all');
   const [draftGroupFilter, setDraftGroupFilter] = useState<string>('all');
   const [gamesMap, setGamesMap] = useState<Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }>>({});
-  const [qbPassYardsProps, setQbPassYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [qbPassingTdsProps, setQbPassingTdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [qbPassAttemptsProps, setQbPassAttemptsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [qbPassCompletionsProps, setQbPassCompletionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [qbRushYardsProps, setQbRushYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [qbTdsOverProps, setQbTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [rbRushAttemptsProps, setRbRushAttemptsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [rbRushYardsProps, setRbRushYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [rbTdsOverProps, setRbTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [wrTdsOverProps, setWrTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [teTdsOverProps, setTeTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [wrReceptionsProps, setWrReceptionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [teReceptionsProps, setTeReceptionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [wrRecYdsProps, setWrRecYdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
-  const [teRecYdsProps, setTeRecYdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string }>>({});
+  const [qbPassYardsProps, setQbPassYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [qbPassingTdsProps, setQbPassingTdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [qbPassAttemptsProps, setQbPassAttemptsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [qbPassCompletionsProps, setQbPassCompletionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [qbRushYardsProps, setQbRushYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [qbTdsOverProps, setQbTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [rbRushAttemptsProps, setRbRushAttemptsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [rbRushYardsProps, setRbRushYardsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [rbTdsOverProps, setRbTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [wrTdsOverProps, setWrTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [teTdsOverProps, setTeTdsOverProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [wrReceptionsProps, setWrReceptionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [teReceptionsProps, setTeReceptionsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [wrRecYdsProps, setWrRecYdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
+  const [teRecYdsProps, setTeRecYdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
 
   // Function to fetch QB passing yards props
   const fetchQbPassYardsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
     try {
       const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
-      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
       
       // Fetch props for each QB in the player pool
       for (const qb of qbPlayers) {
@@ -74,7 +75,8 @@ export default function PlayerPoolPage() {
             propsMap[qb.player.playerDkId] = {
               point: overProp.outcome_point || undefined,
               price: overProp.outcome_price || undefined,
-              bookmaker: overProp.bookmaker || undefined
+              bookmaker: overProp.bookmaker || undefined,
+              likelihood: overProp.probability || undefined
             };
           }
         } catch (error) {
@@ -94,8 +96,8 @@ export default function PlayerPoolPage() {
     try {
       const wrPlayers = entries.filter(e => e.player.position === 'WR');
       const tePlayers = entries.filter(e => e.player.position === 'TE');
-      const wrMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
-      const teMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const wrMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const teMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
 
       const fetchFor = async (playerDkId: number) => {
         // Prefer betonlineag Over 0.5, fallback betonlineag Over any, then DK Over 0.5, then DK Over any
@@ -118,7 +120,8 @@ export default function PlayerPoolPage() {
         return chosen ? {
           point: chosen.outcome_point || undefined,
           price: chosen.outcome_price || undefined,
-          bookmaker: chosen.bookmaker || undefined
+          bookmaker: chosen.bookmaker || undefined,
+          likelihood: chosen.probability || undefined
         } : undefined;
       };
 
@@ -152,8 +155,8 @@ export default function PlayerPoolPage() {
     try {
       const wrPlayers = entries.filter(e => e.player.position === 'WR');
       const tePlayers = entries.filter(e => e.player.position === 'TE');
-      const wrMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
-      const teMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const wrMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const teMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
 
       const fetchFor = async (playerDkId: number) => {
         const resp = await PlayerService.getPlayerProps(playerDkId, {
@@ -165,7 +168,8 @@ export default function PlayerPoolPage() {
         return over ? {
           point: over.outcome_point || undefined,
           price: over.outcome_price || undefined,
-          bookmaker: over.bookmaker || undefined
+          bookmaker: over.bookmaker || undefined,
+          likelihood: over.probability || undefined
         } : undefined;
       };
 
@@ -199,8 +203,8 @@ export default function PlayerPoolPage() {
     try {
       const wrPlayers = entries.filter(e => e.player.position === 'WR');
       const tePlayers = entries.filter(e => e.player.position === 'TE');
-      const wrMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
-      const teMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const wrMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const teMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
 
       const fetchFor = async (playerDkId: number) => {
         const resp = await PlayerService.getPlayerProps(playerDkId, {
@@ -212,7 +216,8 @@ export default function PlayerPoolPage() {
         return over ? {
           point: over.outcome_point || undefined,
           price: over.outcome_price || undefined,
-          bookmaker: over.bookmaker || undefined
+          bookmaker: over.bookmaker || undefined,
+          likelihood: over.probability || undefined
         } : undefined;
       };
 
@@ -245,7 +250,7 @@ export default function PlayerPoolPage() {
   const fetchRbRushAttemptsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
     try {
       const rbPlayers = entries.filter(entry => entry.player.position === 'RB');
-      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
 
       for (const rb of rbPlayers) {
         try {
@@ -265,7 +270,8 @@ export default function PlayerPoolPage() {
             propsMap[rb.player.playerDkId] = {
               point: overProp.outcome_point || undefined,
               price: overProp.outcome_price || undefined,
-              bookmaker: overProp.bookmaker || undefined
+              bookmaker: overProp.bookmaker || undefined,
+              likelihood: overProp.probability || undefined
             };
           }
         } catch (error) {
@@ -284,7 +290,7 @@ export default function PlayerPoolPage() {
   const fetchRbRushYardsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
     try {
       const rbPlayers = entries.filter(entry => entry.player.position === 'RB');
-      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
 
       for (const rb of rbPlayers) {
         try {
@@ -304,7 +310,8 @@ export default function PlayerPoolPage() {
             propsMap[rb.player.playerDkId] = {
               point: overProp.outcome_point || undefined,
               price: overProp.outcome_price || undefined,
-              bookmaker: overProp.bookmaker || undefined
+              bookmaker: overProp.bookmaker || undefined,
+              likelihood: overProp.probability || undefined
             };
           }
         } catch (error) {
@@ -323,7 +330,7 @@ export default function PlayerPoolPage() {
   const fetchRbTdsOverProps = async (entries: PlayerPoolEntry[], weekId: number) => {
     try {
       const rbPlayers = entries.filter(entry => entry.player.position === 'RB');
-      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
 
       for (const rb of rbPlayers) {
         try {
@@ -373,7 +380,8 @@ export default function PlayerPoolPage() {
             propsMap[rb.player.playerDkId] = {
               point: chosen.outcome_point || undefined,
               price: chosen.outcome_price || undefined,
-              bookmaker: chosen.bookmaker || undefined
+              bookmaker: chosen.bookmaker || undefined,
+              likelihood: chosen.probability || undefined
             };
           }
         } catch (error) {
@@ -392,7 +400,7 @@ export default function PlayerPoolPage() {
   const fetchQbPassingTdsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
     try {
       const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
-      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
       
       // Fetch props for each QB in the player pool
       for (const qb of qbPlayers) {
@@ -414,7 +422,8 @@ export default function PlayerPoolPage() {
             propsMap[qb.player.playerDkId] = {
               point: overProp.outcome_point || undefined,
               price: overProp.outcome_price || undefined,
-              bookmaker: overProp.bookmaker || undefined
+              bookmaker: overProp.bookmaker || undefined,
+              likelihood: overProp.probability || undefined
             };
           }
         } catch (error) {
@@ -433,8 +442,8 @@ export default function PlayerPoolPage() {
   const fetchQbPassAttemptsCompletionsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
     try {
       const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
-      const attemptsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
-      const completionsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const attemptsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const completionsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
       
       // Fetch props for each QB in the player pool
       for (const qb of qbPlayers) {
@@ -457,7 +466,8 @@ export default function PlayerPoolPage() {
             attemptsMap[qb.player.playerDkId] = {
               point: overAttemptsProp.outcome_point || undefined,
               price: overAttemptsProp.outcome_price || undefined,
-              bookmaker: overAttemptsProp.bookmaker || undefined
+              bookmaker: overAttemptsProp.bookmaker || undefined,
+              likelihood: overAttemptsProp.probability || undefined
             };
           }
 
@@ -479,7 +489,8 @@ export default function PlayerPoolPage() {
             completionsMap[qb.player.playerDkId] = {
               point: overCompletionsProp.outcome_point || undefined,
               price: overCompletionsProp.outcome_price || undefined,
-              bookmaker: overCompletionsProp.bookmaker || undefined
+              bookmaker: overCompletionsProp.bookmaker || undefined,
+              likelihood: overCompletionsProp.probability || undefined
             };
           }
         } catch (error) {
@@ -500,7 +511,7 @@ export default function PlayerPoolPage() {
   const fetchQbRushYardsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
     try {
       const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
-      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
 
       for (const qb of qbPlayers) {
         try {
@@ -520,7 +531,8 @@ export default function PlayerPoolPage() {
             propsMap[qb.player.playerDkId] = {
               point: overProp.outcome_point || undefined,
               price: overProp.outcome_price || undefined,
-              bookmaker: overProp.bookmaker || undefined
+              bookmaker: overProp.bookmaker || undefined,
+              likelihood: overProp.probability || undefined
             };
           }
         } catch (error) {
@@ -539,7 +551,7 @@ export default function PlayerPoolPage() {
   const fetchQbTdsOverProps = async (entries: PlayerPoolEntry[], weekId: number) => {
     try {
       const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
-      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string }> = {};
+      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
 
       for (const qb of qbPlayers) {
         try {
@@ -589,7 +601,8 @@ export default function PlayerPoolPage() {
             propsMap[qb.player.playerDkId] = {
               point: chosen.outcome_point || undefined,
               price: chosen.outcome_price || undefined,
-              bookmaker: chosen.bookmaker || undefined
+              bookmaker: chosen.bookmaker || undefined,
+              likelihood: chosen.probability || undefined
             };
           }
         } catch (error) {
@@ -1265,6 +1278,9 @@ export default function PlayerPoolPage() {
         </div>
       </div>
 
+      {/* Player Evaluation Tips & Strategy Section */}
+      <PlayerPoolTips selectedWeek={weeks.find(w => w.id === selectedWeek)?.week_number || 1} />
+
       {/* Week Selection and Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <div className="flex flex-wrap gap-4 items-end">
@@ -1550,7 +1566,7 @@ export default function PlayerPoolPage() {
                 <div className="overflow-x-auto">
                   {/* Table Header */}
                   <div className="bg-muted/10 border-b">
-                    <div className={`grid gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(16,_1fr)]' : position === 'RB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : (position === 'WR' || position === 'TE') ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}`}>
+                    <div className={`grid gap-2 px-6 py-2.5 text-xs font-medium text-muted-foreground items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(16,_1fr)]' : position === 'RB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : (position === 'WR' || position === 'TE') ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : position === 'FLEX' ? 'grid-cols-[1.5fr_repeat(16,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}`}>
                       <div 
                         className="col-span-1 cursor-pointer hover:bg-muted/20 transition-colors flex items-center gap-1"
                         onClick={() => handleSort('player')}
@@ -1727,6 +1743,61 @@ export default function PlayerPoolPage() {
                           )}
                         </div>
                       )}
+                      {position === 'FLEX' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('flexRushAttmpts')}
+                        >
+                          <span className="italic">Rush Attmpts</span>
+                          {sortField === 'flexRushAttmpts' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {position === 'FLEX' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('flexRushYds')}
+                        >
+                          <span className="italic">Rush Yards</span>
+                          {sortField === 'flexRushYds' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {position === 'FLEX' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('flexReceptions')}
+                        >
+                          <span className="italic">Receptions</span>
+                          {sortField === 'flexReceptions' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {position === 'FLEX' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('flexRecYds')}
+                        >
+                          <span className="italic">Rec Yds</span>
+                          {sortField === 'flexRecYds' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                      {position === 'FLEX' && (
+                        <div 
+                          className="col-span-1 text-center cursor-pointer hover:bg-muted/20 transition-colors flex items-center justify-center gap-1"
+                          onClick={() => handleSort('flexTdsOver')}
+                        >
+                          <span className="italic">1+ TD</span>
+                          {sortField === 'flexTdsOver' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
                       <div
                         role="button"
                         tabIndex={0}
@@ -1793,7 +1864,7 @@ export default function PlayerPoolPage() {
                     <div
                       key={player.id}
                       className={`
-                        grid gap-2 px-6 py-3 border-b border-border/50 last:border-b-0 items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(16,_1fr)]' : position === 'RB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : (position === 'WR' || position === 'TE') ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}
+                        grid gap-2 px-6 py-3 border-b border-border/50 last:border-b-0 items-center whitespace-nowrap ${position === 'QB' ? 'grid-cols-[1.5fr_repeat(16,_1fr)]' : position === 'RB' ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : (position === 'WR' || position === 'TE') ? 'grid-cols-[1.5fr_repeat(14,_1fr)]' : position === 'FLEX' ? 'grid-cols-[1.5fr_repeat(16,_1fr)]' : 'grid-cols-[1.5fr_repeat(11,_1fr)]'}
                         ${player.excluded === true ? 'opacity-50 bg-muted/30' : ''} 
                         hover:bg-muted/50 transition-colors
                       `}
@@ -1861,18 +1932,17 @@ export default function PlayerPoolPage() {
                           return <PlayerWeekAnalysis weekAnalysis={data} column="implied" />
                         })()}
                       </div>
-                      {/* Rush Attmpts (RB only) */
-                      }
+                      {/* Rush Attmpts (RB only) */}
                       {position === 'RB' && (
                         <div className="col-span-1 text-center">
                           {(() => {
                             const rushAttemptsData = rbRushAttemptsProps[player.player.playerDkId];
-                            if (rushAttemptsData?.point && rushAttemptsData?.price !== undefined) {
+                            if (rushAttemptsData?.point && rushAttemptsData?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{rushAttemptsData.point}</div>
+                                  <div className="font-medium">O{rushAttemptsData.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{rushAttemptsData.price > 0 ? '+' : ''}{rushAttemptsData.price}
+                                    {rushAttemptsData.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );
@@ -1886,12 +1956,12 @@ export default function PlayerPoolPage() {
                         <div className="col-span-1 text-center">
                           {(() => {
                             const rushYdsData = rbRushYardsProps[player.player.playerDkId];
-                            if (rushYdsData?.point && rushYdsData?.price !== undefined) {
+                            if (rushYdsData?.point && rushYdsData?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{rushYdsData.point}</div>
+                                  <div className="font-medium">O{rushYdsData.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{rushYdsData.price > 0 ? '+' : ''}{rushYdsData.price}
+                                    {rushYdsData.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );
@@ -1905,12 +1975,12 @@ export default function PlayerPoolPage() {
                         <div className="col-span-1 text-center">
                           {(() => {
                             const tdsData = rbTdsOverProps[player.player.playerDkId];
-                            if (tdsData?.price !== undefined) {
+                            if (tdsData?.point && tdsData?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{tdsData.point ?? 0.5}</div>
+                                  <div className="font-medium">O{tdsData.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{tdsData.price > 0 ? '+' : ''}{tdsData.price}
+                                    {tdsData.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );
@@ -1949,12 +2019,12 @@ export default function PlayerPoolPage() {
                         <div className="col-span-1 text-center">
                           {(() => {
                             const passYdsData = qbPassYardsProps[player.player.playerDkId];
-                            if (passYdsData?.point && passYdsData?.price) {
+                            if (passYdsData?.point && passYdsData?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{passYdsData.point}</div>
+                                  <div className="font-medium">O{passYdsData.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{passYdsData.price > 0 ? '+' : ''}{passYdsData.price}
+                                    {passYdsData.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );
@@ -1968,12 +2038,12 @@ export default function PlayerPoolPage() {
                         <div className="col-span-1 text-center">
                           {(() => {
                             const passingTdsData = qbPassingTdsProps[player.player.playerDkId];
-                            if (passingTdsData?.point && passingTdsData?.price) {
+                            if (passingTdsData?.point && passingTdsData?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{passingTdsData.point}</div>
+                                  <div className="font-medium">O{passingTdsData.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{passingTdsData.price > 0 ? '+' : ''}{passingTdsData.price}
+                                    {passingTdsData.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );
@@ -1987,12 +2057,12 @@ export default function PlayerPoolPage() {
                         <div className="col-span-1 text-center">
                           {(() => {
                             const qbRushYdsData = qbRushYardsProps[player.player.playerDkId];
-                            if (qbRushYdsData?.point && qbRushYdsData?.price !== undefined) {
+                            if (qbRushYdsData?.point && qbRushYdsData?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{qbRushYdsData.point}</div>
+                                  <div className="font-medium">O{qbRushYdsData.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{qbRushYdsData.price > 0 ? '+' : ''}{qbRushYdsData.price}
+                                    {qbRushYdsData.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );
@@ -2006,12 +2076,12 @@ export default function PlayerPoolPage() {
                         <div className="col-span-1 text-center">
                           {(() => {
                             const tdsData = qbTdsOverProps[player.player.playerDkId];
-                            if (tdsData?.price !== undefined) {
+                            if (tdsData?.point && tdsData?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{tdsData.point ?? 0.5}</div>
+                                  <div className="font-medium">O{tdsData.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{tdsData.price > 0 ? '+' : ''}{tdsData.price}
+                                    {tdsData.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );
@@ -2025,12 +2095,12 @@ export default function PlayerPoolPage() {
                         <div className="col-span-1 text-center">
                           {(() => {
                             const data = position === 'WR' ? wrRecYdsProps[player.player.playerDkId] : teRecYdsProps[player.player.playerDkId];
-                            if (data?.point && data?.price !== undefined) {
+                            if (data?.point && data?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{data.point}</div>
+                                  <div className="font-medium">O{data.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{data.price > 0 ? '+' : ''}{data.price}
+                                    {data.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );
@@ -2044,12 +2114,12 @@ export default function PlayerPoolPage() {
                         <div className="col-span-1 text-center">
                           {(() => {
                             const data = position === 'WR' ? wrReceptionsProps[player.player.playerDkId] : teReceptionsProps[player.player.playerDkId];
-                            if (data?.point && data?.price !== undefined) {
+                            if (data?.point && data?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{data.point}</div>
+                                  <div className="font-medium">O{data.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{data.price > 0 ? '+' : ''}{data.price}
+                                    {data.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );
@@ -2063,12 +2133,127 @@ export default function PlayerPoolPage() {
                         <div className="col-span-1 text-center">
                           {(() => {
                             const data = position === 'WR' ? wrTdsOverProps[player.player.playerDkId] : teTdsOverProps[player.player.playerDkId];
-                            if (data?.price !== undefined) {
+                            if (data?.point && data?.likelihood !== undefined) {
                               return (
                                 <div className="text-sm">
-                                  <div className="font-medium">{data.point ?? 0.5}</div>
+                                  <div className="font-medium">O{data.point}</div>
                                   <div className="text-xs text-muted-foreground">
-                                    O{data.price > 0 ? '+' : ''}{data.price}
+                                    {data.likelihood.toFixed(1)}%
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Rush Attmpts (FLEX only) */}
+                      {position === 'FLEX' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const rushAttemptsData = rbRushAttemptsProps[player.player.playerDkId];
+                            if (rushAttemptsData?.point && rushAttemptsData?.likelihood !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">O{rushAttemptsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {rushAttemptsData.likelihood.toFixed(1)}%
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Rush Yards (FLEX only) */}
+                      {position === 'FLEX' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            const rushYdsData = rbRushYardsProps[player.player.playerDkId];
+                            if (rushYdsData?.point && rushYdsData?.likelihood !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">O{rushYdsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {rushYdsData.likelihood.toFixed(1)}%
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Receptions (FLEX only) */}
+                      {position === 'FLEX' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            let receptionsData;
+                            if (player.player.position === 'WR') {
+                              receptionsData = wrReceptionsProps[player.player.playerDkId];
+                            } else if (player.player.position === 'TE') {
+                              receptionsData = teReceptionsProps[player.player.playerDkId];
+                            }
+                            
+                            if (receptionsData?.point && receptionsData?.likelihood !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">O{receptionsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {receptionsData.likelihood.toFixed(1)}%
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* Rec Yds (FLEX only) */}
+                      {position === 'FLEX' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            let recYdsData;
+                            if (player.player.position === 'WR') {
+                              recYdsData = wrRecYdsProps[player.player.playerDkId];
+                            } else if (player.player.position === 'TE') {
+                              recYdsData = teRecYdsProps[player.player.playerDkId];
+                            }
+                            
+                            if (recYdsData?.point && recYdsData?.likelihood !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">O{recYdsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {recYdsData.likelihood.toFixed(1)}%
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return <span className="text-sm text-muted-foreground">-</span>;
+                          })()}
+                        </div>
+                      )}
+                      {/* 1+ TD (FLEX only) */}
+                      {position === 'FLEX' && (
+                        <div className="col-span-1 text-center">
+                          {(() => {
+                            let tdsData;
+                            if (player.player.position === 'RB') {
+                              tdsData = rbTdsOverProps[player.player.playerDkId];
+                            } else if (player.player.position === 'WR') {
+                              tdsData = wrTdsOverProps[player.player.playerDkId];
+                            } else if (player.player.position === 'TE') {
+                              tdsData = teTdsOverProps[player.player.playerDkId];
+                            }
+                            
+                            if (tdsData?.point && tdsData?.likelihood !== undefined) {
+                              return (
+                                <div className="text-sm">
+                                  <div className="font-medium">O{tdsData.point}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {tdsData.likelihood.toFixed(1)}%
                                   </div>
                                 </div>
                               );

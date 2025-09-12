@@ -698,3 +698,27 @@ class PlayerActualsListResponse(BaseModel):
     actuals: List[PlayerActuals]
     total: int
     week_id: int
+
+# Tips Configuration schemas
+class TipsConfigBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = Field(None)
+    is_active: bool = Field(default=True)
+    configuration_data: str = Field(..., description="JSON string containing tips configuration")
+
+class TipsConfigCreate(TipsConfigBase):
+    pass
+
+class TipsConfigUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    configuration_data: Optional[str] = Field(None, description="JSON string containing tips configuration")
+
+class TipsConfigResponse(TipsConfigBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True

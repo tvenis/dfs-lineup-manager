@@ -3,6 +3,7 @@ import { DraftKingsSettings } from "./settings/DraftKingsSettings";
 import { PlayersSettings } from "./settings/PlayersSettings";
 import { TeamsSettings } from "./settings/TeamsSettings";
 import { WeeksSettings } from "./settings/WeeksSettings";
+import { TipsSettings } from "./settings/TipsSettings";
 import {
   Settings,
   Users,
@@ -10,13 +11,15 @@ import {
   Calendar,
   ChevronRight,
   Gamepad2,
+  Lightbulb,
 } from "lucide-react";
 
 type SettingsSection =
   | "draftkings"
   | "players"
   | "teams"
-  | "weeks";
+  | "weeks"
+  | "tips";
 
 const settingsSections = [
   {
@@ -43,6 +46,12 @@ const settingsSections = [
     description: "Schedule and week data",
     icon: Calendar,
   },
+  {
+    id: "tips" as SettingsSection,
+    label: "Player Pool Tips",
+    description: "Customize strategy guidance",
+    icon: Lightbulb,
+  },
 ];
 
 export function SettingsManager() {
@@ -59,6 +68,8 @@ export function SettingsManager() {
         return <TeamsSettings />;
       case "weeks":
         return <WeeksSettings />;
+      case "tips":
+        return <TipsSettings />;
       default:
         return <DraftKingsSettings />;
     }
