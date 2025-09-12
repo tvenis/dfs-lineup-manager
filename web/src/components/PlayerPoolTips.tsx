@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
@@ -213,34 +213,41 @@ function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [config, setConfig] = useState<TipsConfigData>(defaultTipsConfig)
   const [isLoading, setIsLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
 
+  // Force client-side mounting with useState callback
   useEffect(() => {
-    console.log('PlayerPoolTips: useEffect triggered, selectedWeek:', selectedWeek)
-    console.log('PlayerPoolTips: About to call loadActiveConfiguration')
+    console.log('PlayerPoolTips: Mount effect running')
     
-    // Use the tipsService method instead of direct fetch
-    const loadConfig = async () => {
-      try {
-        console.log('PlayerPoolTips: Calling tipsService.getActiveConfiguration()')
-        const activeConfig = await tipsService.getActiveConfiguration()
-        console.log('PlayerPoolTips: Raw API response:', activeConfig)
-        
-        const configData = tipsService.parseConfigurationData(activeConfig.configuration_data)
-        console.log('PlayerPoolTips: Parsed config data:', configData)
-        console.log('PlayerPoolTips: QB tips count:', configData.positionTips?.QB?.tips?.length)
-        
-        setConfig(configData)
-        setIsLoading(false)
-      } catch (error) {
-        console.error('PlayerPoolTips: Failed to load tips config:', error)
-        console.log('PlayerPoolTips: Falling back to default config')
-        setConfig(defaultTipsConfig)
-        setIsLoading(false)
+    // Use useState callback to ensure this runs after hydration
+    setMounted(prev => {
+      console.log('PlayerPoolTips: setMounted callback triggered')
+      
+      // Load data immediately after mounting
+      const loadConfig = async () => {
+        try {
+          console.log('PlayerPoolTips: Calling tipsService.getActiveConfiguration()')
+          const activeConfig = await tipsService.getActiveConfiguration()
+          console.log('PlayerPoolTips: Raw API response:', activeConfig)
+          
+          const configData = tipsService.parseConfigurationData(activeConfig.configuration_data)
+          console.log('PlayerPoolTips: Parsed config data:', configData)
+          console.log('PlayerPoolTips: QB tips count:', configData.positionTips?.QB?.tips?.length)
+          
+          setConfig(configData)
+          setIsLoading(false)
+        } catch (error) {
+          console.error('PlayerPoolTips: Failed to load tips config:', error)
+          console.log('PlayerPoolTips: Falling back to default config')
+          setConfig(defaultTipsConfig)
+          setIsLoading(false)
+        }
       }
-    }
-    
-    loadConfig()
-  }, []) // Remove selectedWeek dependency since tips config is global
+      
+      loadConfig()
+      return true
+    })
+  }, []) // Empty dependency array
 
   const loadActiveConfiguration = async () => {
     try {
