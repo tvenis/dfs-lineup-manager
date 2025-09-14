@@ -170,9 +170,26 @@ export class LineupService {
         // Use the new backend CSV export endpoint that includes draftableId
         const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.LINEUPS);
         const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-        const response = await fetch(`${cleanBaseUrl}/${lineupId}/export/csv`);
+        const exportUrl = `${cleanBaseUrl}/${lineupId}/export/csv`;
+        
+        console.log('=== EXPORT DEBUG ===');
+        console.log('API_CONFIG.BASE_URL:', API_CONFIG.BASE_URL);
+        console.log('API_CONFIG.ENDPOINTS.LINEUPS:', API_CONFIG.ENDPOINTS.LINEUPS);
+        console.log('Base URL:', baseUrl);
+        console.log('Clean base URL:', cleanBaseUrl);
+        console.log('Export URL:', exportUrl);
+        console.log('Lineup ID:', lineupId);
+        console.log('==================');
+        
+        const response = await fetch(exportUrl);
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+        
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
         return await response.blob();
       } else {
@@ -187,6 +204,11 @@ export class LineupService {
       }
     } catch (error) {
       console.error('Error exporting lineup:', error);
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
       throw error;
     }
   }

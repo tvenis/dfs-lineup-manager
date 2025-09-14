@@ -394,6 +394,10 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
 
   const handleExportLineup = async (lineup: LineupDisplayData) => {
     try {
+      console.log('Exporting lineup:', lineup);
+      console.log('Lineup ID:', lineup.id);
+      console.log('Lineup name:', lineup.name);
+      
       const blob = await LineupService.exportLineup(lineup.id);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

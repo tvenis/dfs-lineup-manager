@@ -234,10 +234,12 @@ def export_lineup_csv(lineup_id: str, db: Session = Depends(get_db)):
         # Create filename
         filename = f"lineup_{name.replace(' ', '_')}_week{week_number}_{year}.csv"
         
-        return StreamingResponse(
-            io.BytesIO(csv_content.encode('utf-8')),
+        from fastapi.responses import Response
+        
+        return Response(
+            content=csv_content.encode('utf-8'),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
         )
         
     except Exception as e:
@@ -381,10 +383,12 @@ def export_all_lineups_csv(
         # Create filename
         filename = f"all_lineups{week_info}.csv"
         
-        return StreamingResponse(
-            io.BytesIO(csv_content.encode('utf-8')),
+        from fastapi.responses import Response
+        
+        return Response(
+            content=csv_content.encode('utf-8'),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
         )
         
     except Exception as e:
