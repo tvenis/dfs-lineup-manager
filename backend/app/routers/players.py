@@ -11,6 +11,7 @@ from app.schemas import (
     PlayerListResponse, PlayerPoolResponse, PlayerPoolAnalysisResponse, PlayerPoolEntryWithAnalysis, WeekAnalysisData,
     PlayerPropsResponse, PlayerPropBetWithMeta
 )
+from typing import Dict, Any
 
 router = APIRouter()
 
@@ -262,6 +263,195 @@ def get_player_pool_with_analysis(
         entries.append(PlayerPoolEntryWithAnalysis(entry=entry, analysis=analysis))
 
     return PlayerPoolAnalysisResponse(entries=entries, total=len(entries), week_id=week_id)
+
+@router.get("/pool/{week_id}/complete")
+def get_player_pool_complete(
+    week_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    position: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    excluded: Optional[bool] = Query(None),
+    search: Optional[str] = Query(None),
+    include_props: bool = Query(True, description="Include player props data"),
+    db: Session = Depends(get_db)
+):
+    """
+    Optimized endpoint that returns player pool + analysis + props in a single query.
+    This replaces 3 separate API calls with 1 optimized call for maximum performance.
+    
+    Returns:
+    - Player pool entries with player and week data
+    - Game analysis data (opponent, spread, totals)
+    - Player props data (if include_props=True)
+    - Games map for team matchups
+    """
+    # Verify week exists
+    week = db.query(Week).filter(Week.id == week_id).first()
+    if not week:
+        raise HTTPException(status_code=404, detail="Week not found")
+    
+    # Build optimized query with all necessary joins
+    query = (
+        db.query(PlayerPoolEntry, Player, Game)
+        .join(Player, PlayerPoolEntry.playerDkId == Player.playerDkId)
+        .outerjoin(
+            Game,
+            (Game.week_id == PlayerPoolEntry.week_id) & (Game.team_id == Player.team_id)
+        )
+        .filter(PlayerPoolEntry.week_id == week_id)
+    )
+    
+    # Apply filters
+    if position:
+        query = query.filter(Player.position == position)
+    
+    if team_id:
+        query = query.filter(Player.team == team_id)
+    
+    if excluded is not None:
+        query = query.filter(PlayerPoolEntry.excluded == excluded)
+    
+    if search:
+        query = query.filter(Player.displayName.ilike(f"%{search}%"))
+    
+    # Get total count for pagination
+    total = query.count()
+    
+    # Apply pagination and get results
+    rows = query.offset(skip).limit(limit).all()
+    
+    # Process results
+    entries = []
+    games_map = {}
+    player_ids = []
+    
+    for row in rows:
+        entry, player, game = row
+        
+        # Attach player to entry
+        entry.player = player
+        
+        # Build analysis data
+        analysis = WeekAnalysisData(
+            opponent_abbr=(game.opponent_team.abbreviation if getattr(game, 'opponent_team', None) else None) if game else None,
+            homeoraway=game.homeoraway if game else None,
+            proj_spread=game.proj_spread if game else None,
+            proj_total=game.proj_total if game else None,
+            implied_team_total=game.implied_team_total if game else None,
+        )
+        
+        # Create entry with analysis
+        entry_with_analysis = PlayerPoolEntryWithAnalysis(entry=entry, analysis=analysis)
+        entries.append(entry_with_analysis)
+        
+        # Build games map for team matchups
+        if game and player.team:
+            games_map[player.team] = {
+                "opponentAbbr": analysis.opponent_abbr,
+                "homeOrAway": analysis.homeoraway,
+                "proj_spread": analysis.proj_spread,
+                "proj_total": analysis.proj_total,
+                "implied_team_total": analysis.implied_team_total
+            }
+        
+        # Collect player IDs for props query
+        if include_props:
+            player_ids.append(player.playerDkId)
+    
+    # Fetch props data in batch if requested
+    props_data = {}
+    if include_props and player_ids:
+        # Get all props for the players in this week
+        props_query = db.query(PlayerPropBet).filter(
+            PlayerPropBet.week_id == week_id,
+            PlayerPropBet.playerDkId.in_(player_ids)
+        ).all()
+        
+        # Group props by player ID and market
+        for prop in props_query:
+            player_id = prop.playerDkId
+            if player_id not in props_data:
+                props_data[player_id] = {}
+            
+            market = prop.market
+            if market not in props_data[player_id]:
+                props_data[player_id][market] = []
+            
+            props_data[player_id][market].append({
+                'outcome_name': prop.outcome_name,
+                'outcome_point': prop.outcome_point,
+                'outcome_price': prop.outcome_price,
+                'bookmaker': prop.bookmaker,
+                'outcome_likelihood': prop.outcome_likelihood
+            })
+        
+        # Process props to find best matches (same logic as batch endpoint)
+        processed_props = {}
+        for player_id, market_data in props_data.items():
+            processed_props[player_id] = {}
+            
+            for market, props_list in market_data.items():
+                # Find the best prop based on bookmaker preference and outcome
+                best_prop = None
+                
+                # Prefer betonlineag Over 0.5, then betonlineag Over any, then DK Over 0.5, then DK Over any
+                for prop in props_list:
+                    if (prop['bookmaker'] == 'betonlineag' and 
+                        prop['outcome_name'] == 'Over' and 
+                        prop['outcome_point'] == 0.5):
+                        best_prop = prop
+                        break
+                
+                if not best_prop:
+                    for prop in props_list:
+                        if (prop['bookmaker'] == 'betonlineag' and 
+                            prop['outcome_name'] == 'Over'):
+                            best_prop = prop
+                            break
+                
+                if not best_prop:
+                    for prop in props_list:
+                        if (prop['bookmaker'] == 'draftkings' and 
+                            prop['outcome_name'] == 'Over' and 
+                            prop['outcome_point'] == 0.5):
+                            best_prop = prop
+                            break
+                
+                if not best_prop:
+                    for prop in props_list:
+                        if (prop['bookmaker'] == 'draftkings' and 
+                            prop['outcome_name'] == 'Over'):
+                            best_prop = prop
+                            break
+                
+                if not best_prop and props_list:
+                    best_prop = props_list[0]  # Fallback to first available
+                
+                if best_prop:
+                    processed_props[player_id][market] = {
+                        'point': best_prop['outcome_point'],
+                        'price': best_prop['outcome_price'],
+                        'bookmaker': best_prop['bookmaker'],
+                        'likelihood': best_prop['outcome_likelihood']
+                    }
+        
+        props_data = processed_props
+    
+    # Return comprehensive response
+    return {
+        "entries": entries,
+        "total": total,
+        "week_id": week_id,
+        "games_map": games_map,
+        "props_data": props_data,
+        "meta": {
+            "skip": skip,
+            "limit": limit,
+            "has_more": (skip + limit) < total,
+            "include_props": include_props
+        }
+    }
 
 @router.put("/pool/{entry_id}", response_model=PlayerPoolEntrySchema)
 def update_player_pool_entry(

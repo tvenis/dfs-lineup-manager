@@ -18,8 +18,6 @@ export default function PlayerPoolPage() {
   // State management
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
-  const [activeWeekId, setActiveWeekId] = useState<number | null>(null);
-  const [weeksLoading, setWeeksLoading] = useState(true);
   const [playerPool, setPlayerPool] = useState<PlayerPoolEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,29 +39,14 @@ export default function PlayerPoolPage() {
   useEffect(() => {
     const fetchWeeks = async () => {
       try {
-        setWeeksLoading(true);
-        
-        // Fetch all weeks and active week in parallel
-        const [weeksResponse, activeWeek] = await Promise.all([
-          WeekService.getWeeks(),
-          WeekService.getActiveWeek()
-        ]);
-        
-        const weeksData = weeksResponse.weeks || [];
+        const weeksData = await WeekService.getWeeks();
         setWeeks(weeksData);
-        
-        // Set selected week to active week if available, otherwise first week
-        if (activeWeek) {
-          setSelectedWeek(activeWeek.id);
-          setActiveWeekId(activeWeek.id);
-        } else if (weeksData && weeksData.length > 0) {
+        if (weeksData.length > 0) {
           setSelectedWeek(weeksData[0].id);
         }
-    } catch (error) {
+      } catch (error) {
         console.error('Error fetching weeks:', error);
         setError('Failed to load weeks');
-      } finally {
-        setWeeksLoading(false);
       }
     };
 
@@ -95,18 +78,17 @@ export default function PlayerPoolPage() {
     } catch (error) {
       console.error('Error fetching player data:', error);
       setError('Failed to load player data');
-      } finally {
-        setLoading(false);
-      }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Get unique draft groups
   const getUniqueDraftGroups = useMemo(() => {
     const draftGroups = new Set<string>();
     playerPool.forEach(player => {
-      const entry = player.entry || player; // Handle both structures
-      if (entry.draftGroup) {
-        draftGroups.add(entry.draftGroup);
+      if (player.draftGroup) {
+        draftGroups.add(player.draftGroup);
       }
     });
     return Array.from(draftGroups).sort();
@@ -123,11 +105,9 @@ export default function PlayerPoolPage() {
     };
 
     playerPool.forEach(player => {
-      // Handle both PlayerPoolEntry and PlayerPoolEntryWithAnalysis structures
-      const entry = player.entry || player; // Use entry if it exists, otherwise use player directly
-      const position = entry.player?.position;
-      if (position && grouped[position]) {
-        grouped[position].push(entry);
+      const position = player.player.position;
+      if (grouped[position]) {
+        grouped[position].push(player);
       }
     });
 
@@ -155,8 +135,8 @@ export default function PlayerPoolPage() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       players = players.filter(player => 
-        player.player?.displayName?.toLowerCase().includes(term) ||
-        player.player?.team?.toLowerCase().includes(term)
+        player.player.displayName.toLowerCase().includes(term) ||
+        player.player.team.toLowerCase().includes(term)
       );
     }
 
@@ -188,7 +168,7 @@ export default function PlayerPoolPage() {
   const getTierConfig = (tier: number) => {
     const configs = {
       1: {
-          icon: '⭐',
+        icon: '⭐',
         label: 'Elite',
         description: 'Top tier players',
         headerColor: 'bg-gradient-to-r from-yellow-400 to-yellow-500',
@@ -197,7 +177,7 @@ export default function PlayerPoolPage() {
         badgeTextColor: 'text-yellow-800'
       },
       2: {
-          icon: '💪',
+        icon: '💪',
         label: 'Strong',
         description: 'Reliable performers',
         headerColor: 'bg-gradient-to-r from-green-400 to-green-500',
@@ -215,7 +195,7 @@ export default function PlayerPoolPage() {
         badgeTextColor: 'text-blue-800'
       },
       4: {
-          icon: '⚠️',
+        icon: '⚠️',
         label: 'Avoid',
         description: 'High risk plays',
         headerColor: 'bg-gradient-to-r from-red-400 to-red-500',
@@ -244,18 +224,11 @@ export default function PlayerPoolPage() {
       
       // Update local state
       setPlayerPool(prev => 
-        prev.map(player => {
-          const entry = player.entry || player; // Handle both structures
-          if (entry.id === playerId) {
-            // Update the entry within the structure
-            if (player.entry) {
-              return { ...player, entry: { ...player.entry, ...updates } };
-            } else {
-              return { ...player, ...updates };
-            }
-          }
-          return player;
-        })
+        prev.map(player => 
+          player.id === playerId 
+            ? { ...player, ...updates }
+            : player
+        )
       );
     } catch (error) {
       console.error('Error updating player:', error);
@@ -275,17 +248,8 @@ export default function PlayerPoolPage() {
       // Update local state
       setPlayerPool(prev => 
         prev.map(player => {
-          const entry = player.entry || player; // Handle both structures
-          const update = updates.find(u => u.playerId === entry.id);
-          if (update) {
-            // Update the entry within the structure
-            if (player.entry) {
-              return { ...player, entry: { ...player.entry, ...update.updates } };
-    } else {
-              return { ...player, ...update.updates };
-            }
-          }
-          return player;
+          const update = updates.find(u => u.playerId === player.id);
+          return update ? { ...player, ...update.updates } : player;
         })
       );
     } catch (error) {
@@ -294,14 +258,12 @@ export default function PlayerPoolPage() {
   };
 
   // Loading state
-  if (weeksLoading || loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            {weeksLoading ? 'Loading weeks...' : 'Loading player data...'}
-          </p>
+          <p className="text-gray-600">Loading player data...</p>
         </div>
       </div>
     );
@@ -317,15 +279,13 @@ export default function PlayerPoolPage() {
     );
   }
 
-
   return (
     <div className="space-y-6">
       {/* Header and Filters */}
       <PlayerPoolFilters
-        weeks={weeks || []}
+        weeks={weeks}
         selectedWeek={selectedWeek}
         onWeekChange={setSelectedWeek}
-        activeWeekId={activeWeekId}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         hideExcluded={hideExcluded}
@@ -342,7 +302,7 @@ export default function PlayerPoolPage() {
       />
 
       {/* Player Evaluation Tips & Strategy Section */}
-      <PlayerPoolTips selectedWeek={weeks.length > 0 ? weeks.find(w => w.id === selectedWeek)?.week_number || 1 : 1} />
+      <PlayerPoolTips selectedWeek={weeks.find(w => w.id === selectedWeek)?.week_number || 1} />
 
       {/* Tier Legend */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -353,12 +313,12 @@ export default function PlayerPoolPage() {
             return (
               <div key={tier} className={`${config.headerColor} ${config.headerTextColor} p-3 rounded-lg flex items-center gap-3`}>
                 <span className="text-xl">{config.icon}</span>
-            <div>
+                <div>
                   <div className="font-medium">Tier {tier}</div>
                   <div className="text-xs opacity-90">{config.label}</div>
                   <div className="text-xs opacity-75">{config.description}</div>
-            </div>
-          </div>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -389,7 +349,7 @@ export default function PlayerPoolPage() {
               </TabsContent>
             );
           })}
-      </Tabs>
+        </Tabs>
       </div>
 
       {/* Pagination */}

@@ -61,46 +61,38 @@ export function usePlayerPool(): UsePlayerPoolReturn {
     fetchWeeks();
   }, []);
 
-  // Fetch player pool and props when week changes
+  // Fetch player pool and props when week changes using optimized single call
   const fetchPlayerData = useCallback(async (weekId: number) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch player pool and analysis in parallel
-      const [poolData, analysisData] = await Promise.all([
-        PlayerService.getPlayerPool(weekId, { limit: 1000 }),
-        PlayerService.getPlayerPoolWithAnalysis(weekId)
-      ]);
+      console.log('🚀 [OPTIMIZED] Fetching complete player pool data in single call');
 
-      const entries = poolData.entries || [];
-      setPlayerPool(entries);
+      // Use optimized single endpoint that gets everything at once
+      const completeData = await PlayerService.getPlayerPoolComplete(weekId, { limit: 1000 }, true);
 
-      // Build games map from analysis data
-      const mapByTeam: Record<string, any> = {};
-      (analysisData.entries || []).forEach((e: any) => {
-        const team = e.entry?.player?.team;
-        if (team) {
-          mapByTeam[team] = {
-            opponentAbbr: e.analysis?.opponent_abbr ?? null,
-            homeOrAway: (e.analysis?.homeoraway as 'H' | 'A' | 'N') || 'N',
-            proj_spread: e.analysis?.proj_spread ?? null,
-            proj_total: e.analysis?.proj_total ?? null,
-            implied_team_total: e.analysis?.implied_team_total ?? null
-          };
-        }
+      // Extract data from the optimized response
+      const entries = completeData.entries || [];
+      const gamesMap = completeData.games_map || {};
+      const propsData = completeData.props_data || {};
+
+      console.log(`📊 [OPTIMIZED] Received complete data:`, {
+        entries: entries.length,
+        gamesMap: Object.keys(gamesMap).length,
+        propsData: Object.keys(propsData).length,
+        meta: completeData.meta
       });
-      setGamesMap(mapByTeam);
 
-      // Fetch all props in a single batch call
-      if (entries.length > 0) {
-        const playerIds = entries.map(entry => entry.player.playerDkId);
-        const propsData = await PlayerService.getPlayerPropsBatch(playerIds, weekId);
-        setPlayerProps(propsData);
-      }
+      // Update state with all the data
+      setPlayerPool(entries);
+      setGamesMap(gamesMap);
+      setPlayerProps(propsData);
+
+      console.log('✅ [OPTIMIZED] Complete player pool data loaded successfully');
 
     } catch (err) {
-      console.error('Error fetching player data:', err);
+      console.error('Error fetching complete player data:', err);
       setError('Failed to fetch player data');
     } finally {
       setLoading(false);

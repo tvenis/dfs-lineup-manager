@@ -330,4 +330,52 @@ export class PlayerService {
     }
     return await response.json();
   }
+
+  /**
+   * Fetch complete player pool data in a single optimized request
+   * This replaces 3 separate API calls (pool + analysis + props) with 1 call
+   */
+  static async getPlayerPoolComplete(
+    weekId: number,
+    filters: PlayerPoolFilters = {},
+    includeProps: boolean = true
+  ): Promise<{
+    entries: PlayerPoolEntryWithAnalysisDto[];
+    total: number;
+    week_id: number;
+    games_map: Record<string, any>;
+    props_data: Record<number, Record<string, any>>;
+    meta: {
+      skip: number;
+      limit: number;
+      has_more: boolean;
+      include_props: boolean;
+    };
+  }> {
+    try {
+      const params = new URLSearchParams();
+      
+      if (filters.position) params.append('position', filters.position);
+      if (filters.team_id) params.append('team_id', filters.team_id);
+      if (filters.excluded !== undefined) params.append('excluded', filters.excluded.toString());
+      if (filters.search) params.append('search', filters.search);
+      if (filters.skip !== undefined) params.append('skip', filters.skip.toString());
+      if (filters.limit !== undefined) params.append('limit', filters.limit.toString());
+      params.append('include_props', includeProps.toString());
+
+      const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
+      const url = `${baseUrl.slice(0, -1)}/pool/${weekId}/complete?${params.toString()}`;
+      
+      console.log('🎯 PlayerService.getPlayerPoolComplete URL:', url);
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching complete player pool:', error);
+      throw error;
+    }
+  }
 }
