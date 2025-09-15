@@ -24,15 +24,21 @@ type SortKey = keyof Pick<
 
 interface Props {
   playerId: number | string;
+  preFilteredWeek?: number;
+  preFilteredBookmaker?: string;
 }
 
-export default function PlayerProps({ playerId }: Props) {
+export default function PlayerProps({ playerId, preFilteredWeek, preFilteredBookmaker }: Props) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PlayerPropsResponse>({ props: [], total: 0 });
 
-  const [weekFilter, setWeekFilter] = useState<string>("All Weeks");
-  const [bookmakerFilter, setBookmakerFilter] = useState<string>("All Bookmakers");
+  const [weekFilter, setWeekFilter] = useState<string>(
+    preFilteredWeek ? String(preFilteredWeek) : "All Weeks"
+  );
+  const [bookmakerFilter, setBookmakerFilter] = useState<string>(
+    preFilteredBookmaker || "All Bookmakers"
+  );
   const [marketFilter, setMarketFilter] = useState<string>("All Markets");
   const [outcomeFilter, setOutcomeFilter] = useState<string>("Over");
 

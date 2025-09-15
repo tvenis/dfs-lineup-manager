@@ -24,7 +24,7 @@ interface PlayerPoolTableProps {
   propsData: Record<number, Record<string, any>>;
   hideExcluded: boolean;
   tierFilter: number | 'all';
-  selectedBookmaker?: string;
+  selectedWeek: number;
   onPlayerUpdate: (playerId: number, updates: any) => void;
   onBulkUpdate: (updates: Array<{ playerId: number; updates: any }>) => void;
   getTierConfig: (tier: number) => any;
@@ -38,7 +38,7 @@ export function PlayerPoolTable({
   propsData,
   hideExcluded,
   tierFilter,
-  selectedBookmaker,
+  selectedWeek,
   onPlayerUpdate,
   onBulkUpdate,
   getTierConfig,
@@ -619,7 +619,7 @@ export function PlayerPoolTable({
                       player={entry} 
                       propsData={propsData} 
                       position={position}
-                      selectedBookmaker={selectedBookmaker}
+                      selectedWeek={selectedWeek}
                     />
                   </TableCell>
                   <TableCell>

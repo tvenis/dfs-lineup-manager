@@ -25,10 +25,6 @@ interface PlayerPoolFiltersProps {
   onDraftGroupChange: (draftGroup: string) => void;
   uniqueDraftGroups: string[];
   
-  // Bookmaker filter
-  selectedBookmaker: string;
-  onBookmakerChange: (bookmaker: string) => void;
-  availableBookmakers: string[];
   
   // Tier filter
   tierFilter: number | 'all';
@@ -53,9 +49,6 @@ export function PlayerPoolFilters({
   draftGroupFilter,
   onDraftGroupChange,
   uniqueDraftGroups,
-  selectedBookmaker,
-  onBookmakerChange,
-  availableBookmakers,
   tierFilter,
   onTierFilterChange,
   activeTab,
@@ -137,23 +130,6 @@ export function PlayerPoolFilters({
                 {uniqueDraftGroups.map((draftGroup) => (
                   <SelectItem key={draftGroup} value={draftGroup}>
                     Draft Group {draftGroup}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-shrink-0">
-            <label htmlFor="bookmaker-select" className="block text-sm font-medium text-gray-700 mb-2">
-              Bookmaker:
-            </label>
-            <Select value={selectedBookmaker} onValueChange={onBookmakerChange}>
-              <SelectTrigger className="w-auto min-w-[200px]">
-                <SelectValue placeholder={selectedBookmaker || "Select Bookmaker"} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableBookmakers.map((bookmaker) => (
-                  <SelectItem key={bookmaker} value={bookmaker}>
-                    {bookmaker}
                   </SelectItem>
                 ))}
               </SelectContent>
