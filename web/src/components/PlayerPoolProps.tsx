@@ -12,7 +12,7 @@ interface PlayerPoolPropsProps {
 }
 
 export function PlayerPoolProps({ player, propsData, position, selectedBookmaker }: PlayerPoolPropsProps) {
-  const playerProps = propsData[player.player.playerDkId];
+  const playerProps = propsData[player.player?.playerDkId];
   
   if (!playerProps) {
     return (
@@ -40,7 +40,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'Pass Yds',
             value: filteredProps['player_pass_yds'].point,
-            likelihood: filteredProps['player_pass_yds'].outcome_likelihood,
+            likelihood: filteredProps['player_pass_yds'].likelihood,
             price: filteredProps['player_pass_yds'].price,
             bookmaker: filteredProps['player_pass_yds'].bookmaker
           });
@@ -49,7 +49,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'Pass TDs',
             value: filteredProps['player_pass_tds'].point,
-            likelihood: filteredProps['player_pass_tds'].outcome_likelihood,
+            likelihood: filteredProps['player_pass_tds'].likelihood,
             price: filteredProps['player_pass_tds'].price,
             bookmaker: filteredProps['player_pass_tds'].bookmaker
           });
@@ -58,7 +58,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'Pass Att',
             value: filteredProps['player_pass_attempts'].point,
-            likelihood: filteredProps['player_pass_attempts'].outcome_likelihood,
+            likelihood: filteredProps['player_pass_attempts'].likelihood,
             price: filteredProps['player_pass_attempts'].price,
             bookmaker: filteredProps['player_pass_attempts'].bookmaker
           });
@@ -67,7 +67,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'Pass Cmp',
             value: filteredProps['player_pass_completions'].point,
-            likelihood: filteredProps['player_pass_completions'].outcome_likelihood,
+            likelihood: filteredProps['player_pass_completions'].likelihood,
             price: filteredProps['player_pass_completions'].price,
             bookmaker: filteredProps['player_pass_completions'].bookmaker
           });
@@ -76,7 +76,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'Rush Yds',
             value: filteredProps['player_rush_yds'].point,
-            likelihood: filteredProps['player_rush_yds'].outcome_likelihood,
+            likelihood: filteredProps['player_rush_yds'].likelihood,
             price: filteredProps['player_rush_yds'].price,
             bookmaker: filteredProps['player_rush_yds'].bookmaker
           });
@@ -85,7 +85,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'TDs Over',
             value: filteredProps['player_tds_over'].point,
-            likelihood: filteredProps['player_tds_over'].outcome_likelihood,
+            likelihood: filteredProps['player_tds_over'].likelihood,
             price: filteredProps['player_tds_over'].price,
             bookmaker: filteredProps['player_tds_over'].bookmaker
           });
@@ -97,7 +97,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'Rush Yds',
             value: filteredProps['player_rush_yds'].point,
-            likelihood: filteredProps['player_rush_yds'].outcome_likelihood,
+            likelihood: filteredProps['player_rush_yds'].likelihood,
             price: filteredProps['player_rush_yds'].price,
             bookmaker: filteredProps['player_rush_yds'].bookmaker
           });
@@ -106,7 +106,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'Rush Att',
             value: filteredProps['player_rush_attempts'].point,
-            likelihood: filteredProps['player_rush_attempts'].outcome_likelihood,
+            likelihood: filteredProps['player_rush_attempts'].likelihood,
             price: filteredProps['player_rush_attempts'].price,
             bookmaker: filteredProps['player_rush_attempts'].bookmaker
           });
@@ -115,7 +115,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'TDs Over',
             value: filteredProps['player_tds_over'].point,
-            likelihood: filteredProps['player_tds_over'].outcome_likelihood,
+            likelihood: filteredProps['player_tds_over'].likelihood,
             price: filteredProps['player_tds_over'].price,
             bookmaker: filteredProps['player_tds_over'].bookmaker
           });
@@ -128,7 +128,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'Receptions',
             value: filteredProps['player_receptions'].point,
-            likelihood: filteredProps['player_receptions'].outcome_likelihood,
+            likelihood: filteredProps['player_receptions'].likelihood,
             price: filteredProps['player_receptions'].price,
             bookmaker: filteredProps['player_receptions'].bookmaker
           });
@@ -137,7 +137,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'Rec Yds',
             value: filteredProps['player_reception_yds'].point,
-            likelihood: filteredProps['player_reception_yds'].outcome_likelihood,
+            likelihood: filteredProps['player_reception_yds'].likelihood,
             price: filteredProps['player_reception_yds'].price,
             bookmaker: filteredProps['player_reception_yds'].bookmaker
           });
@@ -146,7 +146,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
           props.push({
             label: 'TDs Over',
             value: filteredProps['player_tds_over'].point,
-            likelihood: filteredProps['player_tds_over'].outcome_likelihood,
+            likelihood: filteredProps['player_tds_over'].likelihood,
             price: filteredProps['player_tds_over'].price,
             bookmaker: filteredProps['player_tds_over'].bookmaker
           });
