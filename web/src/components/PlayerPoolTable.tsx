@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
@@ -40,6 +41,41 @@ export function PlayerPoolTable({
   getTierConfig,
   getTierStats
 }: PlayerPoolTableProps) {
+  
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+      case 'available':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'questionable':
+      case 'q':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'out':
+      case 'ir':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Get status abbreviation
+  const getStatusAbbreviation = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+      case 'available':
+        return 'AVL';
+      case 'questionable':
+      case 'q':
+        return 'QST';
+      case 'out':
+        return 'OUT';
+      case 'ir':
+        return 'IR';
+      default:
+        return status || 'N/A';
+    }
+  };
   const [sortField, setSortField] = useState<string>('projection');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -88,9 +124,27 @@ export function PlayerPoolTable({
           aValue = aEntry.player?.displayName || '';
           bValue = bEntry.player?.displayName || '';
           break;
+        case 'status':
+          aValue = aEntry.status?.toLowerCase() || '';
+          bValue = bEntry.status?.toLowerCase() || '';
+          break;
+        case 'opponentRank':
+          // Extract opponent rank sortValue from draftStatAttributes where id = -2
+          const aDraftStats = Array.isArray(aEntry.draftStatAttributes) ? aEntry.draftStatAttributes : [];
+          const bDraftStats = Array.isArray(bEntry.draftStatAttributes) ? bEntry.draftStatAttributes : [];
+          const aOpponentRank = aDraftStats.find((attr: { id: number; sortValue?: number | string }) => attr.id === -2)?.sortValue || 0;
+          const bOpponentRank = bDraftStats.find((attr: { id: number; sortValue?: number | string }) => attr.id === -2)?.sortValue || 0;
+          
+          aValue = typeof aOpponentRank === 'string' ? parseFloat(aOpponentRank) : aOpponentRank;
+          bValue = typeof bOpponentRank === 'string' ? parseFloat(bOpponentRank) : bOpponentRank;
+          break;
         case 'tier':
           aValue = aEntry.tier || 4;
           bValue = bEntry.tier || 4;
+          break;
+        case 'exclude':
+          aValue = aEntry.excluded === true ? 1 : 0;
+          bValue = bEntry.excluded === true ? 1 : 0;
           break;
         case 'total':
           const aTeam = aEntry.player?.team;
@@ -135,17 +189,6 @@ export function PlayerPoolTable({
     return sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />;
   };
 
-  const getTierBadge = (tier: number) => {
-    const config = getTierConfig(tier);
-    return (
-      <Badge 
-        variant="outline" 
-        className={`${config.badgeColor} ${config.badgeTextColor} border-current`}
-      >
-        {config.icon} Tier {tier}
-      </Badge>
-    );
-  };
 
   const getGameInfo = (player: PlayerPoolEntry | PlayerPoolEntryWithAnalysis) => {
     const entry = player.entry || player;
@@ -328,7 +371,25 @@ export function PlayerPoolTable({
                   {getSortIcon('name')}
                 </div>
               </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('status')}
+              >
+                <div className="flex items-center gap-2">
+                  Status
+                  {getSortIcon('status')}
+                </div>
+              </TableHead>
               <TableHead>Opponent</TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('opponentRank')}
+              >
+                <div className="flex items-center gap-2">
+                  OPRK
+                  {getSortIcon('opponentRank')}
+                </div>
+              </TableHead>
               <TableHead 
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('total')}
@@ -375,7 +436,7 @@ export function PlayerPoolTable({
             </div>
           </TableHead>
           <TableHead
-            className="cursor-pointer hover:bg-muted/50"
+            className="cursor-pointer hover:bg-muted/50 w-20"
             onClick={() => handleSort('tier')}
           >
             <div className="flex items-center gap-2">
@@ -384,7 +445,15 @@ export function PlayerPoolTable({
             </div>
           </TableHead>
               <TableHead>Props</TableHead>
-              <TableHead className="w-20">Actions</TableHead>
+              <TableHead 
+                className="w-20 cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('exclude')}
+              >
+                <div className="flex items-center gap-2">
+                  Exclude
+                  {getSortIcon('exclude')}
+                </div>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -393,41 +462,131 @@ export function PlayerPoolTable({
               return (
                 <TableRow key={entry.id} className={entry.excluded ? 'opacity-50' : ''}>
                   <TableCell>
-                    <Checkbox
-                      checked={entry.excluded}
-                      onCheckedChange={(checked) => 
-                        onPlayerUpdate(entry.id, { excluded: checked })
-                      }
-                    />
+                    {/* Empty cell for spacing */}
                   </TableCell>
                   <TableCell className="w-48">
                     <div className="space-y-1">
-                      <div className="font-medium">{entry.player?.displayName}</div>
+                      <Link 
+                        href={`/profile/${entry.player?.playerDkId}`}
+                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {entry.player?.displayName}
+                      </Link>
                       <div className="text-sm text-muted-foreground">
                         {entry.player?.position} • {entry.player?.team}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
+                    <Badge 
+                      variant="outline" 
+                      className={`${getStatusColor(entry.status)} text-xs font-medium`}
+                    >
+                      {getStatusAbbreviation(entry.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     {getGameInfo(player)}
                   </TableCell>
                   <TableCell>
-                    <div className="font-mono text-sm">
+                    <div className="text-sm text-center">
                       {(() => {
-                        const entry = player.entry || player;
-                        const team = entry.player?.team;
-                        const gameInfo = gamesMap[team];
-                        return gameInfo?.proj_total ? gameInfo.proj_total.toFixed(1) : 'N/A';
+                        const draftStats = Array.isArray(entry.draftStatAttributes) ? entry.draftStatAttributes : [];
+                        const oppRank = draftStats.find((attr: { id: number; value?: number; quality?: string }) => attr.id === -2) || {};
+                        const value = oppRank.value ?? 0;
+                        const quality = oppRank.quality as 'High' | 'Medium' | 'Low' | undefined;
+                        
+                        // Derive quality from value if quality is missing
+                        let derivedQuality: 'High' | 'Medium' | 'Low' = 'Medium';
+                        if (quality) {
+                          derivedQuality = quality;
+                        } else if (typeof value === 'number') {
+                          if (value <= 10) derivedQuality = 'High';
+                          else if (value <= 20) derivedQuality = 'Medium';
+                          else derivedQuality = 'Low';
+                        }
+                        
+                        const color = derivedQuality === 'High' ? 'text-green-600' : 
+                                     derivedQuality === 'Low' ? 'text-red-600' : 
+                                     'text-yellow-600';
+                        
+                        return (
+                          <span className={color}>
+                            {value || '-'}
+                          </span>
+                        );
                       })()}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-mono text-sm">
+                    <div className="font-mono text-sm flex items-center gap-1">
                       {(() => {
                         const entry = player.entry || player;
                         const team = entry.player?.team;
                         const gameInfo = gamesMap[team];
-                        return gameInfo?.implied_team_total ? gameInfo.implied_team_total.toFixed(1) : 'N/A';
+                        const total = gameInfo?.proj_total;
+                        
+                        if (!total) return 'N/A';
+                        
+                        // Determine color based on total value
+                        let textColor = '';
+                        
+                        if (total >= 48) {
+                          // Elite Shootouts (48+) → Gold
+                          textColor = 'text-yellow-500';
+                        } else if (total >= 45) {
+                          // Above Average (45–47.5) → Green
+                          textColor = 'text-green-600';
+                        } else if (total >= 42) {
+                          // Neutral (42–44.5) → Yellow
+                          textColor = 'text-yellow-600';
+                        } else {
+                          // Low (<42) → Red
+                          textColor = 'text-red-600';
+                        }
+                        
+                        return (
+                          <>
+                            <span className={textColor}>{total.toFixed(1)}</span>
+                            {total >= 48 && <span className="text-sm">🔥</span>}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-mono text-sm flex items-center gap-1">
+                      {(() => {
+                        const entry = player.entry || player;
+                        const team = entry.player?.team;
+                        const gameInfo = gamesMap[team];
+                        const impliedTotal = gameInfo?.implied_team_total;
+                        
+                        if (!impliedTotal) return 'N/A';
+                        
+                        // Determine color based on implied total value
+                        let textColor = '';
+                        
+                        if (impliedTotal >= 28) {
+                          // Elite (28+) → Dark Green / "Gold"
+                          textColor = 'text-yellow-500';
+                        } else if (impliedTotal >= 24) {
+                          // Strong (24–27.5) → Green
+                          textColor = 'text-green-600';
+                        } else if (impliedTotal >= 21) {
+                          // Neutral (21–23.5) → Yellow
+                          textColor = 'text-yellow-600';
+                        } else {
+                          // Low (<21) → Red
+                          textColor = 'text-red-600';
+                        }
+                        
+                        return (
+                          <>
+                            <span className={textColor}>{impliedTotal.toFixed(1)}</span>
+                            {impliedTotal >= 28 && <span className="text-sm">🔥</span>}
+                          </>
+                        );
                       })()}
                     </div>
                   </TableCell>
@@ -449,33 +608,60 @@ export function PlayerPoolTable({
                       }
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {getTierBadge(entry.tier || 4)}
+                  <TableCell className="w-20">
+                    <Select 
+                      value={entry.tier?.toString() || '4'} 
+                      onValueChange={(value: string) => {
+                        const newTierValue = parseInt(value);
+                        onPlayerUpdate(entry.id, { tier: newTierValue });
+                      }}
+                    >
+                      <SelectTrigger className="w-16 h-7 text-xs px-2">
+                        <SelectValue>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs">{getTierConfig(entry.tier || 4).icon}</span>
+                            <span className="text-xs font-medium">{entry.tier || 4}</span>
+                          </div>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">
+                          <div className="flex items-center gap-1">
+                            <span>{getTierConfig(1).icon}</span>
+                            <span className="text-xs">1</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="2">
+                          <div className="flex items-center gap-1">
+                            <span>{getTierConfig(2).icon}</span>
+                            <span className="text-xs">2</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="3">
+                          <div className="flex items-center gap-1">
+                            <span>{getTierConfig(3).icon}</span>
+                            <span className="text-xs">3</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="4">
+                          <div className="flex items-center gap-1">
+                            <span>{getTierConfig(4).icon}</span>
+                            <span className="text-xs">4</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     {getPropsDisplay(player)}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              asChild
-                            >
-                              <Link href={`/profile/${entry.player?.playerDkId}`}>
-                                <ExternalLink className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>View Player Profile</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                    <Checkbox
+                      checked={entry.excluded === true}
+                      onCheckedChange={(checked) => 
+                        onPlayerUpdate(entry.id, { excluded: checked })
+                      }
+                    />
                   </TableCell>
                 </TableRow>
               );
