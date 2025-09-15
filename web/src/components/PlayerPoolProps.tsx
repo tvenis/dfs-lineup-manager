@@ -21,8 +21,19 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
   const playerId = player.player?.playerDkId;
   const playerProps = (playerId && propsData[playerId]) || (playerId && (propsData as any)[String(playerId)]) || {};
   
-  // Check if player has any props available
-  const hasProps = playerProps && Object.keys(playerProps).length > 0;
+  // Debug logging
+  console.log('PlayerPoolProps Debug:', {
+    playerId,
+    playerProps,
+    propsDataKeys: Object.keys(propsData),
+    hasPlayerProps: !!playerProps,
+    playerPropsKeys: Object.keys(playerProps),
+    playerPropsLength: Object.keys(playerProps).length
+  });
+  
+  // Check if player has any props available (works with new {market}_{bookmaker} structure)
+  const hasProps = playerProps && Object.keys(playerProps).length > 0 && 
+    Object.values(playerProps).some((prop: any) => prop && typeof prop === 'object');
 
   if (!hasProps) {
     return (
