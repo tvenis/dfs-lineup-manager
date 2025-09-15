@@ -32,6 +32,7 @@ export default function PlayerPoolPage() {
   const [activeTab, setActiveTab] = useState<string>('QB');
   const [tierFilter, setTierFilter] = useState<number | 'all'>('all');
   const [draftGroupFilter, setDraftGroupFilter] = useState<string>('all');
+  const [selectedBookmaker, setSelectedBookmaker] = useState<string>('DraftKings');
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,6 +112,19 @@ export default function PlayerPoolPage() {
     });
     return Array.from(draftGroups).sort();
   }, [playerPool]);
+
+  // Get available bookmakers from props data
+  const availableBookmakers = useMemo(() => {
+    const bookmakers = new Set<string>();
+    Object.values(propsData).forEach(playerProps => {
+      Object.values(playerProps).forEach((prop: any) => {
+        if (prop.bookmaker) {
+          bookmakers.add(prop.bookmaker);
+        }
+      });
+    });
+    return Array.from(bookmakers).sort();
+  }, [propsData]);
 
   // Group players by position
   const playersByPosition = useMemo(() => {
@@ -350,6 +364,9 @@ export default function PlayerPoolPage() {
         draftGroupFilter={draftGroupFilter}
         onDraftGroupChange={setDraftGroupFilter}
         uniqueDraftGroups={getUniqueDraftGroups}
+        selectedBookmaker={selectedBookmaker}
+        onBookmakerChange={setSelectedBookmaker}
+        availableBookmakers={availableBookmakers}
         tierFilter={tierFilter}
         onTierFilterChange={setTierFilter}
         activeTab={activeTab}
@@ -398,6 +415,7 @@ export default function PlayerPoolPage() {
                   propsData={propsData}
                   hideExcluded={hideExcluded}
                   tierFilter={tierFilter}
+                  selectedBookmaker={selectedBookmaker}
                   onPlayerUpdate={handlePlayerUpdate}
                   onBulkUpdate={handleBulkUpdate}
                   getTierConfig={getTierConfig}

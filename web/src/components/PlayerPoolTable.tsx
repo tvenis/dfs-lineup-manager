@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { PlayerPoolProps } from '@/components/PlayerPoolProps';
 import type { PlayerPoolEntry } from '@/types/prd';
 
 interface PlayerPoolEntryWithAnalysis {
@@ -23,6 +24,7 @@ interface PlayerPoolTableProps {
   propsData: Record<number, Record<string, any>>;
   hideExcluded: boolean;
   tierFilter: number | 'all';
+  selectedBookmaker?: string;
   onPlayerUpdate: (playerId: number, updates: any) => void;
   onBulkUpdate: (updates: Array<{ playerId: number; updates: any }>) => void;
   getTierConfig: (tier: number) => any;
@@ -36,6 +38,7 @@ export function PlayerPoolTable({
   propsData,
   hideExcluded,
   tierFilter,
+  selectedBookmaker,
   onPlayerUpdate,
   onBulkUpdate,
   getTierConfig,
@@ -209,47 +212,6 @@ export function PlayerPoolTable({
     );
   };
 
-  const getPropsDisplay = (player: PlayerPoolEntry | PlayerPoolEntryWithAnalysis) => {
-    const entry = player.entry || player;
-    const playerProps = propsData[entry.player?.playerDkId];
-    if (!playerProps) return null;
-
-    const props = [];
-    
-    // Add position-specific props
-    if (position === 'QB') {
-      if (playerProps['player_pass_yds']) {
-        props.push(`Pass Yds: ${playerProps['player_pass_yds'].point}`);
-      }
-      if (playerProps['player_pass_tds']) {
-        props.push(`Pass TDs: ${playerProps['player_pass_tds'].point}`);
-      }
-    } else if (position === 'RB') {
-      if (playerProps['player_rush_yds']) {
-        props.push(`Rush Yds: ${playerProps['player_rush_yds'].point}`);
-      }
-      if (playerProps['player_rush_attempts']) {
-        props.push(`Rush Att: ${playerProps['player_rush_attempts'].point}`);
-      }
-    } else if (position === 'WR' || position === 'TE') {
-      if (playerProps['player_receptions']) {
-        props.push(`Rec: ${playerProps['player_receptions'].point}`);
-      }
-      if (playerProps['player_reception_yds']) {
-        props.push(`Rec Yds: ${playerProps['player_reception_yds'].point}`);
-      }
-    }
-
-    if (props.length === 0) return null;
-
-    return (
-      <div className="text-xs text-gray-500 space-y-1">
-        {props.map((prop, index) => (
-          <div key={index}>{prop}</div>
-        ))}
-      </div>
-    );
-  };
 
   const tierStats = getTierStats(position);
 
@@ -653,7 +615,12 @@ export function PlayerPoolTable({
                     </Select>
                   </TableCell>
                   <TableCell>
-                    {getPropsDisplay(player)}
+                    <PlayerPoolProps 
+                      player={entry} 
+                      propsData={propsData} 
+                      position={position}
+                      selectedBookmaker={selectedBookmaker}
+                    />
                   </TableCell>
                   <TableCell>
                     <Checkbox
