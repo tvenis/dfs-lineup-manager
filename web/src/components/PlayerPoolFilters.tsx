@@ -148,7 +148,7 @@ export function PlayerPoolFilters({
             </label>
             <Select value={selectedBookmaker} onValueChange={onBookmakerChange}>
               <SelectTrigger className="w-auto min-w-[200px]">
-                <SelectValue placeholder="Select Bookmaker" />
+                <SelectValue placeholder={selectedBookmaker || "Select Bookmaker"} />
               </SelectTrigger>
               <SelectContent>
                 {availableBookmakers.map((bookmaker) => (

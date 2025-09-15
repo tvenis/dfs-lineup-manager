@@ -116,6 +116,9 @@ export default function PlayerPoolPage() {
   // Get available bookmakers from props data
   const availableBookmakers = useMemo(() => {
     const bookmakers = new Set<string>();
+    // Always include DraftKings as the default
+    bookmakers.add('DraftKings');
+    
     Object.values(propsData).forEach(playerProps => {
       Object.values(playerProps).forEach((prop: any) => {
         if (prop.bookmaker) {
