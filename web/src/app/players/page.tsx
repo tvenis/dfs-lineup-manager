@@ -92,8 +92,18 @@ export default function PlayerPoolPage() {
       setPlayerPool(data.entries || []);
       setGamesMap(data.games_map || {});
       setPropsData(data.props_data || {});
+      
+      // Debug logging
+      console.log('PlayerPoolPage - Props Data Debug:', {
+        propsDataKeys: Object.keys(data.props_data || {}),
+        propsDataLength: Object.keys(data.props_data || {}).length,
+        samplePropsData: Object.keys(data.props_data || {}).slice(0, 2).reduce((acc, key) => {
+          acc[key] = data.props_data[key];
+          return acc;
+        }, {} as any)
+      });
 
-    } catch (error) {
+        } catch (error) {
       console.error('Error fetching player data:', error);
       setError('Failed to load player data');
       } finally {
