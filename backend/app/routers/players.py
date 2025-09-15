@@ -386,55 +386,47 @@ def get_player_pool_complete(
                 'outcome_likelihood': prop.outcome_likelihood
             })
         
-        # Process props to find best matches (same logic as batch endpoint)
+        # Process props to return all bookmakers, let frontend handle filtering
         processed_props = {}
         for player_id, market_data in props_data.items():
             processed_props[player_id] = {}
             
             for market, props_list in market_data.items():
-                # Find the best prop based on bookmaker preference and outcome
-                best_prop = None
-                
-                # Prefer draftkings Over 0.5, then draftkings Over any, then betonlineag Over 0.5, then betonlineag Over any
+                # Group props by bookmaker for this market
+                bookmaker_props = {}
                 for prop in props_list:
-                    if (prop['bookmaker'] == 'draftkings' and 
-                        prop['outcome_name'] == 'Over' and 
-                        prop['outcome_point'] == 0.5):
-                        best_prop = prop
-                        break
+                    bookmaker = prop['bookmaker']
+                    if bookmaker not in bookmaker_props:
+                        bookmaker_props[bookmaker] = []
+                    bookmaker_props[bookmaker].append(prop)
                 
-                if not best_prop:
-                    for prop in props_list:
-                        if (prop['bookmaker'] == 'draftkings' and 
-                            prop['outcome_name'] == 'Over'):
-                            best_prop = prop
-                            break
-                
-                if not best_prop:
-                    for prop in props_list:
-                        if (prop['bookmaker'] == 'betonlineag' and 
-                            prop['outcome_name'] == 'Over' and 
+                # For each bookmaker, find the best Over prop (prefer 0.5, then any Over)
+                for bookmaker, bookmaker_props_list in bookmaker_props.items():
+                    best_prop = None
+                    
+                    # Prefer Over 0.5, then any Over
+                    for prop in bookmaker_props_list:
+                        if (prop['outcome_name'] == 'Over' and 
                             prop['outcome_point'] == 0.5):
                             best_prop = prop
                             break
-                
-                if not best_prop:
-                    for prop in props_list:
-                        if (prop['bookmaker'] == 'betonlineag' and 
-                            prop['outcome_name'] == 'Over'):
-                            best_prop = prop
-                            break
-                
-                if not best_prop and props_list:
-                    best_prop = props_list[0]  # Fallback to first available
-                
-                if best_prop:
-                    processed_props[player_id][market] = {
-                        'point': best_prop['outcome_point'],
-                        'price': best_prop['outcome_price'],
-                        'bookmaker': best_prop['bookmaker'],
-                        'likelihood': best_prop['outcome_likelihood']
-                    }
+                    
+                    if not best_prop:
+                        for prop in bookmaker_props_list:
+                            if prop['outcome_name'] == 'Over':
+                                best_prop = prop
+                                break
+                    
+                    if best_prop:
+                        # Create a unique key for this bookmaker's prop
+                        market_key = f"{market}_{bookmaker}"
+                        processed_props[player_id][market_key] = {
+                            'point': best_prop['outcome_point'],
+                            'price': best_prop['outcome_price'],
+                            'bookmaker': best_prop['bookmaker'],
+                            'likelihood': best_prop['outcome_likelihood'],
+                            'market': market  # Include original market name
+                        }
         
         props_data = processed_props
     

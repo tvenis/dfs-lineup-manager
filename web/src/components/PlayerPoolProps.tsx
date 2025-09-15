@@ -35,121 +35,147 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
   const getPropsForPosition = () => {
     const props = [];
     
+    // Helper function to find prop by market name (handles new data structure)
+    const findProp = (marketName: string) => {
+      return Object.values(filteredProps).find((prop: any) => prop.market === marketName);
+    };
+    
     switch (position) {
       case 'QB':
-        if (filteredProps['player_pass_yds']) {
+        const passYds = findProp('player_pass_yds');
+        if (passYds) {
           props.push({
             label: 'Pass Yds',
-            value: filteredProps['player_pass_yds'].point,
-            likelihood: filteredProps['player_pass_yds'].likelihood,
-            price: filteredProps['player_pass_yds'].price,
-            bookmaker: filteredProps['player_pass_yds'].bookmaker
+            value: passYds.point,
+            likelihood: passYds.likelihood,
+            price: passYds.price,
+            bookmaker: passYds.bookmaker
           });
         }
-        if (filteredProps['player_pass_tds']) {
+        
+        const passTds = findProp('player_pass_tds');
+        if (passTds) {
           props.push({
             label: 'Pass TDs',
-            value: filteredProps['player_pass_tds'].point,
-            likelihood: filteredProps['player_pass_tds'].likelihood,
-            price: filteredProps['player_pass_tds'].price,
-            bookmaker: filteredProps['player_pass_tds'].bookmaker
+            value: passTds.point,
+            likelihood: passTds.likelihood,
+            price: passTds.price,
+            bookmaker: passTds.bookmaker
           });
         }
-        if (filteredProps['player_pass_attempts']) {
+        
+        const passAtt = findProp('player_pass_attempts');
+        if (passAtt) {
           props.push({
             label: 'Pass Att',
-            value: filteredProps['player_pass_attempts'].point,
-            likelihood: filteredProps['player_pass_attempts'].likelihood,
-            price: filteredProps['player_pass_attempts'].price,
-            bookmaker: filteredProps['player_pass_attempts'].bookmaker
+            value: passAtt.point,
+            likelihood: passAtt.likelihood,
+            price: passAtt.price,
+            bookmaker: passAtt.bookmaker
           });
         }
-        if (filteredProps['player_pass_completions']) {
+        
+        const passCmp = findProp('player_pass_completions');
+        if (passCmp) {
           props.push({
             label: 'Pass Cmp',
-            value: filteredProps['player_pass_completions'].point,
-            likelihood: filteredProps['player_pass_completions'].likelihood,
-            price: filteredProps['player_pass_completions'].price,
-            bookmaker: filteredProps['player_pass_completions'].bookmaker
+            value: passCmp.point,
+            likelihood: passCmp.likelihood,
+            price: passCmp.price,
+            bookmaker: passCmp.bookmaker
           });
         }
-        if (filteredProps['player_rush_yds']) {
+        
+        const rushYds = findProp('player_rush_yds');
+        if (rushYds) {
           props.push({
             label: 'Rush Yds',
-            value: filteredProps['player_rush_yds'].point,
-            likelihood: filteredProps['player_rush_yds'].likelihood,
-            price: filteredProps['player_rush_yds'].price,
-            bookmaker: filteredProps['player_rush_yds'].bookmaker
+            value: rushYds.point,
+            likelihood: rushYds.likelihood,
+            price: rushYds.price,
+            bookmaker: rushYds.bookmaker
           });
         }
-        if (filteredProps['player_tds_over']) {
+        
+        const tdsOver = findProp('player_tds_over');
+        if (tdsOver) {
           props.push({
             label: 'TDs Over',
-            value: filteredProps['player_tds_over'].point,
-            likelihood: filteredProps['player_tds_over'].likelihood,
-            price: filteredProps['player_tds_over'].price,
-            bookmaker: filteredProps['player_tds_over'].bookmaker
+            value: tdsOver.point,
+            likelihood: tdsOver.likelihood,
+            price: tdsOver.price,
+            bookmaker: tdsOver.bookmaker
           });
         }
         break;
         
       case 'RB':
-        if (filteredProps['player_rush_yds']) {
+        const rbRushYds = findProp('player_rush_yds');
+        if (rbRushYds) {
           props.push({
             label: 'Rush Yds',
-            value: filteredProps['player_rush_yds'].point,
-            likelihood: filteredProps['player_rush_yds'].likelihood,
-            price: filteredProps['player_rush_yds'].price,
-            bookmaker: filteredProps['player_rush_yds'].bookmaker
+            value: rbRushYds.point,
+            likelihood: rbRushYds.likelihood,
+            price: rbRushYds.price,
+            bookmaker: rbRushYds.bookmaker
           });
         }
-        if (filteredProps['player_rush_attempts']) {
+        
+        const rushAtt = findProp('player_rush_attempts');
+        if (rushAtt) {
           props.push({
             label: 'Rush Att',
-            value: filteredProps['player_rush_attempts'].point,
-            likelihood: filteredProps['player_rush_attempts'].likelihood,
-            price: filteredProps['player_rush_attempts'].price,
-            bookmaker: filteredProps['player_rush_attempts'].bookmaker
+            value: rushAtt.point,
+            likelihood: rushAtt.likelihood,
+            price: rushAtt.price,
+            bookmaker: rushAtt.bookmaker
           });
         }
-        if (filteredProps['player_tds_over']) {
+        
+        const rbTdsOver = findProp('player_tds_over');
+        if (rbTdsOver) {
           props.push({
             label: 'TDs Over',
-            value: filteredProps['player_tds_over'].point,
-            likelihood: filteredProps['player_tds_over'].likelihood,
-            price: filteredProps['player_tds_over'].price,
-            bookmaker: filteredProps['player_tds_over'].bookmaker
+            value: rbTdsOver.point,
+            likelihood: rbTdsOver.likelihood,
+            price: rbTdsOver.price,
+            bookmaker: rbTdsOver.bookmaker
           });
         }
         break;
         
       case 'WR':
       case 'TE':
-        if (filteredProps['player_receptions']) {
+        const receptions = findProp('player_receptions');
+        if (receptions) {
           props.push({
             label: 'Receptions',
-            value: filteredProps['player_receptions'].point,
-            likelihood: filteredProps['player_receptions'].likelihood,
-            price: filteredProps['player_receptions'].price,
-            bookmaker: filteredProps['player_receptions'].bookmaker
+            value: receptions.point,
+            likelihood: receptions.likelihood,
+            price: receptions.price,
+            bookmaker: receptions.bookmaker
           });
         }
-        if (filteredProps['player_reception_yds']) {
+        
+        const recYds = findProp('player_reception_yds');
+        if (recYds) {
           props.push({
             label: 'Rec Yds',
-            value: filteredProps['player_reception_yds'].point,
-            likelihood: filteredProps['player_reception_yds'].likelihood,
-            price: filteredProps['player_reception_yds'].price,
-            bookmaker: filteredProps['player_reception_yds'].bookmaker
+            value: recYds.point,
+            likelihood: recYds.likelihood,
+            price: recYds.price,
+            bookmaker: recYds.bookmaker
           });
         }
-        if (filteredProps['player_tds_over']) {
+        
+        const wrTdsOver = findProp('player_tds_over');
+        if (wrTdsOver) {
           props.push({
             label: 'TDs Over',
-            value: filteredProps['player_tds_over'].point,
-            likelihood: filteredProps['player_tds_over'].likelihood,
-            price: filteredProps['player_tds_over'].price,
-            bookmaker: filteredProps['player_tds_over'].bookmaker
+            value: wrTdsOver.point,
+            likelihood: wrTdsOver.likelihood,
+            price: wrTdsOver.price,
+            bookmaker: wrTdsOver.bookmaker
           });
         }
         break;
