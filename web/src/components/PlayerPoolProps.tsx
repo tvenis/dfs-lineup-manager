@@ -17,8 +17,6 @@ interface PlayerPoolPropsProps {
 export function PlayerPoolProps({ player, propsData, position, selectedWeek }: PlayerPoolPropsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  console.log('PlayerPoolProps state:', { isModalOpen, playerId: player.player?.playerDkId });
-  
   // Get player props for this specific player
   const playerId = player.player?.playerDkId;
   const playerProps = (playerId && propsData[playerId]) || (playerId && (propsData as any)[String(playerId)]) || {};
@@ -26,16 +24,6 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
   // Check if player has any props available (works with new {market}_{bookmaker} structure)
   const hasProps = playerProps && Object.keys(playerProps).length > 0 && 
     Object.values(playerProps).some((prop: any) => prop && typeof prop === 'object');
-  
-  // Debug logging
-  console.log('PlayerPoolProps Debug:', {
-    playerId,
-    hasProps,
-    playerPropsLength: Object.keys(playerProps).length,
-    firstProp: Object.values(playerProps)[0]
-  });
-
-  console.log('Rendering PlayerPoolProps:', { hasProps, playerId });
   
   if (!hasProps) {
     console.log('Returning No props available for player:', playerId);
@@ -46,7 +34,6 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
     );
   }
 
-  console.log('Rendering Props button for player:', playerId);
   
   return (
     <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -55,10 +42,6 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
           variant="outline"
           size="sm"
           className="h-8 px-2 text-xs"
-          onClick={() => {
-            console.log('Button clicked, opening modal for player:', playerId);
-            setIsModalOpen(true);
-          }}
         >
           <BarChart3 className="h-3 w-3 mr-1" />
           Props ({Object.keys(playerProps).length})
