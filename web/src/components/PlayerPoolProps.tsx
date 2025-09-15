@@ -17,6 +17,8 @@ interface PlayerPoolPropsProps {
 export function PlayerPoolProps({ player, propsData, position, selectedWeek }: PlayerPoolPropsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  console.log('PlayerPoolProps state:', { isModalOpen, playerId: player.player?.playerDkId });
+  
   // Get player props for this specific player
   const playerId = player.player?.playerDkId;
   const playerProps = (playerId && propsData[playerId]) || (playerId && (propsData as any)[String(playerId)]) || {};
@@ -46,16 +48,36 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
 
   console.log('Rendering Props button for player:', playerId);
   
-  // Temporary: Just render a simple button to test
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="h-8 px-2 text-xs"
-      onClick={() => console.log('Button clicked for player:', playerId)}
-    >
-      <BarChart3 className="h-3 w-3 mr-1" />
-      Props ({Object.keys(playerProps).length})
-    </Button>
+    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2 text-xs"
+          onClick={() => {
+            console.log('Button clicked, opening modal for player:', playerId);
+            setIsModalOpen(true);
+          }}
+        >
+          <BarChart3 className="h-3 w-3 mr-1" />
+          Props ({Object.keys(playerProps).length})
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            Props for {player.player?.displayName} - Week {selectedWeek}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="mt-4">
+          <PlayerProps 
+            playerId={player.player?.playerDkId} 
+            preFilteredWeek={selectedWeek}
+            preFilteredBookmaker="draftkings"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
