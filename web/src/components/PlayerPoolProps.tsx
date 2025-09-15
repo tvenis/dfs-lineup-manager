@@ -25,8 +25,6 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
   const hasProps = playerProps && Object.keys(playerProps).length > 0 && 
     Object.values(playerProps).some((prop: any) => prop && typeof prop === 'object');
   
-  // Always render something for debugging
-  console.log('PlayerPoolProps render:', { playerId, hasProps, playerPropsLength: Object.keys(playerProps).length });
   
   if (!hasProps) {
     return (
@@ -36,18 +34,32 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
     );
   }
 
-  // Simple test - just return a basic button first
   return (
-    <div className="text-xs">
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 px-2 text-xs"
-        onClick={() => console.log('Button clicked for player:', playerId)}
-      >
-        <BarChart3 className="h-3 w-3 mr-1" />
-        Props ({Object.keys(playerProps).length})
-      </Button>
-    </div>
+    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2 text-xs"
+        >
+          <BarChart3 className="h-3 w-3 mr-1" />
+          Props ({Object.keys(playerProps).length})
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            Props for {player.player?.displayName} - Week {selectedWeek}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="mt-4">
+          <PlayerProps 
+            playerId={player.player?.playerDkId} 
+            preFilteredWeek={selectedWeek}
+            preFilteredBookmaker="draftkings"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
