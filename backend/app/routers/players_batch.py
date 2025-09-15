@@ -56,7 +56,8 @@ def get_player_props_batch(
                 'outcome_point': prop.outcome_point,
                 'outcome_price': prop.outcome_price,
                 'bookmaker': prop.bookmaker,
-                'market': prop.market
+                'market': prop.market,
+                'outcome_likelihood': prop.outcome_likelihood
             })
         
         # Process each player's props to find the best match
@@ -106,7 +107,8 @@ def get_player_props_batch(
                     processed_result[player_id][market] = {
                         'point': best_prop['outcome_point'],
                         'price': best_prop['outcome_price'],
-                        'bookmaker': best_prop['bookmaker']
+                        'bookmaker': best_prop['bookmaker'],
+                        'likelihood': best_prop['outcome_likelihood']
                     }
         
         return processed_result

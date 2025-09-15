@@ -49,45 +49,594 @@ export default function PlayerPoolPage() {
   const [wrRecYdsProps, setWrRecYdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
   const [teRecYdsProps, setTeRecYdsProps] = useState<Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }>>({});
 
-  // Function to fetch QB passing yards props
-  const fetchQbPassYardsProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+  // Unified function to fetch ALL QB props using batch API
+  // This replaces 5+ individual API calls with 2 batch calls for performance
+  const fetchAllQbProps = async (entries: PlayerPoolEntry[], weekId: number) => {
+    const startTime = performance.now();
+    
     try {
       const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
-      const propsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
       
-      // Fetch props for each QB in the player pool
+      if (qbPlayers.length === 0) {
+        // Reset all QB prop states
+        setQbPassYardsProps({});
+        setQbPassingTdsProps({});
+        setQbPassAttemptsProps({});
+        setQbPassCompletionsProps({});
+        setQbRushYardsProps({});
+        setQbTdsOverProps({});
+        return;
+      }
+
+      console.log(`🚀 [BATCH] Starting ALL QB props fetch for ${qbPlayers.length} QBs`);
+      
+      const playerIds = qbPlayers.map(qb => qb.player.playerDkId);
+      console.log(`📡 [BATCH] Making batch API calls for ${playerIds.length} QBs:`, playerIds);
+      
+      // Make two batch calls: one for DraftKings props, one for BetOnlineAG props
+      const [dkProps, betOnlineProps] = await Promise.all([
+        // DraftKings props
+        PlayerService.getPlayerPropsBatch(
+          playerIds,
+          weekId,
+          ['player_pass_yds', 'player_pass_tds', 'player_pass_attempts', 'player_pass_completions', 'player_rush_yds', 'player_tds_over'],
+          ['draftkings']
+        ),
+        // BetOnlineAG props (for TDs over with preference)
+        PlayerService.getPlayerPropsBatch(
+          playerIds,
+          weekId,
+          ['player_tds_over'],
+          ['betonlineag']
+        )
+      ]);
+      
+      console.log(`📡 [BATCH] Received DK response for ${Object.keys(dkProps).length} players`);
+      console.log(`📡 [BATCH] Received BetOnlineAG response for ${Object.keys(betOnlineProps).length} players`);
+      
+      // Initialize all prop maps
+      const passYardsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const passTdsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const passAttemptsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const passCompletionsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const rushYardsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const tdsOverMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      
+      // Process the batch results
       for (const qb of qbPlayers) {
-        try {
-          const propsData = await PlayerService.getPlayerProps(qb.player.playerDkId, { 
-            week_id: weekId, 
-            bookmaker: 'draftkings',
-            market: 'player_pass_yds'
-          });
-          
-          // Find the "Over" prop for passing yards
-          const overProp = propsData.props.find(prop => 
-            prop.outcome_name === 'Over' && 
-            prop.bookmaker === 'draftkings' &&
-            prop.market === 'player_pass_yds'
-          );
-          
-          if (overProp) {
-            propsMap[qb.player.playerDkId] = {
-              point: overProp.outcome_point || undefined,
-              price: overProp.outcome_price || undefined,
-              bookmaker: overProp.bookmaker || undefined,
-              likelihood: overProp.probability || undefined
-            };
+        const playerId = qb.player.playerDkId;
+        const dkPlayerProps = dkProps[playerId] || {};
+        const betOnlinePlayerProps = betOnlineProps[playerId] || {};
+        
+        // Process DraftKings props
+        if (dkPlayerProps['player_pass_yds']) {
+          const prop = dkPlayerProps['player_pass_yds'];
+          passYardsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_pass_tds']) {
+          const prop = dkPlayerProps['player_pass_tds'];
+          passTdsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_pass_attempts']) {
+          const prop = dkPlayerProps['player_pass_attempts'];
+          passAttemptsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_pass_completions']) {
+          const prop = dkPlayerProps['player_pass_completions'];
+          passCompletionsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_rush_yds']) {
+          const prop = dkPlayerProps['player_rush_yds'];
+          rushYardsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        // Process TDs Over with BetOnlineAG preference logic
+        let chosenTdProp = null;
+        
+        // Prefer BetOnlineAG Over 0.5
+        if (betOnlinePlayerProps['player_tds_over']) {
+          const prop = betOnlinePlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
           }
-        } catch (error) {
-          console.error(`Error fetching props for QB ${qb.player.displayName}:`, error);
+        }
+        
+        // Fallback: any BetOnlineAG Over
+        if (!chosenTdProp && betOnlinePlayerProps['player_tds_over']) {
+          chosenTdProp = betOnlinePlayerProps['player_tds_over'];
+        }
+        
+        // Fallback: DraftKings Over 0.5
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          const prop = dkPlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
+          }
+        }
+        
+        // Fallback: any DraftKings Over
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          chosenTdProp = dkPlayerProps['player_tds_over'];
+        }
+        
+        if (chosenTdProp) {
+          tdsOverMap[playerId] = {
+            point: chosenTdProp.point || undefined,
+            price: chosenTdProp.price || undefined,
+            bookmaker: chosenTdProp.bookmaker || undefined,
+            likelihood: chosenTdProp.likelihood || undefined
+          };
         }
       }
       
-      setQbPassYardsProps(propsMap);
-      console.log(`🎯 Fetched passing yards props for ${Object.keys(propsMap).length} QBs`);
+      // Update all state variables
+      setQbPassYardsProps(passYardsMap);
+      setQbPassingTdsProps(passTdsMap);
+      setQbPassAttemptsProps(passAttemptsMap);
+      setQbPassCompletionsProps(passCompletionsMap);
+      setQbRushYardsProps(rushYardsMap);
+      setQbTdsOverProps(tdsOverMap);
+      
+      const endTime = performance.now();
+      const duration = Math.round(endTime - startTime);
+      
+      console.log(`🎯 [BATCH] Fetched ALL QB props for ${qbPlayers.length} QBs in ${duration}ms`);
+      console.log(`   - Passing Yards: ${Object.keys(passYardsMap).length} QBs`);
+      console.log(`   - Passing TDs: ${Object.keys(passTdsMap).length} QBs`);
+      console.log(`   - Pass Attempts: ${Object.keys(passAttemptsMap).length} QBs`);
+      console.log(`   - Pass Completions: ${Object.keys(passCompletionsMap).length} QBs`);
+      console.log(`   - Rush Yards: ${Object.keys(rushYardsMap).length} QBs`);
+      console.log(`   - TDs Over: ${Object.keys(tdsOverMap).length} QBs`);
+      console.log(`   - (2 API calls vs ${qbPlayers.length * 5} individual calls)`);
+      
     } catch (error) {
-      console.error('Error fetching QB passing yards props:', error);
+      console.error('Error fetching ALL QB props (batch):', error);
+    }
+  };
+
+  // Comprehensive function to fetch ALL props (QB + RB + WR/TE) using batch API
+  // This replaces 10+ individual API calls with 2 batch calls for maximum performance
+  const fetchAllPropsBatch = async (entries: PlayerPoolEntry[], weekId: number) => {
+    const startTime = performance.now();
+    
+    try {
+      const qbPlayers = entries.filter(entry => entry.player.position === 'QB');
+      const rbPlayers = entries.filter(entry => entry.player.position === 'RB');
+      const wrPlayers = entries.filter(entry => entry.player.position === 'WR');
+      const tePlayers = entries.filter(entry => entry.player.position === 'TE');
+      
+      const totalPlayers = qbPlayers.length + rbPlayers.length + wrPlayers.length + tePlayers.length;
+      
+      if (totalPlayers === 0) {
+        // Reset all prop states
+        setQbPassYardsProps({});
+        setQbPassingTdsProps({});
+        setQbPassAttemptsProps({});
+        setQbPassCompletionsProps({});
+        setQbRushYardsProps({});
+        setQbTdsOverProps({});
+        setRbRushAttemptsProps({});
+        setRbRushYardsProps({});
+        setRbTdsOverProps({});
+        setWrTdsOverProps({});
+        setTeTdsOverProps({});
+        setWrReceptionsProps({});
+        setTeReceptionsProps({});
+        setWrRecYdsProps({});
+        setTeRecYdsProps({});
+        return;
+      }
+
+      console.log(`🚀 [BATCH] Starting ALL props fetch for ${totalPlayers} players (QB: ${qbPlayers.length}, RB: ${rbPlayers.length}, WR: ${wrPlayers.length}, TE: ${tePlayers.length})`);
+      
+      // Get all player IDs
+      const allPlayerIds = [
+        ...qbPlayers.map(qb => qb.player.playerDkId),
+        ...rbPlayers.map(rb => rb.player.playerDkId),
+        ...wrPlayers.map(wr => wr.player.playerDkId),
+        ...tePlayers.map(te => te.player.playerDkId)
+      ];
+      
+      console.log(`📡 [BATCH] Making batch API calls for ${allPlayerIds.length} players`);
+      
+      // Make two batch calls: one for DraftKings props, one for BetOnlineAG props
+      const [dkProps, betOnlineProps] = await Promise.all([
+        // DraftKings props - all markets
+        PlayerService.getPlayerPropsBatch(
+          allPlayerIds,
+          weekId,
+          [
+            'player_pass_yds', 'player_pass_tds', 'player_pass_attempts', 'player_pass_completions', 'player_rush_yds', 'player_tds_over', // QB
+            'player_rush_attempts', 'player_rush_yds', 'player_tds_over', // RB
+            'player_tds_over', 'player_receptions', 'player_reception_yds' // WR/TE
+          ],
+          ['draftkings']
+        ),
+        // BetOnlineAG props (for TDs over with preference)
+        PlayerService.getPlayerPropsBatch(
+          allPlayerIds,
+          weekId,
+          ['player_tds_over'],
+          ['betonlineag']
+        )
+      ]);
+      
+      console.log(`📡 [BATCH] Received DK response for ${Object.keys(dkProps).length} players`);
+      console.log(`📡 [BATCH] Received BetOnlineAG response for ${Object.keys(betOnlineProps).length} players`);
+      
+      // Initialize all prop maps
+      const passYardsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const passTdsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const passAttemptsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const passCompletionsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const qbRushYardsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const qbTdsOverMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      
+      const rbRushAttemptsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const rbRushYardsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const rbTdsOverMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      
+      const wrTdsOverMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const teTdsOverMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const wrReceptionsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const teReceptionsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const wrRecYdsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      const teRecYdsMap: Record<number, { point?: number; price?: number; bookmaker?: string; likelihood?: number }> = {};
+      
+      // Process QB props
+      for (const qb of qbPlayers) {
+        const playerId = qb.player.playerDkId;
+        const dkPlayerProps = dkProps[playerId] || {};
+        const betOnlinePlayerProps = betOnlineProps[playerId] || {};
+        
+        // Process DraftKings QB props
+        if (dkPlayerProps['player_pass_yds']) {
+          const prop = dkPlayerProps['player_pass_yds'];
+          passYardsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_pass_tds']) {
+          const prop = dkPlayerProps['player_pass_tds'];
+          passTdsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_pass_attempts']) {
+          const prop = dkPlayerProps['player_pass_attempts'];
+          passAttemptsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_pass_completions']) {
+          const prop = dkPlayerProps['player_pass_completions'];
+          passCompletionsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_rush_yds']) {
+          const prop = dkPlayerProps['player_rush_yds'];
+          qbRushYardsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        // Process QB TDs Over with BetOnlineAG preference logic
+        let chosenTdProp = null;
+        
+        // Prefer BetOnlineAG Over 0.5
+        if (betOnlinePlayerProps['player_tds_over']) {
+          const prop = betOnlinePlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
+          }
+        }
+        
+        // Fallback: any BetOnlineAG Over
+        if (!chosenTdProp && betOnlinePlayerProps['player_tds_over']) {
+          chosenTdProp = betOnlinePlayerProps['player_tds_over'];
+        }
+        
+        // Fallback: DraftKings Over 0.5
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          const prop = dkPlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
+          }
+        }
+        
+        // Fallback: any DraftKings Over
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          chosenTdProp = dkPlayerProps['player_tds_over'];
+        }
+        
+        if (chosenTdProp) {
+          qbTdsOverMap[playerId] = {
+            point: chosenTdProp.point || undefined,
+            price: chosenTdProp.price || undefined,
+            bookmaker: chosenTdProp.bookmaker || undefined,
+            likelihood: chosenTdProp.likelihood || undefined
+          };
+        }
+      }
+      
+      // Process RB props
+      for (const rb of rbPlayers) {
+        const playerId = rb.player.playerDkId;
+        const dkPlayerProps = dkProps[playerId] || {};
+        const betOnlinePlayerProps = betOnlineProps[playerId] || {};
+        
+        // Process DraftKings RB props
+        if (dkPlayerProps['player_rush_attempts']) {
+          const prop = dkPlayerProps['player_rush_attempts'];
+          rbRushAttemptsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_rush_yds']) {
+          const prop = dkPlayerProps['player_rush_yds'];
+          rbRushYardsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        // Process RB TDs Over with BetOnlineAG preference logic
+        let chosenTdProp = null;
+        
+        // Prefer BetOnlineAG Over 0.5
+        if (betOnlinePlayerProps['player_tds_over']) {
+          const prop = betOnlinePlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
+          }
+        }
+        
+        // Fallback: any BetOnlineAG Over
+        if (!chosenTdProp && betOnlinePlayerProps['player_tds_over']) {
+          chosenTdProp = betOnlinePlayerProps['player_tds_over'];
+        }
+        
+        // Fallback: DraftKings Over 0.5
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          const prop = dkPlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
+          }
+        }
+        
+        // Fallback: any DraftKings Over
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          chosenTdProp = dkPlayerProps['player_tds_over'];
+        }
+        
+        if (chosenTdProp) {
+          rbTdsOverMap[playerId] = {
+            point: chosenTdProp.point || undefined,
+            price: chosenTdProp.price || undefined,
+            bookmaker: chosenTdProp.bookmaker || undefined,
+            likelihood: chosenTdProp.likelihood || undefined
+          };
+        }
+      }
+      
+      // Process WR props
+      for (const wr of wrPlayers) {
+        const playerId = wr.player.playerDkId;
+        const dkPlayerProps = dkProps[playerId] || {};
+        const betOnlinePlayerProps = betOnlineProps[playerId] || {};
+        
+        // Process DraftKings WR props
+        if (dkPlayerProps['player_receptions']) {
+          const prop = dkPlayerProps['player_receptions'];
+          wrReceptionsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_reception_yds']) {
+          const prop = dkPlayerProps['player_reception_yds'];
+          wrRecYdsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        // Process WR TDs Over with BetOnlineAG preference logic
+        let chosenTdProp = null;
+        
+        // Prefer BetOnlineAG Over 0.5
+        if (betOnlinePlayerProps['player_tds_over']) {
+          const prop = betOnlinePlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
+          }
+        }
+        
+        // Fallback: any BetOnlineAG Over
+        if (!chosenTdProp && betOnlinePlayerProps['player_tds_over']) {
+          chosenTdProp = betOnlinePlayerProps['player_tds_over'];
+        }
+        
+        // Fallback: DraftKings Over 0.5
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          const prop = dkPlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
+          }
+        }
+        
+        // Fallback: any DraftKings Over
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          chosenTdProp = dkPlayerProps['player_tds_over'];
+        }
+        
+        if (chosenTdProp) {
+          wrTdsOverMap[playerId] = {
+            point: chosenTdProp.point || undefined,
+            price: chosenTdProp.price || undefined,
+            bookmaker: chosenTdProp.bookmaker || undefined,
+            likelihood: chosenTdProp.likelihood || undefined
+          };
+        }
+      }
+      
+      // Process TE props
+      for (const te of tePlayers) {
+        const playerId = te.player.playerDkId;
+        const dkPlayerProps = dkProps[playerId] || {};
+        const betOnlinePlayerProps = betOnlineProps[playerId] || {};
+        
+        // Process DraftKings TE props
+        if (dkPlayerProps['player_receptions']) {
+          const prop = dkPlayerProps['player_receptions'];
+          teReceptionsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        if (dkPlayerProps['player_reception_yds']) {
+          const prop = dkPlayerProps['player_reception_yds'];
+          teRecYdsMap[playerId] = {
+            point: prop.point || undefined,
+            price: prop.price || undefined,
+            bookmaker: prop.bookmaker || undefined,
+            likelihood: prop.likelihood || undefined
+          };
+        }
+        
+        // Process TE TDs Over with BetOnlineAG preference logic
+        let chosenTdProp = null;
+        
+        // Prefer BetOnlineAG Over 0.5
+        if (betOnlinePlayerProps['player_tds_over']) {
+          const prop = betOnlinePlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
+          }
+        }
+        
+        // Fallback: any BetOnlineAG Over
+        if (!chosenTdProp && betOnlinePlayerProps['player_tds_over']) {
+          chosenTdProp = betOnlinePlayerProps['player_tds_over'];
+        }
+        
+        // Fallback: DraftKings Over 0.5
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          const prop = dkPlayerProps['player_tds_over'];
+          if (prop.point === 0.5) {
+            chosenTdProp = prop;
+          }
+        }
+        
+        // Fallback: any DraftKings Over
+        if (!chosenTdProp && dkPlayerProps['player_tds_over']) {
+          chosenTdProp = dkPlayerProps['player_tds_over'];
+        }
+        
+        if (chosenTdProp) {
+          teTdsOverMap[playerId] = {
+            point: chosenTdProp.point || undefined,
+            price: chosenTdProp.price || undefined,
+            bookmaker: chosenTdProp.bookmaker || undefined,
+            likelihood: chosenTdProp.likelihood || undefined
+          };
+        }
+      }
+      
+      // Update all state variables
+      setQbPassYardsProps(passYardsMap);
+      setQbPassingTdsProps(passTdsMap);
+      setQbPassAttemptsProps(passAttemptsMap);
+      setQbPassCompletionsProps(passCompletionsMap);
+      setQbRushYardsProps(qbRushYardsMap);
+      setQbTdsOverProps(qbTdsOverMap);
+      
+      setRbRushAttemptsProps(rbRushAttemptsMap);
+      setRbRushYardsProps(rbRushYardsMap);
+      setRbTdsOverProps(rbTdsOverMap);
+      
+      setWrTdsOverProps(wrTdsOverMap);
+      setTeTdsOverProps(teTdsOverMap);
+      setWrReceptionsProps(wrReceptionsMap);
+      setTeReceptionsProps(teReceptionsMap);
+      setWrRecYdsProps(wrRecYdsMap);
+      setTeRecYdsProps(teRecYdsMap);
+      
+      const endTime = performance.now();
+      const duration = Math.round(endTime - startTime);
+      
+      console.log(`🎯 [BATCH] Fetched ALL props for ${totalPlayers} players in ${duration}ms`);
+      console.log(`   QB Props: Passing Yards: ${Object.keys(passYardsMap).length}, Passing TDs: ${Object.keys(passTdsMap).length}, Pass Attempts: ${Object.keys(passAttemptsMap).length}, Pass Completions: ${Object.keys(passCompletionsMap).length}, Rush Yards: ${Object.keys(qbRushYardsMap).length}, TDs Over: ${Object.keys(qbTdsOverMap).length}`);
+      console.log(`   RB Props: Rush Attempts: ${Object.keys(rbRushAttemptsMap).length}, Rush Yards: ${Object.keys(rbRushYardsMap).length}, TDs Over: ${Object.keys(rbTdsOverMap).length}`);
+      console.log(`   WR Props: TDs Over: ${Object.keys(wrTdsOverMap).length}, Receptions: ${Object.keys(wrReceptionsMap).length}, Rec Yards: ${Object.keys(wrRecYdsMap).length}`);
+      console.log(`   TE Props: TDs Over: ${Object.keys(teTdsOverMap).length}, Receptions: ${Object.keys(teReceptionsMap).length}, Rec Yards: ${Object.keys(teRecYdsMap).length}`);
+      console.log(`   - (2 API calls vs ${totalPlayers * 3} individual calls)`);
+      
+    } catch (error) {
+      console.error('Error fetching ALL props (batch):', error);
     }
   };
 
@@ -649,23 +1198,8 @@ export default function PlayerPoolPage() {
           setPlayerPool(poolData.entries || []);
 
           // Fetch QB passing yards, TDs, and attempts/completions props
-          await fetchQbPassYardsProps(poolData.entries || [], defaultWeek.id);
-          await fetchQbPassingTdsProps(poolData.entries || [], defaultWeek.id);
-          await fetchQbPassAttemptsCompletionsProps(poolData.entries || [], defaultWeek.id);
-          await fetchQbRushYardsProps(poolData.entries || [], defaultWeek.id);
-          await fetchQbTdsOverProps(poolData.entries || [], defaultWeek.id);
-          // Fetch RB rush attempts props
-          await fetchRbRushAttemptsProps(poolData.entries || [], defaultWeek.id);
-          // Fetch RB rush yards props
-          await fetchRbRushYardsProps(poolData.entries || [], defaultWeek.id);
-          // Fetch RB 1+ TD props
-          await fetchRbTdsOverProps(poolData.entries || [], defaultWeek.id);
-          // Fetch WR/TE 1+ TD props
-          await fetchWrTeTdsOverProps(poolData.entries || [], defaultWeek.id);
-          // Fetch WR/TE receptions props
-          await fetchWrTeReceptionsProps(poolData.entries || [], defaultWeek.id);
-          // Fetch WR/TE rec yds props
-          await fetchWrTeRecYdsProps(poolData.entries || [], defaultWeek.id);
+          // Fetch ALL props in 2 batch calls instead of 10+ individual calls
+          await fetchAllPropsBatch(poolData.entries || [], defaultWeek.id);
 
           // Prefer server-side joined analysis for accuracy
           try {
@@ -735,23 +1269,8 @@ export default function PlayerPoolPage() {
         setPlayerPool(poolData.entries || []);
         
         // Fetch QB passing yards, TDs, and attempts/completions props
-        await fetchQbPassYardsProps(poolData.entries || [], selectedWeek);
-        await fetchQbPassingTdsProps(poolData.entries || [], selectedWeek);
-        await fetchQbPassAttemptsCompletionsProps(poolData.entries || [], selectedWeek);
-        await fetchQbRushYardsProps(poolData.entries || [], selectedWeek);
-        await fetchQbTdsOverProps(poolData.entries || [], selectedWeek);
-        // Fetch RB rush attempts props
-        await fetchRbRushAttemptsProps(poolData.entries || [], selectedWeek);
-        // Fetch RB rush yards props
-        await fetchRbRushYardsProps(poolData.entries || [], selectedWeek);
-        // Fetch RB 1+ TD props
-        await fetchRbTdsOverProps(poolData.entries || [], selectedWeek);
-        // Fetch WR/TE 1+ TD props
-        await fetchWrTeTdsOverProps(poolData.entries || [], selectedWeek);
-        // Fetch WR/TE receptions props
-        await fetchWrTeReceptionsProps(poolData.entries || [], selectedWeek);
-        // Fetch WR/TE rec yds props
-        await fetchWrTeRecYdsProps(poolData.entries || [], selectedWeek);
+        // Fetch ALL props in 2 batch calls instead of 10+ individual calls
+        await fetchAllPropsBatch(poolData.entries || [], selectedWeek);
         try {
           const analysis = await PlayerService.getPlayerPoolWithAnalysis(selectedWeek);
           const mapByTeam: Record<string, { opponentAbbr: string | null; homeOrAway: 'H' | 'A' | 'N'; proj_spread?: number | null; proj_total?: number | null; implied_team_total?: number | null }> = {};
