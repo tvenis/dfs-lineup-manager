@@ -1,10 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { BarChart3 } from "lucide-react";
-import PlayerProps from "./PlayerProps";
 import type { PlayerPoolEntry } from "@/types/prd";
 
 interface PlayerPoolPropsProps {
@@ -15,7 +12,6 @@ interface PlayerPoolPropsProps {
 }
 
 export function PlayerPoolProps({ player, propsData, position, selectedWeek }: PlayerPoolPropsProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Get player props for this specific player
   const playerId = player.player?.playerDkId;
@@ -34,32 +30,20 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
     );
   }
 
+  // For now, let's use a simple button and implement modal later
   return (
-    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 px-2 text-xs"
-        >
-          <BarChart3 className="h-3 w-3 mr-1" />
-          Props ({Object.keys(playerProps).length})
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            Props for {player.player?.displayName} - Week {selectedWeek}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="mt-4">
-          <PlayerProps 
-            playerId={player.player?.playerDkId} 
-            preFilteredWeek={selectedWeek}
-            preFilteredBookmaker="draftkings"
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-8 px-2 text-xs"
+      onClick={() => {
+        console.log('Props button clicked for player:', playerId);
+        // TODO: Implement modal functionality
+        alert(`Props for ${player.player?.displayName} - ${Object.keys(playerProps).length} props available`);
+      }}
+    >
+      <BarChart3 className="h-3 w-3 mr-1" />
+      Props ({Object.keys(playerProps).length})
+    </Button>
   );
 }
