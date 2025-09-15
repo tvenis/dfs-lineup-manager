@@ -184,48 +184,65 @@ export default function PlayerPoolPage() {
     return stats;
   };
 
-  // Get tier configuration
+  // Get tier configuration (consistent with Lineup Builder)
   const getTierConfig = (tier: number) => {
-    const configs = {
-      1: {
+    switch (tier) {
+      case 1:
+        return {
+          label: 'Core/Cash',
+          description: 'Must-have foundational plays',
+          color: 'bg-blue-100 text-blue-800 border-blue-300',
           icon: '⭐',
-        label: 'Elite',
-        description: 'Top tier players',
-        headerColor: 'bg-gradient-to-r from-yellow-400 to-yellow-500',
-        headerTextColor: 'text-yellow-900',
-        badgeColor: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-        badgeTextColor: 'text-yellow-800'
-      },
-      2: {
+          headerColor: 'bg-blue-50/80 border-b border-blue-200',
+          headerTextColor: 'text-blue-800',
+          badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+          badgeTextColor: 'text-blue-800'
+        };
+      case 2:
+        return {
+          label: 'Strong Plays',
+          description: 'Solid complementary pieces',
+          color: 'bg-green-100 text-green-800 border-green-300',
           icon: '💪',
-        label: 'Strong',
-        description: 'Reliable performers',
-        headerColor: 'bg-gradient-to-r from-green-400 to-green-500',
-        headerTextColor: 'text-green-900',
-        badgeColor: 'bg-green-100 text-green-800 border-green-300',
-        badgeTextColor: 'text-green-800'
-      },
-      3: {
-        icon: '⚡',
-        label: 'Value',
-        description: 'Good value plays',
-        headerColor: 'bg-gradient-to-r from-blue-400 to-blue-500',
-        headerTextColor: 'text-blue-900',
-        badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
-        badgeTextColor: 'text-blue-800'
-      },
-      4: {
+          headerColor: 'bg-green-50/80 border-b border-green-200',
+          headerTextColor: 'text-green-800',
+          badgeColor: 'bg-green-100 text-green-800 border-green-300',
+          badgeTextColor: 'text-green-800'
+        };
+      case 3:
+        return {
+          label: 'GPP/Ceiling',
+          description: 'High-variance leverage plays',
+          color: 'bg-purple-100 text-purple-800 border-purple-300',
+          icon: '🚀',
+          headerColor: 'bg-purple-50/80 border-b border-purple-200',
+          headerTextColor: 'text-purple-800',
+          badgeColor: 'bg-purple-100 text-purple-800 border-purple-300',
+          badgeTextColor: 'text-purple-800'
+        };
+      case 4:
+        return {
+          label: 'Avoids/Thin',
+          description: 'Rarely played options',
+          color: 'bg-red-100 text-red-800 border-red-300',
           icon: '⚠️',
-        label: 'Avoid',
-        description: 'High risk plays',
-        headerColor: 'bg-gradient-to-r from-red-400 to-red-500',
-        headerTextColor: 'text-red-900',
-        badgeColor: 'bg-red-100 text-red-800 border-red-300',
-        badgeTextColor: 'text-red-800'
-      }
-    };
-    
-    return configs[tier as keyof typeof configs] || configs[4];
+          headerColor: 'bg-red-50/80 border-b border-red-200',
+          headerTextColor: 'text-red-800',
+          badgeColor: 'bg-red-100 text-red-800 border-red-300',
+          badgeTextColor: 'text-red-800'
+        };
+      default:
+        return {
+          label: 'Unknown',
+          description: 'Unknown tier',
+          color: 'bg-gray-100 text-gray-800 border-gray-300',
+          icon: '❓',
+          headerColor: 'bg-gray-50/80 border-b border-gray-200',
+          headerTextColor: 'text-gray-800',
+          badgeColor: 'bg-gray-100 text-gray-800 border-gray-300',
+          badgeTextColor: 'text-gray-800'
+        };
+    }
   };
 
   // Handle player updates
