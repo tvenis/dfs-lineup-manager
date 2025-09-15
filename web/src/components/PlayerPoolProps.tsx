@@ -21,19 +21,17 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
   const playerId = player.player?.playerDkId;
   const playerProps = (playerId && propsData[playerId]) || (playerId && (propsData as any)[String(playerId)]) || {};
   
-  // Debug logging
-  console.log('PlayerPoolProps Debug:', {
-    playerId,
-    playerProps,
-    propsDataKeys: Object.keys(propsData),
-    hasPlayerProps: !!playerProps,
-    playerPropsKeys: Object.keys(playerProps),
-    playerPropsLength: Object.keys(playerProps).length
-  });
-  
   // Check if player has any props available (works with new {market}_{bookmaker} structure)
   const hasProps = playerProps && Object.keys(playerProps).length > 0 && 
     Object.values(playerProps).some((prop: any) => prop && typeof prop === 'object');
+  
+  // Debug logging
+  console.log('PlayerPoolProps Debug:', {
+    playerId,
+    hasProps,
+    playerPropsLength: Object.keys(playerProps).length,
+    firstProp: Object.values(playerProps)[0]
+  });
 
   if (!hasProps) {
     return (
@@ -52,7 +50,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
           className="h-8 px-2 text-xs"
         >
           <BarChart3 className="h-3 w-3 mr-1" />
-          Props
+          Props ({Object.keys(playerProps).length})
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
