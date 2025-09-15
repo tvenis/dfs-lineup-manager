@@ -1324,6 +1324,12 @@ export function LineupBuilder({
                           <span className="text-muted-foreground">
                             ${playerEntry?.salary.toLocaleString() || '0'}
                           </span>
+                          <span className="text-muted-foreground text-xs">
+                            {playerEntry?.salary ? `(${((playerEntry.salary / SALARY_CAP) * 100).toFixed(1)}%)` : '(0%)'}
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            {playerEntry?.projectedPoints ? `${playerEntry.projectedPoints.toFixed(1)} pts` : 'N/A'}
+                          </span>
                           <Button
                             variant="ghost"
                             size="sm"
