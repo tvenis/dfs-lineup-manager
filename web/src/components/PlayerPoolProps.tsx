@@ -211,25 +211,25 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
                 >
                   {prop.label}: {prop.value}
                 </Badge>
-                <span className="text-xs text-gray-500">
-                  {prop.likelihood !== undefined && prop.likelihood !== null 
-                    ? `${(prop.likelihood * 100).toFixed(0)}%`
-                    : prop.price 
-                      ? `${prop.price > 0 ? '+' : ''}${prop.price}`
-                      : 'N/A'
-                  }
-                </span>
+        <span className="text-xs text-gray-500">
+          {prop.likelihood !== undefined && prop.likelihood !== null 
+            ? `${prop.likelihood.toFixed(0)}%`
+            : prop.price 
+              ? `${prop.price > 0 ? '+' : ''}${prop.price}`
+              : 'N/A'
+          }
+        </span>
               </div>
             </TooltipTrigger>
             <TooltipContent>
               <div className="space-y-1">
                 <div className="font-medium">{prop.label}</div>
                 <div>Line: {prop.value}</div>
-                {prop.likelihood !== undefined && prop.likelihood !== null ? (
-                  <div>Likelihood: {(prop.likelihood * 100).toFixed(1)}%</div>
-                ) : prop.price && (
-                  <div>Price: {prop.price > 0 ? '+' : ''}{prop.price}</div>
-                )}
+        {prop.likelihood !== undefined && prop.likelihood !== null ? (
+          <div>Likelihood: {prop.likelihood.toFixed(1)}%</div>
+        ) : prop.price && (
+          <div>Price: {prop.price > 0 ? '+' : ''}{prop.price}</div>
+        )}
                 {prop.bookmaker && (
                   <div>Book: {prop.bookmaker}</div>
                 )}
