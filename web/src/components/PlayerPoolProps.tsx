@@ -31,6 +31,7 @@ export function PlayerPoolProps({ player, propsData, position, selectedBookmaker
       )
     : playerProps;
 
+
   const getPropsForPosition = () => {
     const props = [];
     

@@ -32,7 +32,7 @@ export default function PlayerPoolPage() {
   const [activeTab, setActiveTab] = useState<string>('QB');
   const [tierFilter, setTierFilter] = useState<number | 'all'>('all');
   const [draftGroupFilter, setDraftGroupFilter] = useState<string>('all');
-  const [selectedBookmaker, setSelectedBookmaker] = useState<string>('draftkings');
+  const [selectedBookmaker, setSelectedBookmaker] = useState<string>('betonlineag');
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -116,8 +116,8 @@ export default function PlayerPoolPage() {
   // Get available bookmakers from props data
   const availableBookmakers = useMemo(() => {
     const bookmakers = new Set<string>();
-    // Always include draftkings as the default
-    bookmakers.add('draftkings');
+    // Always include betonlineag as the default (has most data)
+    bookmakers.add('betonlineag');
     
     Object.values(propsData).forEach(playerProps => {
       Object.values(playerProps).forEach((prop: any) => {
