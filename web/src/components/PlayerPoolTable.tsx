@@ -616,7 +616,7 @@ export function PlayerPoolTable({
                   </TableCell>
                   <TableCell>
                     <PlayerPoolProps 
-                      player={player} 
+                      player={entry} 
                       propsData={propsData} 
                       position={position}
                       selectedBookmaker={selectedBookmaker}

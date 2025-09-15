@@ -12,20 +12,6 @@ interface PlayerPoolPropsProps {
 }
 
 export function PlayerPoolProps({ player, propsData, position, selectedBookmaker }: PlayerPoolPropsProps) {
-  // Debug logging to understand the data structure
-  console.log('PlayerPoolProps Debug:', {
-    player: player,
-    playerDkId: player.player?.playerDkId,
-    playerDkIdType: typeof player.player?.playerDkId,
-    propsDataKeys: Object.keys(propsData),
-    propsDataKeysTypes: Object.keys(propsData).map(k => typeof k),
-    propsDataLength: Object.keys(propsData).length,
-    selectedBookmaker: selectedBookmaker,
-    position: position,
-    directLookup: propsData[player.player?.playerDkId],
-    stringLookup: propsData[String(player.player?.playerDkId)]
-  });
-
   const playerProps = propsData[player.player?.playerDkId] || propsData[String(player.player?.playerDkId)];
   
   if (!playerProps) {
