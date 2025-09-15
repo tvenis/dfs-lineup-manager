@@ -33,7 +33,10 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
     firstProp: Object.values(playerProps)[0]
   });
 
+  console.log('Rendering PlayerPoolProps:', { hasProps, playerId });
+  
   if (!hasProps) {
+    console.log('Returning No props available for player:', playerId);
     return (
       <div className="text-xs text-gray-400">
         No props available
@@ -41,32 +44,18 @@ export function PlayerPoolProps({ player, propsData, position, selectedWeek }: P
     );
   }
 
+  console.log('Rendering Props button for player:', playerId);
+  
+  // Temporary: Just render a simple button to test
   return (
-    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 px-2 text-xs"
-        >
-          <BarChart3 className="h-3 w-3 mr-1" />
-          Props ({Object.keys(playerProps).length})
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            Props for {player.player?.displayName} - Week {selectedWeek}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="mt-4">
-          <PlayerProps 
-            playerId={player.player?.playerDkId} 
-            preFilteredWeek={selectedWeek}
-            preFilteredBookmaker="draftkings"
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-8 px-2 text-xs"
+      onClick={() => console.log('Button clicked for player:', playerId)}
+    >
+      <BarChart3 className="h-3 w-3 mr-1" />
+      Props ({Object.keys(playerProps).length})
+    </Button>
   );
 }
