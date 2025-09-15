@@ -395,9 +395,9 @@ def get_player_pool_complete(
                 # Find the best prop based on bookmaker preference and outcome
                 best_prop = None
                 
-                # Prefer betonlineag Over 0.5, then betonlineag Over any, then DK Over 0.5, then DK Over any
+                # Prefer draftkings Over 0.5, then draftkings Over any, then betonlineag Over 0.5, then betonlineag Over any
                 for prop in props_list:
-                    if (prop['bookmaker'] == 'betonlineag' and 
+                    if (prop['bookmaker'] == 'draftkings' and 
                         prop['outcome_name'] == 'Over' and 
                         prop['outcome_point'] == 0.5):
                         best_prop = prop
@@ -405,14 +405,14 @@ def get_player_pool_complete(
                 
                 if not best_prop:
                     for prop in props_list:
-                        if (prop['bookmaker'] == 'betonlineag' and 
+                        if (prop['bookmaker'] == 'draftkings' and 
                             prop['outcome_name'] == 'Over'):
                             best_prop = prop
                             break
                 
                 if not best_prop:
                     for prop in props_list:
-                        if (prop['bookmaker'] == 'draftkings' and 
+                        if (prop['bookmaker'] == 'betonlineag' and 
                             prop['outcome_name'] == 'Over' and 
                             prop['outcome_point'] == 0.5):
                             best_prop = prop
@@ -420,7 +420,7 @@ def get_player_pool_complete(
                 
                 if not best_prop:
                     for prop in props_list:
-                        if (prop['bookmaker'] == 'draftkings' and 
+                        if (prop['bookmaker'] == 'betonlineag' and 
                             prop['outcome_name'] == 'Over'):
                             best_prop = prop
                             break
