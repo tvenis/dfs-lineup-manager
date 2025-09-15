@@ -32,7 +32,7 @@ export default function PlayerPoolPage() {
   const [activeTab, setActiveTab] = useState<string>('QB');
   const [tierFilter, setTierFilter] = useState<number | 'all'>('all');
   const [draftGroupFilter, setDraftGroupFilter] = useState<string>('all');
-  const [selectedBookmaker, setSelectedBookmaker] = useState<string>('DraftKings');
+  const [selectedBookmaker, setSelectedBookmaker] = useState<string>('draftkings');
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -92,16 +92,6 @@ export default function PlayerPoolPage() {
       setPlayerPool(data.entries || []);
       setGamesMap(data.games_map || {});
       setPropsData(data.props_data || {});
-      
-      // Debug logging
-      console.log('PlayerPoolPage - Props Data Debug:', {
-        propsDataKeys: Object.keys(data.props_data || {}),
-        propsDataLength: Object.keys(data.props_data || {}).length,
-        samplePropsData: Object.keys(data.props_data || {}).slice(0, 2).reduce((acc, key) => {
-          acc[key] = data.props_data[key];
-          return acc;
-        }, {} as any)
-      });
 
         } catch (error) {
       console.error('Error fetching player data:', error);
@@ -126,8 +116,8 @@ export default function PlayerPoolPage() {
   // Get available bookmakers from props data
   const availableBookmakers = useMemo(() => {
     const bookmakers = new Set<string>();
-    // Always include DraftKings as the default
-    bookmakers.add('DraftKings');
+    // Always include draftkings as the default
+    bookmakers.add('draftkings');
     
     Object.values(propsData).forEach(playerProps => {
       Object.values(playerProps).forEach((prop: any) => {
