@@ -224,6 +224,7 @@ async def get_active_upcoming_weeks(db: Session = Depends(get_db)):
 async def parse_contests_csv(
     file: UploadFile = File(...),
     week_id: int = Form(...),
+    default_lineup_id: str = Form(None),
     db: Session = Depends(get_db),
 ):
     if not file.filename.endswith('.csv'):
@@ -281,6 +282,10 @@ async def parse_contests_csv(
         # Compute result flag: 1 if any winnings > 0
         result_flag = 1 if (_parse_money(win_cash) > 0 or _parse_money(win_ticket) > 0) else 0
 
+        # Use default lineup if no lineup specified in CSV
+        csv_lineup_id = _get_stripped(row, header_map, ["lineup_id", "lineup id"])
+        final_lineup_id = csv_lineup_id or default_lineup_id
+
         staged.append({
             "entry_key": entry_key,
             "contest_id": contest_id,
@@ -288,7 +293,7 @@ async def parse_contests_csv(
             "sport_code": sport_code,
             "game_type_code": game_type_code,
             "contest_type_code": contest_type_code,
-            "lineup_id": _get_stripped(row, header_map, ["lineup_id", "lineup id"]) or None,
+            "lineup_id": final_lineup_id,
             "contest_description": entry_label,
             "contest_opponent": opponent,
             "contest_date_utc": _parse_datetime_est_to_utc(date_est),

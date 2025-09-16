@@ -37,10 +37,19 @@ interface StagedContestRow {
   prize_pool_usd: number
 }
 
+interface Lineup {
+  id: string
+  name: string
+  week_id: number
+  status: string
+}
+
 export function ImportContests() {
   const router = useRouter()
   const [weeks, setWeeks] = useState<Week[]>([])
   const [selectedWeek, setSelectedWeek] = useState<string>('')
+  const [lineups, setLineups] = useState<Lineup[]>([])
+  const [selectedLineup, setSelectedLineup] = useState<string>('none')
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [parsedCount, setParsedCount] = useState<number>(0)
   const [isParsing, setIsParsing] = useState(false)
@@ -48,6 +57,12 @@ export function ImportContests() {
   useEffect(() => {
     fetchWeeks()
   }, [])
+
+  useEffect(() => {
+    if (selectedWeek) {
+      fetchLineups(selectedWeek)
+    }
+  }, [selectedWeek])
 
   const fetchWeeks = async () => {
     try {
@@ -61,6 +76,25 @@ export function ImportContests() {
       }
     } catch (e) {
       console.error('Failed to fetch weeks', e)
+    }
+  }
+
+  const fetchLineups = async (weekId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/lineups?week_id=${weekId}&status=submitted&limit=1000`)
+      if (response.ok) {
+        const data = await response.json()
+        setLineups(data.lineups || [])
+        // Reset selected lineup when week changes
+        setSelectedLineup('none')
+      } else {
+        setLineups([])
+        setSelectedLineup('none')
+      }
+    } catch (e) {
+      console.error('Failed to fetch lineups', e)
+      setLineups([])
+      setSelectedLineup('none')
     }
   }
 
@@ -78,6 +112,9 @@ export function ImportContests() {
       const form = new FormData()
       form.append('file', csvFile)
       form.append('week_id', selectedWeek)
+      if (selectedLineup && selectedLineup !== 'none') {
+        form.append('default_lineup_id', selectedLineup)
+      }
 
       const res = await fetch('http://localhost:8000/api/contests/parse', {
         method: 'POST',
@@ -134,6 +171,29 @@ export function ImportContests() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Default Lineup Selection */}
+          <div className="space-y-2">
+            <Label>Default Lineup (Optional)</Label>
+            <Select value={selectedLineup} onValueChange={setSelectedLineup}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a submitted lineup" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No default lineup</SelectItem>
+                {lineups.map((lineup) => (
+                  <SelectItem key={lineup.id} value={lineup.id}>
+                    {lineup.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {lineups.length === 0 && selectedWeek && (
+              <div className="text-sm text-muted-foreground">
+                No submitted lineups found for this week
+              </div>
+            )}
           </div>
 
           {/* File Selection */}
