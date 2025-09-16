@@ -203,9 +203,9 @@ async def _ensure_dk_contest_details(db: Session, contest_ids: Set[str]):
 
 
 @router.get("/weeks")
-async def get_active_upcoming_weeks(db: Session = Depends(get_db)):
+async def get_active_completed_weeks(db: Session = Depends(get_db)):
     try:
-        weeks = db.query(Week).filter(Week.status.in_(["Active", "Upcoming"]))\
+        weeks = db.query(Week).filter(Week.status.in_(["Active", "Completed"]))\
             .order_by(Week.year, Week.week_number).all()
         formatted = [
             {
