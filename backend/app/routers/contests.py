@@ -98,7 +98,7 @@ async def _ensure_dk_contest_details(db: Session, contest_ids: Set[str]):
     # Lookups
     sport_code_to_id = {s.code.upper(): s.sport_id for s in db.query(Sport).all()}
     from app.models import ContestType as ContestTypeModel
-    ctype_code_to_id = {c.code.lower(): c.contest_type_id for c in db.query(ContestTypeModel).all()}
+    ctype_code_to_id = {c.code: c.contest_type_id for c in db.query(ContestTypeModel).all()}
 
     def _parse_dt(value: str):
         if not value:
@@ -156,10 +156,12 @@ async def _ensure_dk_contest_details(db: Session, contest_ids: Set[str]):
                 inferred_code = None
                 if at.get("is h2h") == "true":
                     inferred_code = "H2H"
+                elif at.get("is fiftyfifty") == "true":
+                    inferred_code = "50/50"
                 elif at.get("isdoubleup") == "true":
-                    inferred_code = "double-up"
+                    inferred_code = "DoubleUp"
                 elif at.get("istournament") == "true":
-                    inferred_code = "tournament"
+                    inferred_code = "Tournament"
                 contest_type_id = ctype_code_to_id.get(inferred_code) if inferred_code else None
 
                 # Rake
