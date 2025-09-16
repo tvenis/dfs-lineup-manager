@@ -2,21 +2,31 @@ from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean, Text, 
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.types import TypeDecorator
-from app.database import Base
+from app.database import Base, DATABASE_URL
 import json
 
 class JSONString(TypeDecorator):
-    """Custom JSON type for SQLite compatibility"""
-    impl = String
+    """Custom JSON type for SQLite compatibility, native JSON for PostgreSQL"""
+    impl = String  # Required base implementation
+    
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(JSON())
+        else:
+            return dialect.type_descriptor(String())
     
     def process_bind_param(self, value, dialect):
-        if value is not None:
-            return json.dumps(value)
+        if dialect.name == 'postgresql':
+            return value  # PostgreSQL handles JSON natively
+        elif value is not None:
+            return json.dumps(value)  # SQLite needs string conversion
         return None
     
     def process_result_value(self, value, dialect):
-        if value is not None:
-            return json.loads(value)
+        if dialect.name == 'postgresql':
+            return value  # PostgreSQL returns JSON directly
+        elif value is not None:
+            return json.loads(value)  # SQLite needs parsing
         return None
 
 class Sport(Base):
@@ -211,7 +221,7 @@ class RecentActivity(Base):
     recordsUpdated = Column(Integer, default=0)  # count of records updated
     recordsSkipped = Column(Integer, default=0)  # count of records skipped
     errors = Column(JSON)  # error details as JSON
-    user = Column(String(100))  # optional user identifier
+    user_name = Column(String(100))  # optional user identifier (renamed from 'user' to avoid PostgreSQL reserved keyword)
     details = Column(JSON)  # additional details as JSON
     
     # Relationships
