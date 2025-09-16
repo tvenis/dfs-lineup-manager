@@ -15,6 +15,7 @@ interface Row {
   week_id: number
   sport_code: string
   game_type_code: string
+  contest_type_code: string
   lineup_id?: string | null
   contest_description?: string
   contest_opponent?: string
@@ -122,7 +123,7 @@ export default function ContestReviewPage() {
                   <TableHead>Entry Key</TableHead>
                   <TableHead>Contest ID</TableHead>
                   <TableHead>Sport</TableHead>
-                  <TableHead>Game Type</TableHead>
+                  <TableHead>Contest Type</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Opponent</TableHead>
                   <TableHead>Lineup</TableHead>
@@ -140,7 +141,7 @@ export default function ContestReviewPage() {
                       <Input value={r.sport_code} onChange={e => updateRow(i, 'sport_code', e.target.value)} />
                     </TableCell>
                     <TableCell className="min-w-28">
-                      <Input value={r.game_type_code} onChange={e => updateRow(i, 'game_type_code', e.target.value)} />
+                      <Input value={r.contest_type_code} onChange={e => updateRow(i, 'contest_type_code', e.target.value)} />
                     </TableCell>
                     <TableCell className="min-w-64">
                       <Input value={r.contest_description || ''} onChange={e => updateRow(i, 'contest_description', e.target.value)} />
