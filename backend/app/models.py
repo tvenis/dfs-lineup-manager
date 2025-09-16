@@ -5,29 +5,8 @@ from sqlalchemy.types import TypeDecorator
 from app.database import Base, DATABASE_URL
 import json
 
-class JSONString(TypeDecorator):
-    """Custom JSON type for SQLite compatibility, native JSON for PostgreSQL"""
-    impl = String  # Required base implementation
-    
-    def load_dialect_impl(self, dialect):
-        if dialect.name == 'postgresql':
-            return dialect.type_descriptor(JSON())
-        else:
-            return dialect.type_descriptor(String())
-    
-    def process_bind_param(self, value, dialect):
-        if dialect.name == 'postgresql':
-            return value  # PostgreSQL handles JSON natively
-        elif value is not None:
-            return json.dumps(value)  # SQLite needs string conversion
-        return None
-    
-    def process_result_value(self, value, dialect):
-        if dialect.name == 'postgresql':
-            return value  # PostgreSQL returns JSON directly
-        elif value is not None:
-            return json.loads(value)  # SQLite needs parsing
-        return None
+# Since we're using PostgreSQL everywhere, we can use native JSON
+# No need for custom JSONString type anymore
 
 class Sport(Base):
     __tablename__ = "sport"
@@ -233,9 +212,9 @@ class Lineup(Base):
     id = Column(String(50), primary_key=True)
     week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)  # Updated to Integer
     name = Column(String(200), nullable=False)
-    tags = Column(JSONString)  # string[] (free-form labels) - using custom JSON type
+    tags = Column(JSON)  # string[] (free-form labels)
     game_style = Column(String(50))  # e.g., 'Classic', 'Showdown', etc.
-    slots = Column(JSONString, nullable=False)  # QB, RB1, RB2, WR1, WR2, WR3, TE, FLEX, DST; each references playerId - using custom JSON type
+    slots = Column(JSON, nullable=False)  # QB, RB1, RB2, WR1, WR2, WR3, TE, FLEX, DST; each references playerId
     status = Column(String(20), default="created")  # 'created' | 'exported' | 'uploaded' | 'submitted'
     salary_used = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
