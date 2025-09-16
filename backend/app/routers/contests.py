@@ -155,7 +155,7 @@ async def _ensure_dk_contest_details(db: Session, contest_ids: Set[str]):
                 at = {str(k).lower(): str(v).lower() for k, v in attributes.items()}
                 inferred_code = None
                 if at.get("is h2h") == "true":
-                    inferred_code = "h2h"
+                    inferred_code = "H2H"
                 elif at.get("isdoubleup") == "true":
                     inferred_code = "double-up"
                 elif at.get("istournament") == "true":
@@ -311,6 +311,30 @@ async def parse_contests_csv(
         # Swallow but return a hint in response for debugging
         return {"staged": staged, "count": len(staged), "dk_detail_error": str(e)}
 
+    # Extract opponent names from DraftKings API for H2H contests
+    try:
+        from app.models import ContestType as ContestTypeModel
+        contest_types = db.query(ContestTypeModel).all()
+        code_to_contest_type = {c.code: c.contest_type_id for c in contest_types}
+        
+        # Get DK contest details for all contests
+        dk_details = db.query(DKContestDetail).filter(DKContestDetail.contest_id.in_(list(contest_keys))).all()
+        dk_detail_map = {d.contest_id: d for d in dk_details}
+        
+        # Update staged data with opponent names from DK API
+        for staged_row in staged:
+            contest_id = str(staged_row.get("contest_id"))
+            if contest_id and contest_id in dk_detail_map:
+                dk_detail = dk_detail_map[contest_id]
+                if dk_detail.contest_type_id == code_to_contest_type.get("H2H"):
+                    attributes = dk_detail.attributes or {}
+                    opponent_name = attributes.get("Head to Head Opponent Name")
+                    if opponent_name:
+                        staged_row["contest_opponent"] = opponent_name
+    except Exception as e:
+        # Log error but don't fail the parse
+        print(f"Error extracting opponent names: {e}")
+
     return {"staged": staged, "count": len(staged)}
 
 
@@ -359,7 +383,7 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                 if dk_detail:
                     contest_type_id = dk_detail.contest_type_id
                     # Extract opponent from attributes if it's H2H
-                    if dk_detail.contest_type_id == code_to_contest_type.get("h2h"):
+                    if dk_detail.contest_type_id == code_to_contest_type.get("H2H"):
                         attributes = dk_detail.attributes or {}
                         contest_opponent = attributes.get("Head to Head Opponent Name")
                 
@@ -438,7 +462,7 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                         dk = db.query(DKContestDetail).filter(DKContestDetail.contest_id == str(contest_id)).first()
                         if dk and dk.attributes:
                             at = {str(k).lower(): str(v) for k, v in dk.attributes.items()}
-                            if at.get('ish2h', '').lower() == 'true':
+                            if at.get('is h2h', '').lower() == 'true':
                                 opp = dk.attributes.get('Head to Head Opponent Name') or dk.attributes.get('opponent')
                                 if opp:
                                     (existing if existing else obj).contest_opponent = opp
