@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { PlayerService } from '@/lib/playerService';
+import { PlayerService, PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 import { WeekService } from '@/lib/weekService';
 import type { PlayerPoolEntry, Week } from '@/types/prd';
 import { PlayerWeekAnalysis, WeekAnalysisData } from '@/components/PlayerWeekAnalysis';
@@ -18,7 +18,7 @@ export default function PlayerPoolPage() {
   // State management
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
-  const [playerPool, setPlayerPool] = useState<PlayerPoolEntry[]>([]);
+  const [playerPool, setPlayerPool] = useState<PlayerPoolEntryWithAnalysisDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gamesMap, setGamesMap] = useState<Record<string, any>>({});
@@ -40,9 +40,9 @@ export default function PlayerPoolPage() {
     const fetchWeeks = async () => {
       try {
         const weeksData = await WeekService.getWeeks();
-        setWeeks(weeksData);
-        if (weeksData.length > 0) {
-          setSelectedWeek(weeksData[0].id);
+        setWeeks(weeksData.weeks);
+        if (weeksData.weeks.length > 0) {
+          setSelectedWeek(weeksData.weeks[0].id);
         }
       } catch (error) {
         console.error('Error fetching weeks:', error);
@@ -67,9 +67,8 @@ export default function PlayerPoolPage() {
       setError(null);
 
       const data = await PlayerService.getPlayerPoolComplete(weekId, {
-        limit: 1000,
-        include_props: true
-      });
+        limit: 1000
+      }, true);
 
       setPlayerPool(data.entries || []);
       setGamesMap(data.games_map || {});
@@ -87,8 +86,8 @@ export default function PlayerPoolPage() {
   const getUniqueDraftGroups = useMemo(() => {
     const draftGroups = new Set<string>();
     playerPool.forEach(player => {
-      if (player.draftGroup) {
-        draftGroups.add(player.draftGroup);
+      if (player.entry.draftGroup) {
+        draftGroups.add(player.entry.draftGroup);
       }
     });
     return Array.from(draftGroups).sort();
@@ -96,7 +95,7 @@ export default function PlayerPoolPage() {
 
   // Group players by position
   const playersByPosition = useMemo(() => {
-    const grouped: Record<string, PlayerPoolEntry[]> = {
+    const grouped: Record<string, PlayerPoolEntryWithAnalysisDto[]> = {
       QB: [],
       RB: [],
       WR: [],
@@ -105,7 +104,7 @@ export default function PlayerPoolPage() {
     };
 
     playerPool.forEach(player => {
-      const position = player.player.position;
+      const position = player.entry.player.position;
       if (grouped[position]) {
         grouped[position].push(player);
       }
@@ -135,14 +134,14 @@ export default function PlayerPoolPage() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       players = players.filter(player => 
-        player.player.displayName.toLowerCase().includes(term) ||
-        player.player.team.toLowerCase().includes(term)
+        player.entry.player.displayName.toLowerCase().includes(term) ||
+        player.entry.player.team.toLowerCase().includes(term)
       );
     }
 
     // Apply draft group filter
     if (draftGroupFilter !== 'all') {
-      players = players.filter(player => player.draftGroup === draftGroupFilter);
+      players = players.filter(player => player.entry.draftGroup === draftGroupFilter);
     }
 
     return players;
@@ -154,7 +153,7 @@ export default function PlayerPoolPage() {
     const stats = { tier1: 0, tier2: 0, tier3: 0, tier4: 0 };
     
     players.forEach(player => {
-      const tier = player.tier || 4;
+      const tier = player.entry.tier || 4;
       if (tier === 1) stats.tier1++;
       else if (tier === 2) stats.tier2++;
       else if (tier === 3) stats.tier3++;
@@ -225,8 +224,8 @@ export default function PlayerPoolPage() {
       // Update local state
       setPlayerPool(prev => 
         prev.map(player => 
-          player.id === playerId 
-            ? { ...player, ...updates }
+          player.entry.id === playerId 
+            ? { ...player, entry: { ...player.entry, ...updates } }
             : player
         )
       );
@@ -248,8 +247,8 @@ export default function PlayerPoolPage() {
       // Update local state
       setPlayerPool(prev => 
         prev.map(player => {
-          const update = updates.find(u => u.playerId === player.id);
-          return update ? { ...player, ...update.updates } : player;
+          const update = updates.find(u => u.playerId === player.entry.id);
+          return update ? { ...player, entry: { ...player.entry, ...update.updates } } : player;
         })
       );
     } catch (error) {
@@ -329,7 +328,7 @@ export default function PlayerPoolPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           {(['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'] as string[]).map((position) => {
             const filteredPlayers = getFilteredPlayers(position);
-            const excludedCount = filteredPlayers.filter(player => player.excluded === true).length;
+            const excludedCount = filteredPlayers.filter(player => player.entry.excluded === true).length;
             const tierStats = getTierStats(position);
 
             return (
@@ -337,6 +336,7 @@ export default function PlayerPoolPage() {
                 <PlayerPoolTable
                   players={filteredPlayers}
                   position={position}
+                  selectedWeek={selectedWeek!}
                   gamesMap={gamesMap}
                   propsData={propsData}
                   hideExcluded={hideExcluded}

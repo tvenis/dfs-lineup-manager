@@ -46,7 +46,7 @@ export default function OptimizedPlayerPool() {
     };
 
     playerPool.forEach(entry => {
-      const position = entry.player.position;
+      const position = entry.entry.player.position;
       if (grouped[position]) {
         grouped[position].push(entry);
       }
@@ -59,8 +59,8 @@ export default function OptimizedPlayerPool() {
   const getUniqueDraftGroups = useMemo(() => {
     const draftGroups = new Set<string>();
     playerPool.forEach(entry => {
-      if (entry.draftGroup) {
-        draftGroups.add(entry.draftGroup);
+      if (entry.entry.draftGroup) {
+        draftGroups.add(entry.entry.draftGroup);
       }
     });
     return Array.from(draftGroups).sort();
@@ -74,21 +74,21 @@ export default function OptimizedPlayerPool() {
       // Apply filters
       if (searchTerm) {
         players = players.filter(entry => 
-          entry.player.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          entry.player.team.toLowerCase().includes(searchTerm.toLowerCase())
+          entry.entry.player.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          entry.entry.player.team.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
 
       if (hideExcluded) {
-        players = players.filter(entry => !entry.excluded);
+        players = players.filter(entry => !entry.entry.excluded);
       }
 
       if (tierFilter !== 'all') {
-        players = players.filter(entry => entry.tier === tierFilter);
+        players = players.filter(entry => entry.entry.tier === tierFilter);
       }
 
       if (draftGroupFilter !== 'all') {
-        players = players.filter(entry => entry.draftGroup === draftGroupFilter);
+        players = players.filter(entry => entry.entry.draftGroup === draftGroupFilter);
       }
 
       // Sort players
@@ -262,15 +262,15 @@ export default function OptimizedPlayerPool() {
                   </TableHeader>
                   <TableBody>
                     {filteredPlayers.map((entry) => {
-                      const props = getPlayerProps(entry.player.playerDkId, 'player_pass_yds');
+                      const props = getPlayerProps(entry.entry.player.playerDkId, 'player_pass_yds');
                       return (
-                        <TableRow key={entry.id}>
+                        <TableRow key={entry.entry.id}>
                           <TableCell className="font-medium">
-                            {entry.player.displayName}
+                            {entry.entry.player.displayName}
                           </TableCell>
-                          <TableCell>{entry.player.team}</TableCell>
-                          <TableCell>${entry.salary?.toLocaleString()}</TableCell>
-                          <TableCell>{entry.projectedPoints?.toFixed(1)}</TableCell>
+                          <TableCell>{entry.entry.player.team}</TableCell>
+                          <TableCell>${entry.entry.salary?.toLocaleString()}</TableCell>
+                          <TableCell>{entry.entry.projectedPoints?.toFixed(1)}</TableCell>
                           <TableCell>
                             {props.point && (
                               <span className="text-sm text-gray-600">
@@ -279,7 +279,7 @@ export default function OptimizedPlayerPool() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Link href={`/profile/${entry.player.playerDkId}`}>
+                            <Link href={`/profile/${entry.entry.player.playerDkId}`}>
                               <Button variant="ghost" size="sm">
                                 <ExternalLink className="h-4 w-4" />
                               </Button>

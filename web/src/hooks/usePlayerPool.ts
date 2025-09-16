@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { PlayerService } from '@/lib/playerService';
+import { PlayerService, PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 import type { PlayerPoolEntry, Week } from '@/types/prd';
 
 interface PlayerProps {
@@ -16,7 +16,7 @@ interface UsePlayerPoolReturn {
   // Data
   weeks: Week[];
   selectedWeek: number | null;
-  playerPool: PlayerPoolEntry[];
+  playerPool: PlayerPoolEntryWithAnalysisDto[];
   playerProps: PlayerProps;
   gamesMap: Record<string, any>;
   
@@ -32,7 +32,7 @@ interface UsePlayerPoolReturn {
 export function usePlayerPool(): UsePlayerPoolReturn {
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
-  const [playerPool, setPlayerPool] = useState<PlayerPoolEntry[]>([]);
+  const [playerPool, setPlayerPool] = useState<PlayerPoolEntryWithAnalysisDto[]>([]);
   const [playerProps, setPlayerProps] = useState<PlayerProps>({});
   const [gamesMap, setGamesMap] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);

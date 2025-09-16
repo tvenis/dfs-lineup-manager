@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { PlayerService } from '@/lib/playerService';
+import { PlayerService, PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 import { WeekService } from '@/lib/weekService';
 import type { PlayerPoolEntry, Week } from '@/types/prd';
 import { PlayerWeekAnalysis, WeekAnalysisData } from '@/components/PlayerWeekAnalysis';
@@ -20,7 +20,7 @@ export default function PlayerPoolPage() {
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [activeWeekId, setActiveWeekId] = useState<number | null>(null);
   const [weeksLoading, setWeeksLoading] = useState(true);
-  const [playerPool, setPlayerPool] = useState<PlayerPoolEntry[]>([]);
+  const [playerPool, setPlayerPool] = useState<PlayerPoolEntryWithAnalysisDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gamesMap, setGamesMap] = useState<Record<string, any>>({});
@@ -84,9 +84,8 @@ export default function PlayerPoolPage() {
       setError(null);
 
       const data = await PlayerService.getPlayerPoolComplete(weekId, {
-        limit: 1000,
-        include_props: true
-      });
+        limit: 1000
+      }, true);
 
       setPlayerPool(data.entries || []);
       setGamesMap(data.games_map || {});
@@ -400,7 +399,7 @@ export default function PlayerPoolPage() {
                   propsData={propsData}
                   hideExcluded={hideExcluded}
                   tierFilter={tierFilter}
-                  selectedWeek={selectedWeek}
+                  selectedWeek={selectedWeek!}
                   onPlayerUpdate={handlePlayerUpdate}
                   onBulkUpdate={handleBulkUpdate}
                   getTierConfig={getTierConfig}

@@ -11,14 +11,10 @@ import { ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { PlayerPoolProps } from '@/components/PlayerPoolProps';
 import type { PlayerPoolEntry } from '@/types/prd';
-
-interface PlayerPoolEntryWithAnalysis {
-  entry: PlayerPoolEntry;
-  analysis?: any;
-}
+import type { PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 
 interface PlayerPoolTableProps {
-  players: (PlayerPoolEntry | PlayerPoolEntryWithAnalysis)[];
+  players: (PlayerPoolEntry | PlayerPoolEntryWithAnalysisDto)[];
   position: string;
   gamesMap: Record<string, any>;
   propsData: Record<number, Record<string, any>>;
@@ -82,20 +78,25 @@ export function PlayerPoolTable({
   const [sortField, setSortField] = useState<string>('projection');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+  // Helper function to get the entry from either type
+  const getEntry = (player: PlayerPoolEntry | PlayerPoolEntryWithAnalysisDto): PlayerPoolEntry => {
+    return 'entry' in player ? player.entry : player;
+  };
+
   // Filter players based on hideExcluded and tierFilter
   const filteredPlayers = useMemo(() => {
     let filtered = players;
     
     if (hideExcluded) {
       filtered = filtered.filter(player => {
-        const entry = player.entry || player;
+        const entry = getEntry(player);
         return !entry.excluded;
       });
     }
     
     if (tierFilter !== 'all') {
       filtered = filtered.filter(player => {
-        const entry = player.entry || player;
+        const entry = getEntry(player);
         return entry.tier === tierFilter;
       });
     }
@@ -106,8 +107,8 @@ export function PlayerPoolTable({
   // Sort players
   const sortedPlayers = useMemo(() => {
     return [...filteredPlayers].sort((a, b) => {
-      const aEntry = a.entry || a;
-      const bEntry = b.entry || b;
+      const aEntry = getEntry(a);
+      const bEntry = getEntry(b);
       let aValue: any, bValue: any;
       
       switch (sortField) {
@@ -193,8 +194,8 @@ export function PlayerPoolTable({
   };
 
 
-  const getGameInfo = (player: PlayerPoolEntry | PlayerPoolEntryWithAnalysis) => {
-    const entry = player.entry || player;
+  const getGameInfo = (player: PlayerPoolEntry | PlayerPoolEntryWithAnalysisDto) => {
+    const entry = getEntry(player);
     const team = entry.player?.team;
     const gameInfo = gamesMap[team];
     
@@ -420,7 +421,7 @@ export function PlayerPoolTable({
           </TableHeader>
           <TableBody>
             {sortedPlayers.map((player) => {
-              const entry = player.entry || player;
+              const entry = getEntry(player);
               return (
                 <TableRow key={entry.id} className={entry.excluded ? 'opacity-50' : ''}>
                   <TableCell>
@@ -483,7 +484,7 @@ export function PlayerPoolTable({
                   <TableCell>
                     <div className="font-mono text-sm flex items-center gap-1">
                       {(() => {
-                        const entry = player.entry || player;
+                        const entry = getEntry(player);
                         const team = entry.player?.team;
                         const gameInfo = gamesMap[team];
                         const total = gameInfo?.proj_total;
@@ -519,7 +520,7 @@ export function PlayerPoolTable({
                   <TableCell>
                     <div className="font-mono text-sm flex items-center gap-1">
                       {(() => {
-                        const entry = player.entry || player;
+                        const entry = getEntry(player);
                         const team = entry.player?.team;
                         const gameInfo = gamesMap[team];
                         const impliedTotal = gameInfo?.implied_team_total;

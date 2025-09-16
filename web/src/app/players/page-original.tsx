@@ -73,23 +73,16 @@ export default function PlayerPoolPage() {
       const playerIds = qbPlayers.map(qb => qb.player.playerDkId);
       console.log(`📡 [BATCH] Making batch API calls for ${playerIds.length} QBs:`, playerIds);
       
-      // Make two batch calls: one for DraftKings props, one for BetOnlineAG props
-      const [dkProps, betOnlineProps] = await Promise.all([
-        // DraftKings props
-        PlayerService.getPlayerPropsBatch(
-          playerIds,
-          weekId,
-          ['player_pass_yds', 'player_pass_tds', 'player_pass_attempts', 'player_pass_completions', 'player_rush_yds', 'player_tds_over'],
-          ['draftkings']
-        ),
-        // BetOnlineAG props (for TDs over with preference)
-        PlayerService.getPlayerPropsBatch(
-          playerIds,
-          weekId,
-          ['player_tds_over'],
-          ['betonlineag']
-        )
-      ]);
+      // Make single batch call for all props (includes both DraftKings and BetOnlineAG)
+      const allProps = await PlayerService.getPlayerPropsBatch(
+        playerIds,
+        weekId,
+        ['player_pass_yds', 'player_pass_tds', 'player_pass_attempts', 'player_pass_completions', 'player_rush_yds', 'player_tds_over']
+      );
+      
+      // Use the same props data for both variables (since the service already includes all bookmakers)
+      const dkProps = allProps;
+      const betOnlineProps = allProps;
       
       console.log(`📡 [BATCH] Received DK response for ${Object.keys(dkProps).length} players`);
       console.log(`📡 [BATCH] Received BetOnlineAG response for ${Object.keys(betOnlineProps).length} players`);
@@ -268,27 +261,20 @@ export default function PlayerPoolPage() {
       
       console.log(`📡 [BATCH] Making batch API calls for ${allPlayerIds.length} players`);
       
-      // Make two batch calls: one for DraftKings props, one for BetOnlineAG props
-      const [dkProps, betOnlineProps] = await Promise.all([
-        // DraftKings props - all markets
-        PlayerService.getPlayerPropsBatch(
-          allPlayerIds,
-          weekId,
-          [
-            'player_pass_yds', 'player_pass_tds', 'player_pass_attempts', 'player_pass_completions', 'player_rush_yds', 'player_tds_over', // QB
-            'player_rush_attempts', 'player_rush_yds', 'player_tds_over', // RB
-            'player_tds_over', 'player_receptions', 'player_reception_yds' // WR/TE
-          ],
-          ['draftkings']
-        ),
-        // BetOnlineAG props (for TDs over with preference)
-        PlayerService.getPlayerPropsBatch(
-          allPlayerIds,
-          weekId,
-          ['player_tds_over'],
-          ['betonlineag']
-        )
-      ]);
+      // Make single batch call for all props (includes both DraftKings and BetOnlineAG)
+      const allProps = await PlayerService.getPlayerPropsBatch(
+        allPlayerIds,
+        weekId,
+        [
+          'player_pass_yds', 'player_pass_tds', 'player_pass_attempts', 'player_pass_completions', 'player_rush_yds', 'player_tds_over', // QB
+          'player_rush_attempts', 'player_rush_yds', 'player_tds_over', // RB
+          'player_tds_over', 'player_receptions', 'player_reception_yds' // WR/TE
+        ]
+      );
+      
+      // Use the same props data for both variables (since the service already includes all bookmakers)
+      const dkProps = allProps;
+      const betOnlineProps = allProps;
       
       console.log(`📡 [BATCH] Received DK response for ${Object.keys(dkProps).length} players`);
       console.log(`📡 [BATCH] Received BetOnlineAG response for ${Object.keys(betOnlineProps).length} players`);
