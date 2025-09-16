@@ -328,11 +328,21 @@ async def parse_contests_csv(
         dk_details = db.query(DKContestDetail).filter(DKContestDetail.contest_id.in_(list(contest_keys))).all()
         dk_detail_map = {d.contest_id: d for d in dk_details}
         
-        # Update staged data with opponent names from DK API
+        # Update staged data with contest type and opponent names from DK API
         for staged_row in staged:
             contest_id = str(staged_row.get("contest_id"))
             if contest_id and contest_id in dk_detail_map:
                 dk_detail = dk_detail_map[contest_id]
+                
+                # Update contest type from DK API
+                if dk_detail.contest_type_id:
+                    # Find the contest type code from the ID
+                    id_to_code = {c.contest_type_id: c.code for c in contest_types}
+                    contest_type_code = id_to_code.get(dk_detail.contest_type_id)
+                    if contest_type_code:
+                        staged_row["contest_type_code"] = contest_type_code
+                
+                # Update opponent name for H2H contests
                 if dk_detail.contest_type_id == code_to_contest_type.get("H2H"):
                     attributes = dk_detail.attributes or {}
                     opponent_name = attributes.get("Head to Head Opponent Name")

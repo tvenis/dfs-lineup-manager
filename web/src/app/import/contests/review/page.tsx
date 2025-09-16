@@ -141,7 +141,11 @@ export default function ContestReviewPage() {
                       <Input value={r.sport_code} onChange={e => updateRow(i, 'sport_code', e.target.value)} />
                     </TableCell>
                     <TableCell className="min-w-28">
-                      <Input value={r.contest_type_code} onChange={e => updateRow(i, 'contest_type_code', e.target.value)} />
+                      <Input 
+                        value={r.contest_type_code || ''} 
+                        onChange={e => updateRow(i, 'contest_type_code', e.target.value)}
+                        placeholder="Contest Type"
+                      />
                     </TableCell>
                     <TableCell className="min-w-64">
                       <Input value={r.contest_description || ''} onChange={e => updateRow(i, 'contest_description', e.target.value)} />
