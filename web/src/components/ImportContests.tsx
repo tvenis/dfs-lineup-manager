@@ -71,7 +71,10 @@ export function ImportContests() {
         const data = await response.json()
         setWeeks(data.weeks)
         if (data.weeks.length > 0) {
-          setSelectedWeek(data.weeks[0].id.toString())
+          // Find the Active week first, fallback to first week if no Active week
+          const activeWeek = data.weeks.find((week: Week) => week.status === 'Active')
+          const defaultWeek = activeWeek || data.weeks[0]
+          setSelectedWeek(defaultWeek.id.toString())
         }
       }
     } catch (e) {
