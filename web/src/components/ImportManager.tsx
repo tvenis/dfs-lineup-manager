@@ -16,6 +16,7 @@ import { ImportPlayerProjections } from './ImportPlayerProjections'
 import { ImportPlayerActuals } from './ImportPlayerActuals'
 import { ImportContests } from './ImportContests'
 import { Week } from '@/types/prd'
+import { API_CONFIG, buildApiUrl } from '@/config/api'
 
 
 
@@ -144,7 +145,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         return
       }
       try {
-        const response = await fetch(`http://localhost:8000/api/draftgroups/?week_id=${selectedWeekId}`)
+        const response = await fetch(buildApiUrl(`/api/draftgroups/?week_id=${selectedWeekId}`))
         if (response.ok) {
           const data = await response.json()
           setDraftGroups(Array.isArray(data) ? data : [])
@@ -163,7 +164,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
 
   const fetchWeeks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/weeks/')
+      const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS))
       if (response.ok) {
         const data = await response.json()
         setWeeks(data.weeks)

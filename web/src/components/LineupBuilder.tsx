@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { PlayerService } from '@/lib/playerService'
 import { LineupService } from '@/lib/lineupService'
 import { WeekService } from '@/lib/weekService'
+import { API_CONFIG, buildApiUrl } from '@/config/api'
 import { LineupDisplayData, LineupPlayer } from '@/types/prd'
 import { PlayerPoolEntry, Player, Week, LineupSlotId } from '@/types/prd'
 import { getPositionBadgeClasses } from '@/lib/positionColors'
@@ -181,7 +182,7 @@ export function LineupBuilder({
       try {
         console.log('📡 Testing direct fetch to backend...')
         try {
-          const directResponse = await fetch('http://localhost:8000/api/weeks/')
+          const directResponse = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS))
           console.log('✅ Direct fetch response status:', directResponse.status)
           const directData = await directResponse.json()
           console.log('✅ Direct fetch data:', directData)

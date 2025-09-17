@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Alert, AlertDescription } from './ui/alert'
 import { Badge } from './ui/badge'
 import { Upload, FileText, RefreshCw } from 'lucide-react'
+import { buildApiUrl } from '@/config/api'
 
 interface ImportPlayerProjectionsProps {
   onImportComplete: (importData: {
@@ -83,7 +84,7 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
 
   const fetchWeeks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/projections/weeks')
+      const response = await fetch(buildApiUrl('/api/projections/weeks'))
       if (response.ok) {
         const data = await response.json()
         setWeeks(data.weeks)

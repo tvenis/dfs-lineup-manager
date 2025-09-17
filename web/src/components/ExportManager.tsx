@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from './ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Label } from './ui/label'
 import { Download, FileText, FileJson, CheckCircle, Eye, RefreshCw } from 'lucide-react'
+import { buildApiUrl } from '@/config/api'
 
 // Types for API responses
 interface Week {
@@ -44,7 +45,7 @@ export function ExportManager() {
 
   const fetchWeeks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/draftkings/weeks')
+      const response = await fetch(buildApiUrl('/api/draftkings/weeks'))
       if (response.ok) {
         const data = await response.json()
         setWeeks(data.weeks)

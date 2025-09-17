@@ -9,6 +9,7 @@ import { Label } from './ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Alert, AlertDescription } from './ui/alert'
 import { FileText, RefreshCw, Upload } from 'lucide-react'
+import { buildApiUrl } from '@/config/api'
 
 interface Week {
   id: number
@@ -66,7 +67,7 @@ export function ImportContests() {
 
   const fetchWeeks = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/contests/weeks')
+      const response = await fetch(buildApiUrl('/api/contests/weeks'))
       if (response.ok) {
         const data = await response.json()
         setWeeks(data.weeks)
