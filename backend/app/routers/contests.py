@@ -526,7 +526,7 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
 
 
 @router.get("/")
-async def list_contests(week_id: int | None = None, limit: int = 100, db: Session = Depends(get_db)):
+async def list_contests(week_id: int | None = None, limit: int = 1000, db: Session = Depends(get_db)):
     """List contests, optionally filtered by week, sorted by most recent first."""
     try:
         query = db.query(Contest)
