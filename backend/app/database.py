@@ -5,9 +5,10 @@ from sqlalchemy.orm import sessionmaker
 
 # Database URL configuration
 # Use Neon PostgreSQL for all environments
-# Priority: DATABASE_URL > STORAGE_URL > LOCAL_DATABASE_URL
+# Priority: DATABASE_URL > DATABASE_DATABASE_URL (Neon) > STORAGE_URL > LOCAL_DATABASE_URL
 DATABASE_URL = (
     os.getenv("DATABASE_URL") or 
+    os.getenv("DATABASE_DATABASE_URL") or  # Neon-generated variable
     os.getenv("STORAGE_URL") or
     os.getenv("LOCAL_DATABASE_URL") or
     None
