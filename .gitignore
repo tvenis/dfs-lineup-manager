@@ -223,3 +223,12 @@ dmypy.json
 
 # Vercel
 .vercel
+
+# Security - Never commit these!
+*.pem
+*.key
+*config.json
+*credentials*
+*secrets*
+DATABASE_URL*
+*connection-string*

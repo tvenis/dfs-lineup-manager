@@ -5,12 +5,22 @@ from sqlalchemy.orm import sessionmaker
 
 # Database URL configuration
 # Use Neon PostgreSQL for all environments
-# Priority: DATABASE_URL > STORAGE_URL > fallback to production Neon
+# Priority: DATABASE_URL > STORAGE_URL > LOCAL_DATABASE_URL
 DATABASE_URL = (
     os.getenv("DATABASE_URL") or 
     os.getenv("STORAGE_URL") or
-    "postgresql://neondb_owner:npg_84xTtgykZApm@ep-calm-violet-adx9d0wj-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
+    os.getenv("LOCAL_DATABASE_URL") or
+    None
 )
+
+if not DATABASE_URL:
+    raise ValueError(
+        "Database connection string not found. Please set one of these environment variables:\n"
+        "- DATABASE_URL (for production/Vercel)\n"
+        "- STORAGE_URL (from Neon integration)\n" 
+        "- LOCAL_DATABASE_URL (for local development)\n"
+        "Example: LOCAL_DATABASE_URL='postgresql://user:pass@host/db'"
+    )
 
 # Convert postgresql:// to postgresql+psycopg:// for psycopg3 driver
 if DATABASE_URL.startswith("postgresql://"):
