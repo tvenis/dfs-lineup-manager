@@ -66,7 +66,7 @@ export default function ScoreboardPage() {
         setError(null);
         const [contestsRes, weeksRes, contestTypesRes] = await Promise.all([
           fetch(buildApiUrl("/api/contests")),
-          fetch(buildApiUrl("/api/weeks")),
+          fetch(buildApiUrl("/api/contests/weeks")),
           fetch(buildApiUrl("/api/contests/contest-types")),
         ]);
         if (!contestsRes.ok) {
@@ -85,8 +85,22 @@ export default function ScoreboardPage() {
         const weeksData = await weeksRes.json();
         const contestTypesData = await contestTypesRes.json();
         setAllContests(contestsData.contests || []);
-        setWeeks(weeksData.weeks || []);
+        const weeksArray = weeksData.weeks || [];
+        setWeeks(weeksArray);
         setContestTypes(contestTypesData.contest_types || []);
+        
+        // Set default week filter to Active week if available
+        const activeWeek = weeksArray.find((w: any) => w.status === 'Active');
+        if (activeWeek) {
+          setWeekFilter(`week-${activeWeek.week_number}`);
+        } else if (weeksArray.length > 0) {
+          // Fallback to most recent completed week
+          const completedWeeks = weeksArray.filter((w: any) => w.status === 'Completed');
+          if (completedWeeks.length > 0) {
+            const mostRecent = completedWeeks.sort((a: any, b: any) => b.week_number - a.week_number)[0];
+            setWeekFilter(`week-${mostRecent.week_number}`);
+          }
+        }
       } catch (e: any) {
         setError(e.message || "Unknown error");
       } finally {
@@ -288,10 +302,15 @@ export default function ScoreboardPage() {
               <SelectValue placeholder="Week" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="current">Current Week</SelectItem>
+              <SelectItem value="current">Active Week</SelectItem>
               <SelectItem value="all">All Weeks</SelectItem>
-              {weeks.map(w => (
-                <SelectItem key={w.id} value={`week-${w.week_number}`}>{`Week ${w.week_number}, ${w.year}`}</SelectItem>
+              {weeks
+                .filter(w => w.status === 'Active' || w.status === 'Completed')
+                .map(w => (
+                <SelectItem key={w.id} value={`week-${w.week_number}`}>
+                  {`Week ${w.week_number}, ${w.year}`} 
+                  <span className="ml-2 text-xs text-muted-foreground">({w.status})</span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
