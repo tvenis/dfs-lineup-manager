@@ -99,7 +99,7 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
 
   const fetchAllPlayers = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/players?limit=1000')
+      const response = await fetch(buildApiUrl('/api/players?limit=1000'))
       if (response.ok) {
         const data = await response.json()
         setAllPlayers(data.players || [])

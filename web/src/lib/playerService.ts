@@ -91,7 +91,7 @@ export class PlayerService {
   static async getCurrentWeek(): Promise<Week> {
     try {
       const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS);
-      const url = `${baseUrl.slice(0, -1)}/current`;
+      const url = `${baseUrl}/current`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -119,7 +119,7 @@ export class PlayerService {
       if (filters.limit !== undefined) params.append('limit', filters.limit.toString());
 
       const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
-      const url = `${baseUrl.slice(0, -1)}/pool/${weekId}?${params.toString()}`;
+      const url = `${baseUrl}/pool/${weekId}?${params.toString()}`;
       
       console.log('🎯 PlayerService.getPlayerPool URL:', url);
       console.log('🎯 PlayerService.getPlayerPool baseUrl:', baseUrl);
@@ -138,7 +138,7 @@ export class PlayerService {
 
   static async getPlayerPoolWithAnalysis(weekId: number): Promise<PlayerPoolAnalysisResponseDto> {
     const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
-    const url = `${baseUrl.slice(0, -1)}/pool/${weekId}/analysis`;
+    const url = `${baseUrl}/pool/${weekId}/analysis`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -157,7 +157,7 @@ export class PlayerService {
   ): Promise<PlayerPoolEntry> {
     try {
       const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
-      const url = `${baseUrl.slice(0, -1)}/pool/${entryId}`;
+      const url = `${baseUrl}/pool/${entryId}`;
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -227,7 +227,7 @@ export class PlayerService {
     if (filters.market) params.append('market', filters.market);
 
     const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
-    const url = `${baseUrl.slice(0, -1)}/${playerDkId}/props?${params.toString()}`;
+    const url = `${baseUrl}/${playerDkId}/props?${params.toString()}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -254,7 +254,7 @@ export class PlayerService {
       if (filters.show_hidden !== undefined) params.append('show_hidden', filters.show_hidden.toString());
 
       const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
-      const url = `${baseUrl.slice(0, -1)}/profiles?${params.toString()}`;
+      const url = `${baseUrl}/profiles?${params.toString()}`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -322,7 +322,7 @@ export class PlayerService {
     params.append('bookmakers', 'draftkings,betonlineag');
 
     const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
-    const url = `${baseUrl.slice(0, -1)}/props/batch?${params.toString()}`;
+    const url = `${baseUrl}/props/batch?${params.toString()}`;
     
     const response = await fetch(url);
     if (!response.ok) {
@@ -364,7 +364,7 @@ export class PlayerService {
       params.append('include_props', includeProps.toString());
 
       const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
-      const url = `${baseUrl.slice(0, -1)}/pool/${weekId}/complete?${params.toString()}`;
+      const url = `${baseUrl}/pool/${weekId}/complete?${params.toString()}`;
       
       console.log('🎯 PlayerService.getPlayerPoolComplete URL:', url);
       

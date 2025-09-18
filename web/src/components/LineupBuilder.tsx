@@ -361,7 +361,7 @@ export function LineupBuilder({
           // Update roster with existing players
           const loadPlayerDetails = async (playerId: number) => {
             try {
-              const response = await fetch(`http://localhost:8000/api/players/${playerId}`);
+              const response = await fetch(buildApiUrl(`/api/players/${playerId}`));
               if (response.ok) {
                 const player = await response.json();
                 console.log(`✅ Fetched player details for ${playerId}:`, player.displayName);

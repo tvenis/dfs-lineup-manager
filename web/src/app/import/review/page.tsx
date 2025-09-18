@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { CheckCircle, XCircle, AlertTriangle, User, Upload, RefreshCw, ArrowLeft } from 'lucide-react'
+import { buildApiUrl } from '@/config/api'
 
 interface Player {
   id: number
@@ -58,7 +59,7 @@ function ImportReviewContent() {
     // Fetch all players for manual matching
     const fetchAllPlayers = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/players?limit=1000')
+        const response = await fetch(buildApiUrl('/api/players?limit=1000'))
         if (response.ok) {
           const data = await response.json()
           setAllPlayers(data.players || [])
