@@ -17,12 +17,12 @@ const getApiBaseUrl = () => {
 export const API_CONFIG = {
   BASE_URL: getApiBaseUrl(),
   ENDPOINTS: {
-    PLAYERS: '/api/players/',
-    WEEKS: '/api/weeks/',
-    TEAMS: '/api/teams/',
-    GAMES: '/api/games/',
-    LINEUPS: '/api/lineups/',
-    CSV_IMPORT: '/api/csv/'
+    PLAYERS: '/api/players',
+    WEEKS: '/api/weeks',
+    TEAMS: '/api/teams',
+    GAMES: '/api/games',
+    LINEUPS: '/api/lineups',
+    CSV_IMPORT: '/api/csv'
   }
 };
 
@@ -31,10 +31,7 @@ export const buildApiUrl = (endpoint: string): string => {
   // Ensure the endpoint starts with a slash
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Remove trailing slash to avoid Railway 307 redirects that change HTTPS to HTTP
-  const finalEndpoint = cleanEndpoint.includes('?') 
-    ? cleanEndpoint 
-    : cleanEndpoint.replace(/\/$/, '');
-  
-  return `${API_CONFIG.BASE_URL}${finalEndpoint}`;
+  // Use endpoint as-is to match FastAPI route definitions (no automatic trailing slash)
+  // This prevents 307 redirects that Railway incorrectly changes from HTTPS to HTTP
+  return `${API_CONFIG.BASE_URL}${cleanEndpoint}`;
 };
