@@ -13,7 +13,8 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="DFS Lineup Manager API",
     description="API for Daily Fantasy Sports Lineup Management",
-    version="1.0.0"
+    version="1.0.0",
+    redirect_slashes=False  # Disable automatic trailing slash redirects
 )
 
 # Configure CORS
