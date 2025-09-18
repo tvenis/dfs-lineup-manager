@@ -18,8 +18,10 @@ export const buildApiUrl = (endpoint: string): string => {
   // Ensure the endpoint starts with a slash
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Ensure the endpoint ends with a slash for FastAPI compatibility
-  const finalEndpoint = cleanEndpoint.endsWith('/') ? cleanEndpoint : `${cleanEndpoint}/`;
+  // Only add trailing slash if the endpoint doesn't already have query parameters
+  const finalEndpoint = cleanEndpoint.includes('?') 
+    ? cleanEndpoint 
+    : (cleanEndpoint.endsWith('/') ? cleanEndpoint : `${cleanEndpoint}/`);
   
   return `${API_CONFIG.BASE_URL}${finalEndpoint}`;
 };
