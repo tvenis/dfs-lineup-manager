@@ -24,7 +24,8 @@ app.add_middleware(
         "http://localhost:3001", 
         "http://localhost:3002", 
         "http://localhost:3005",
-        "https://dfs-lineup-manager-tvenis-troys-projects-26f617b4.vercel.app",  # Production Vercel domain
+        "https://dfs-lineup-manager.vercel.app",  # Correct production domain
+        "https://dfs-lineup-manager-tvenis-troys-projects-26f617b4.vercel.app",  # Alternative domain
         "https://*.vercel.app",  # All Vercel preview deployments
     ],
     allow_credentials=True,
