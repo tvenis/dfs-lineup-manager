@@ -31,10 +31,10 @@ export const buildApiUrl = (endpoint: string): string => {
   // Ensure the endpoint starts with a slash
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Only add trailing slash if the endpoint doesn't already have query parameters
+  // Remove trailing slash to avoid Railway 307 redirects that change HTTPS to HTTP
   const finalEndpoint = cleanEndpoint.includes('?') 
     ? cleanEndpoint 
-    : (cleanEndpoint.endsWith('/') ? cleanEndpoint : `${cleanEndpoint}/`);
+    : cleanEndpoint.replace(/\/$/, '');
   
   return `${API_CONFIG.BASE_URL}${finalEndpoint}`;
 };
