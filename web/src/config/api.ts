@@ -1,8 +1,21 @@
-// API Configuration
+// API Configuration  
+const getApiBaseUrl = () => {
+  // Use environment variable if set
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // For production/preview, use same origin (Vercel domain)
+  if (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')) {
+    return window.location.origin;
+  }
+  
+  // Local development fallback
+  return 'http://localhost:8000';
+};
+
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 
-           (typeof window !== 'undefined' && window.location.origin) || 
-           'http://localhost:8000',
+  BASE_URL: getApiBaseUrl(),
   ENDPOINTS: {
     PLAYERS: '/api/players/',
     WEEKS: '/api/weeks/',
