@@ -301,24 +301,16 @@ export function WeeksSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="p-4 border rounded-lg">
+          <div className="flex gap-4 mb-6">
+            <div className="p-4 border rounded-lg min-w-[120px]">
               <div className="text-2xl font-bold">
                 {activeWeek ? `Week ${activeWeek.week_number}` : 'None'}
               </div>
               <div className="text-sm text-muted-foreground">Active Week</div>
             </div>
-            <div className="p-4 border rounded-lg">
-              <div className="text-2xl font-bold">{totalWeeks}</div>
-              <div className="text-sm text-muted-foreground">Total Weeks</div>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <div className="text-2xl font-bold">{totalGames}</div>
-              <div className="text-sm text-muted-foreground">Total Games</div>
-            </div>
-            <div className="p-4 border rounded-lg">
+            <div className="p-4 border rounded-lg min-w-[120px]">
               <div className="text-2xl font-bold">{completedWeeks}</div>
-              <div className="text-sm text-muted-foreground">Completed</div>
+              <div className="text-sm text-muted-foreground">Completed Weeks</div>
             </div>
           </div>
         </CardContent>
