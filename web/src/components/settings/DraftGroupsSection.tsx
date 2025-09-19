@@ -205,7 +205,7 @@ export function DraftGroupsSection() {
           To add a Draft Group, go to DraftKings and find a Contest ID for the Main Slate (or desired slate). Once you find an appropriate Contest, hit Enter. The Contest ID will be in the URL of the lineup builder page. Take this Contest ID and substitute it into this API: https://api.draftkings.com/contests/v1/contests/[CONTEST_ID]?format=json. The Draft Group ID will be towards the bottom of the JSON for the contest.
         </CardDescription>
         
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4">
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4 w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Add Draft Group
         </Button>
