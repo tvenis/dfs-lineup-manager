@@ -37,7 +37,7 @@ def create_week(week: WeekCreate, db: Session = Depends(get_db)):
     db.refresh(db_week)
     return db_week
 
-@router.get("/", response_model=WeekListSimpleResponse)
+@router.get("", response_model=WeekListSimpleResponse)
 def get_weeks(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),

@@ -49,9 +49,11 @@ export class LineupService {
       if (skip !== undefined) params.append('skip', skip.toString());
       if (limit !== undefined) params.append('limit', limit.toString());
 
+      // Build the base URL with trailing slash, then add query parameters
+      const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.LINEUPS);
       const url = params.toString() 
-        ? `${buildApiUrl(API_CONFIG.ENDPOINTS.LINEUPS)}?${params.toString()}`
-        : buildApiUrl(API_CONFIG.ENDPOINTS.LINEUPS);
+        ? `${baseUrl}?${params.toString()}`
+        : baseUrl;
 
       const response = await fetch(url);
       if (!response.ok) {

@@ -31,7 +31,6 @@ export const buildApiUrl = (endpoint: string): string => {
   // Ensure the endpoint starts with a slash
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Use endpoint as-is to match FastAPI route definitions (no automatic trailing slash)
-  // This prevents 307 redirects that Railway incorrectly changes from HTTPS to HTTP
+  // Use endpoint as-is (no automatic trailing slash handling needed)
   return `${API_CONFIG.BASE_URL}${cleanEndpoint}`;
 };

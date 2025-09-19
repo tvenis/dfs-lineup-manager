@@ -9,7 +9,7 @@ export interface WeekListResponse {
 export class WeekService {
   static async getWeeks(): Promise<WeekListResponse> {
     try {
-      const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS));
+      const response = await fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS)}?skip=0&limit=100`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

@@ -169,7 +169,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
         
         // Test API connectivity first
         console.log('🎯 Testing API connectivity...');
-        const testResponse = await fetch(`${API_CONFIG.BASE_URL}/api/weeks/?skip=0&limit=100`);
+        const testResponse = await fetch(`${API_CONFIG.BASE_URL}/api/weeks?skip=0&limit=100`);
         console.log('🎯 Test API response status:', testResponse.status);
         if (!testResponse.ok) {
           throw new Error(`API test failed: ${testResponse.status}`);

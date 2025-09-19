@@ -50,7 +50,7 @@ def create_lineup(lineup: LineupCreate, db: Session = Depends(get_db)):
     db.refresh(db_lineup)
     return db_lineup
 
-@router.get("/", response_model=LineupListResponse)
+@router.get("", response_model=LineupListResponse)
 def get_lineups(
     week_id: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
