@@ -17,7 +17,7 @@ from app.database import get_db
 from app.models import Week, Sport, GameType, Contest, RecentActivity, Lineup, ContestType, DKContestDetail
 import httpx
 
-router = APIRouter(prefix="/api/contests", tags=["contests"])
+router = APIRouter(tags=["contests"])
 
 
 def _parse_money(value: str) -> float:
@@ -525,7 +525,7 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/")
+@router.get("")
 async def list_contests(week_id: int | None = None, limit: int = 25000, db: Session = Depends(get_db)):
     """List contests, optionally filtered by week, sorted by most recent first."""
     try:
