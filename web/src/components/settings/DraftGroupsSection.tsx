@@ -15,7 +15,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -201,121 +200,17 @@ export function DraftGroupsSection() {
   return (
     <Card>
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">Draft Groups</CardTitle>
-            <CardDescription className="text-sm">
-              To add a Draft Group, go to DraftKings and find a Contest ID for the Main Slate (or desired slate). Once you find an appropriate Contest, hit Enter. The Contest ID will be in the URL of the lineup builder page. Take this Contest ID and substitute it into this API: https://api.draftkings.com/contests/v1/contests/[CONTEST_ID]?format=json. The Draft Group ID will be towards the bottom of the JSON for the contest.
-            </CardDescription>
-          </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Draft Group
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Draft Group</DialogTitle>
-                <DialogDescription>
-                  Add a new draft group to the database.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...createForm}>
-                <form onSubmit={createForm.handleSubmit(handleCreateDraftGroup)} className="space-y-4">
-                  <FormField
-                    control={createForm.control}
-                    name="draftGroup"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Draft Group ID</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          The unique Draft Group ID from DraftKings
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="week_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Week</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(parseInt(value))}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a week" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {weeks.map((week) => (
-                              <SelectItem key={week.id} value={week.id.toString()}>
-                                Week {week.week_number} ({week.year}) - {week.status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="draftGroup_description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Optional description for this draft group
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="games"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Games</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Number of games in this draft group
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit">Create</Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <CardTitle className="text-lg">Draft Groups</CardTitle>
+        <CardDescription className="text-sm">
+          To add a Draft Group, go to DraftKings and find a Contest ID for the Main Slate (or desired slate). Once you find an appropriate Contest, hit Enter. The Contest ID will be in the URL of the lineup builder page. Take this Contest ID and substitute it into this API: https://api.draftkings.com/contests/v1/contests/[CONTEST_ID]?format=json. The Draft Group ID will be towards the bottom of the JSON for the contest.
+        </CardDescription>
+        
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="mt-4">
+          <Plus className="w-4 h-4 mr-2" />
+          Add Draft Group
+        </Button>
       </CardHeader>
+      
       <CardContent className="pt-0">
         {draftGroups.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground text-sm">
@@ -357,6 +252,108 @@ export function DraftGroupsSection() {
           </div>
         )}
       </CardContent>
+
+      {/* Create Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Draft Group</DialogTitle>
+            <DialogDescription>
+              Add a new draft group to the database.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...createForm}>
+            <form onSubmit={createForm.handleSubmit(handleCreateDraftGroup)} className="space-y-4">
+              <FormField
+                control={createForm.control}
+                name="draftGroup"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Draft Group ID</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        {...field} 
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      The unique Draft Group ID from DraftKings
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="week_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Week</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a week" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {weeks.map((week) => (
+                          <SelectItem key={week.id} value={week.id.toString()}>
+                            Week {week.week_number} ({week.year}) - {week.status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="draftGroup_description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Optional description for this draft group
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="games"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Games</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        {...field} 
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Number of games in this draft group
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Create</Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
