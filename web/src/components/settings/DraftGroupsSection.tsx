@@ -91,7 +91,9 @@ export function DraftGroupsSection() {
           WeekService.getWeeks()
         ]);
         
-        setDraftGroups(draftGroupsResponse);
+        // Sort draft groups by Draft Group ID
+        const sortedDraftGroups = draftGroupsResponse.sort((a, b) => a.draftGroup - b.draftGroup);
+        setDraftGroups(sortedDraftGroups);
         setWeeks(weeksResponse.weeks);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -113,7 +115,7 @@ export function DraftGroupsSection() {
         games: data.games || 0,
       });
       
-      setDraftGroups(prev => [...prev, newDraftGroup]);
+      setDraftGroups(prev => [...prev, newDraftGroup].sort((a, b) => a.draftGroup - b.draftGroup));
       setIsCreateDialogOpen(false);
       createForm.reset();
     } catch (error) {
@@ -146,6 +148,7 @@ export function DraftGroupsSection() {
       
       setDraftGroups(prev => 
         prev.map(dg => dg.id === editingDraftGroup.id ? updatedDraftGroup : dg)
+            .sort((a, b) => a.draftGroup - b.draftGroup)
       );
       setIsEditDialogOpen(false);
       setEditingDraftGroup(null);
