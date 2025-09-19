@@ -50,11 +50,9 @@ source venv/bin/activate
 echo "📦 Installing Python dependencies..."
 pip install -r requirements.txt
 
-# Check if database exists and has data
-if [ ! -f "dfs_app.db" ] || [ ! -s "dfs_app.db" ]; then
-    echo "🗄️  Setting up database with sample data..."
-    python test_player_pool.py
-fi
+# Check if database connection is available (Neon PostgreSQL)
+# Note: Database setup should be done through migrations, not SQLite files
+echo "🗄️  Using Neon PostgreSQL database..."
 
 # Start backend in background
 echo "🚀 Starting backend server on port 8000..."

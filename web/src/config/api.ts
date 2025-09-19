@@ -22,7 +22,9 @@ export const API_CONFIG = {
     TEAMS: '/api/teams',
     GAMES: '/api/games',
     LINEUPS: '/api/lineups',
-    CSV_IMPORT: '/api/csv'
+    CSV_IMPORT: '/api/csv',
+    CONTESTS: '/api/contests',
+    DRAFTGROUPS: '/api/draftgroups'
   }
 };
 

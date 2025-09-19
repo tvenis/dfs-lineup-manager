@@ -46,7 +46,7 @@ app.include_router(odds_api.router, prefix="", tags=["odds-api"])
 app.include_router(games.router, prefix="/api/games", tags=["games"]) 
 app.include_router(contests.router, prefix="/api/contests", tags=["contests"])
 app.include_router(actuals.router, prefix="", tags=["actuals"])
-app.include_router(draftgroups.router, prefix="", tags=["draftgroups"])
+app.include_router(draftgroups.router, tags=["draftgroups"])
 app.include_router(players_batch.router, prefix="", tags=["players-batch"])
 app.include_router(tips.router, prefix="", tags=["tips"]) 
 
