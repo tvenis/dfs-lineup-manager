@@ -201,22 +201,20 @@ export function DraftGroupsSection() {
   return (
     <Card>
       <CardHeader className="pb-4">
-        <div className="flex flex-col space-y-4">
-          <div className="flex flex-row items-start justify-between">
-            <div className="flex-1 pr-4">
-              <CardTitle className="text-lg">Draft Groups</CardTitle>
-              <CardDescription className="text-sm">
-                To add a Draft Group, go to DraftKings and find a Contest ID for the Main Slate (or desired slate). Once you find an appropriate Contest, hit Enter. The Contest ID will be in the URL of the lineup builder page. Take this Contest ID and substitute it into this API: https://api.draftkings.com/contests/v1/contests/[CONTEST_ID]?format=json. The Draft Group ID will be towards the bottom of the JSON for the contest.
-              </CardDescription>
-            </div>
-            <div className="flex-shrink-0">
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Draft Group
-                  </Button>
-                </DialogTrigger>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg">Draft Groups</CardTitle>
+            <CardDescription className="text-sm">
+              To add a Draft Group, go to DraftKings and find a Contest ID for the Main Slate (or desired slate). Once you find an appropriate Contest, hit Enter. The Contest ID will be in the URL of the lineup builder page. Take this Contest ID and substitute it into this API: https://api.draftkings.com/contests/v1/contests/[CONTEST_ID]?format=json. The Draft Group ID will be towards the bottom of the JSON for the contest.
+            </CardDescription>
+          </div>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Draft Group
+              </Button>
+            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create New Draft Group</DialogTitle>
@@ -315,9 +313,7 @@ export function DraftGroupsSection() {
                 </form>
               </Form>
             </DialogContent>
-              </Dialog>
-            </div>
-          </div>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
