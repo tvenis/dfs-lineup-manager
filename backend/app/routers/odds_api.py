@@ -647,6 +647,7 @@ async def import_player_props(
     Import player prop bets from Odds-API for a given market (starting with player_pass_tds).
     - Supports a specific game by odds_api_gameid, or All games for a week.
     - If bookmakers is 'all', fetch from all bookmakers (omit param).
+    - Only imports Over bets; Under bets are automatically filtered out.
     """
     api_key = request.get("api_key")
     week_id = request.get("week_id")
@@ -804,6 +805,10 @@ async def import_player_props(
                                 outcome_description = outcome.get("description")  # player name
                                 outcome_price = outcome.get("price")
                                 outcome_point = outcome.get("point")
+
+                                # Skip Under bets - only import Over bets
+                                if outcome_name and outcome_name.lower() == "under":
+                                    continue
 
                                 player_obj = find_player_by_name(outcome_description) if outcome_description else None
 

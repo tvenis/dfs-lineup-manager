@@ -978,8 +978,13 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="betmgm">BetMGM</SelectItem>
+                        <SelectItem value="betonlineag">BetOnline</SelectItem>
+                        <SelectItem value="betrivers">BetRivers</SelectItem>
+                        <SelectItem value="bovada">Bovada</SelectItem>
                         <SelectItem value="draftkings">DraftKings</SelectItem>
                         <SelectItem value="fanduel">FanDuel</SelectItem>
+                        <SelectItem value="williamhill_us">William Hill US</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1378,7 +1383,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                     <div>
                       <h4 className="font-medium">Player Props</h4>
                       <p className="text-sm text-muted-foreground">
-                        Import player prop bets (currently Passing TDs). Requires Week and optional Game selection.
+                        Import player prop bets (currently Passing TDs). Only imports Over bets. Requires Week and optional Game selection.
                       </p>
                     </div>
                     <Badge variant="outline">Player Props</Badge>
