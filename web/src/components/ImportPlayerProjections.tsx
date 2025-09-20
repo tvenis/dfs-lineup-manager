@@ -286,41 +286,44 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
   const processMatching = async () => {
     console.log('processMatching called!') // Debug
     console.log('Button state:', { selectedWeek, csvFile: !!csvFile, csvDataLength: csvData.length, isProcessing, isParsing }) // Debug
+    
+    if (!csvFile || !selectedWeek) {
+      console.error('Missing required data for processing')
+      return
+    }
+    
     setIsProcessing(true)
     
     try {
-      // Add a small delay to show the spinner, especially for large datasets
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Use backend matching instead of client-side matching
+      const formData = new FormData()
+      formData.append('file', csvFile)
+      formData.append('week_id', selectedWeek.toString())
+      formData.append('projection_source', projectionSource || 'Custom Projections')
       
-      const matched: MatchedPlayer[] = csvData.map((csvPlayer, index) => {
-        const { player, confidence, possibleMatches } = findPlayerMatches(csvPlayer)
-        
-        return {
-          ...csvPlayer,
-          csvIndex: index,
-          matchedPlayerId: player?.playerDkId,
-          matchConfidence: confidence,
-          possibleMatches
-        }
+      const response = await fetch('http://localhost:8000/api/projections/import', {
+        method: 'POST',
+        body: formData
       })
-
-      setMatchedPlayers(matched)
       
-      // Store data for review page and navigate
-      const reviewData = {
-        matchedPlayers: matched,
-        importData: {
-          week: selectedWeek,
-          projectionSource: projectionSource || 'Custom Projections',
-          csvFileName: csvFile?.name || 'unknown.csv',
-          csvData: csvData
-        }
+      if (!response.ok) {
+        const errorData = await response.json()
+        const errorMessage = typeof errorData.detail === 'string' 
+          ? errorData.detail 
+          : errorData.detail?.message || errorData.detail?.error || 'Import failed'
+        throw new Error(errorMessage)
       }
       
-      sessionStorage.setItem('importReviewData', JSON.stringify(reviewData))
-      router.push('/import/review')
+      const result = await response.json()
+      console.log('Backend import result:', result)
+      
+      // Import was successful - redirect to import page with success
+      router.push('/import?success=true')
+      
     } catch (error) {
       console.error('Error during processing:', error)
+      // Show error to user
+      alert(error instanceof Error ? error.message : 'Import failed')
     } finally {
       setIsProcessing(false)
     }
@@ -442,12 +445,12 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
             ) : isProcessing ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                Processing & Matching Players...
+                Importing Projections...
               </>
             ) : (
               <>
                 <Upload className="w-4 h-4" />
-                Process & Match Players
+                Import Projections
               </>
             )}
           </Button>

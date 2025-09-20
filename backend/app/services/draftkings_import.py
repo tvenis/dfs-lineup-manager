@@ -13,6 +13,7 @@ import logging
 from typing import Dict, List, Optional, Tuple, Union
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 import requests
 from datetime import datetime
 
@@ -429,7 +430,7 @@ class DraftKingsImportService:
                     if team_abbrev in self._team_abbrev_to_id_cache:
                         team_id = self._team_abbrev_to_id_cache[team_abbrev]
                     else:
-                        team_row = self.db.query(Team).filter(Team.abbreviation == team_abbrev).first()
+                        team_row = self.db.query(Team).filter(func.upper(Team.abbreviation) == team_abbrev.upper()).first()
                         team_id = team_row.id if team_row else None
                         self._team_abbrev_to_id_cache[team_abbrev] = team_id
             except Exception as e:
@@ -614,7 +615,7 @@ class DraftKingsImportService:
                 recordsUpdated=result.players_updated + result.entries_updated,
                 recordsSkipped=result.entries_skipped,
                 errors=result.errors,
-                user=None,
+                user_name=None,
                 details={
                     "players_added": result.players_added,
                     "players_updated": result.players_updated,
@@ -628,6 +629,156 @@ class DraftKingsImportService:
         except Exception as e:
             print(f"Failed to log import activity: {str(e)}")
             self.db.rollback()
+
+    def _upsert_player_individually(self, player_data: Dict) -> str:
+        """
+        Upsert player record with individual transaction and commit
+        Returns: 'added', 'updated', or 'skipped'
+        """
+        try:
+            # Resolve team_id from team abbreviation (if available)
+            team_id: Optional[int] = None
+            try:
+                team_abbrev = player_data.get('team')
+                if team_abbrev:
+                    # Use cache first
+                    if team_abbrev in self._team_abbrev_to_id_cache:
+                        team_id = self._team_abbrev_to_id_cache[team_abbrev]
+                    else:
+                        team_row = self.db.query(Team).filter(func.upper(Team.abbreviation) == team_abbrev.upper()).first()
+                        team_id = team_row.id if team_row else None
+                        self._team_abbrev_to_id_cache[team_abbrev] = team_id
+            except Exception as e:
+                logger.warning(f"Failed to resolve team_id for team '{player_data.get('team')}' - {str(e)}")
+
+            # Extract only player fields that exist in the Player model
+            player_fields = {
+                'playerDkId': player_data['playerDkId'],
+                'firstName': player_data['firstName'],
+                'lastName': player_data['lastName'],
+                'displayName': player_data['displayName'],
+                'shortName': player_data['shortName'],
+                'position': player_data['position'],
+                'team': player_data['team'],
+                'team_id': team_id,
+                'playerImage50': player_data['playerImage50'],
+                'playerImage160': player_data['playerImage160']
+            }
+            
+            # Check if player exists in database
+            existing_player = self.db.query(Player).filter(Player.playerDkId == player_fields['playerDkId']).first()
+            
+            if existing_player:
+                # Update existing player
+                updateable_fields = ['firstName', 'lastName', 'displayName', 'shortName', 'position', 'team', 'team_id', 'playerImage50', 'playerImage160']
+                updated = False
+                for field in updateable_fields:
+                    if field in player_fields and player_fields[field] is not None:
+                        current_value = getattr(existing_player, field)
+                        new_value = player_fields[field]
+                        if current_value != new_value:
+                            setattr(existing_player, field, new_value)
+                            updated = True
+                
+                if updated:
+                    self.db.commit()
+                    logger.debug(f"Updated existing player: {existing_player.playerDkId} - {existing_player.displayName}")
+                    return "updated"
+                else:
+                    return "skipped"
+            else:
+                # Add new player
+                new_player = Player(**player_fields)
+                self.db.add(new_player)
+                self.db.commit()
+                logger.debug(f"Added new player: {new_player.playerDkId} - {new_player.displayName}")
+                return "added"
+                
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error in _upsert_player_individually: {str(e)}")
+            return "skipped"
+
+    def _upsert_player_pool_entry_individually(
+        self, 
+        pool_entry_data: Dict, 
+        week_id: int, 
+        draft_group: str,
+        player_dk_id: int
+    ) -> Tuple[str, bool]:
+        """
+        Upsert player pool entry record with individual transaction and commit
+        Returns: ('added'/'updated'/'skipped', status_updated_boolean)
+        """
+        try:
+            # Check if entry exists
+            existing_entry = self.db.query(PlayerPoolEntry).filter(
+                PlayerPoolEntry.week_id == week_id,
+                PlayerPoolEntry.draftGroup == draft_group,
+                PlayerPoolEntry.playerDkId == player_dk_id
+            ).first()
+            
+            if existing_entry:
+                # Update existing entry
+                updateable_fields = [
+                    'draftableId', 'projectedPoints', 'salary', 'status', 'isDisabled', 
+                    'playerGameHash', 'competitions', 'draftStatAttributes',
+                    'playerAttributes', 'teamLeagueSeasonAttributes', 'playerGameAttributes',
+                    'draftAlerts', 'externalRequirements'
+                ]
+                updated = False
+                status_updated = False
+                for key in updateable_fields:
+                    if key in pool_entry_data and pool_entry_data[key] is not None:
+                        current_value = getattr(existing_entry, key)
+                        new_value = pool_entry_data[key]
+                        if current_value != new_value:
+                            setattr(existing_entry, key, new_value)
+                            updated = True
+                            if key == 'status':
+                                status_updated = True
+                                logger.info(f"Updated player {player_dk_id} status: {current_value} -> {new_value}")
+                
+                if updated:
+                    self.db.commit()
+                    logger.debug(f"Updated existing pool entry for player {player_dk_id}")
+                    return "updated", status_updated
+                else:
+                    return "skipped", False
+            else:
+                # Create new entry
+                new_entry = PlayerPoolEntry(
+                    week_id=week_id,
+                    draftGroup=draft_group,
+                    playerDkId=player_dk_id,
+                    draftableId=pool_entry_data['draftableId'],
+                    projectedPoints=pool_entry_data['projectedPoints'],
+                    salary=pool_entry_data['salary'],
+                    status=pool_entry_data['status'],
+                    isDisabled=pool_entry_data['isDisabled'],
+                    excluded=pool_entry_data['excluded'],
+                    playerGameHash=pool_entry_data['playerGameHash'],
+                    competitions=pool_entry_data['competitions'],
+                    draftStatAttributes=pool_entry_data['draftStatAttributes'],
+                    playerAttributes=pool_entry_data['playerAttributes'],
+                    teamLeagueSeasonAttributes=pool_entry_data['teamLeagueSeasonAttributes'],
+                    playerGameAttributes=pool_entry_data['playerGameAttributes'],
+                    draftAlerts=pool_entry_data['draftAlerts'],
+                    externalRequirements=pool_entry_data['externalRequirements'],
+                )
+                self.db.add(new_entry)
+                self.db.commit()
+                logger.debug(f"Created new pool entry for player {player_dk_id}")
+                return "added", False
+                
+        except IntegrityError as e:
+            self.db.rollback()
+            logger.warning(f"Integrity error for pool entry of player {player_dk_id}: {str(e)}")
+            return "skipped", False
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error in _upsert_player_pool_entry_individually: {str(e)}")
+            return "skipped", False
 
     def _extract_projected_points(self, draft_stat_attributes: Optional[Union[Dict, List]]) -> Optional[float]:
         """

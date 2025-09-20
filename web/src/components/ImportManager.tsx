@@ -56,7 +56,7 @@ interface RecentActivity {
   recordsUpdated: number
   recordsSkipped: number
   errors: string[]
-  user: string | null
+  user_name: string | null
   details: unknown
   importType?: 'player-pool' | 'projections' | 'odds-api' | 'actuals' // New field for tab-specific tracking
 }
@@ -283,7 +283,17 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || `API request failed: ${response.status}`)
+        // Handle both string and object error details
+        let errorMessage = `API request failed: ${response.status}`
+        if (errorData.detail) {
+          if (typeof errorData.detail === 'string') {
+            errorMessage = errorData.detail
+          } else if (typeof errorData.detail === 'object') {
+            // Handle structured error objects from backend
+            errorMessage = errorData.detail.message || errorData.detail.error || JSON.stringify(errorData.detail)
+          }
+        }
+        throw new Error(errorMessage)
       }
 
       const result: DraftKingsImportResponse = await response.json()
@@ -304,7 +314,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         recordsUpdated: result.players_updated + result.entries_updated,
         recordsSkipped: result.entries_skipped,
         errors: result.errors,
-        user: null,
+        user_name: null,
         details: null,
         importType: 'player-pool'
       }
@@ -332,7 +342,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         recordsUpdated: 0,
         recordsSkipped: 0,
         errors: [error instanceof Error ? error.message : 'Unknown error occurred'],
-        user: null,
+        user_name: null,
         details: null,
         importType: 'player-pool'
       }
@@ -390,7 +400,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       recordsUpdated: 0,
       recordsSkipped: importData.failedImports,
       errors: importData.failedImports > 0 ? [`${importData.failedImports} failed to match`] : [],
-      user: null,
+      user_name: null,
       details: null,
       importType: 'projections'
     }
@@ -417,7 +427,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       recordsUpdated: 0,
       recordsSkipped: importData.failedImports,
       errors: importData.failedImports > 0 ? [`${importData.failedImports} failed to match`] : [],
-      user: null,
+      user_name: null,
       details: null,
       importType: 'actuals'
     }
@@ -557,7 +567,17 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || `API request failed: ${response.status} ${response.statusText}`)
+        // Handle both string and object error details
+        let errorMessage = `API request failed: ${response.status} ${response.statusText}`
+        if (errorData.detail) {
+          if (typeof errorData.detail === 'string') {
+            errorMessage = errorData.detail
+          } else if (typeof errorData.detail === 'object') {
+            // Handle structured error objects from backend
+            errorMessage = errorData.detail.message || errorData.detail.error || JSON.stringify(errorData.detail)
+          }
+        }
+        throw new Error(errorMessage)
       }
       
       const data = await response.json()
@@ -611,7 +631,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         recordsUpdated,
         recordsSkipped: 0,
         errors: data.errors || [],
-        user: null,
+        user_name: null,
         details: null,
         importType: 'odds-api'
       }
@@ -633,7 +653,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         recordsUpdated: 0,
         recordsSkipped: 0,
         errors: [error instanceof Error ? error.message : 'Unknown error'],
-        user: null,
+        user_name: null,
         details: null,
         importType: 'odds-api'
       }

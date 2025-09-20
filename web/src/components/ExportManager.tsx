@@ -28,7 +28,7 @@ interface RecentActivity {
   recordsUpdated: number
   recordsSkipped: number
   errors: string[]
-  user: string | null
+  user_name: string | null
   details: unknown
 }
 

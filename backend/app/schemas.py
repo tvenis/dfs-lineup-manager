@@ -189,7 +189,7 @@ class RecentActivityBase(BaseModel):
     recordsUpdated: int = Field(default=0, ge=0)
     recordsSkipped: int = Field(default=0, ge=0)
     errors: List[str] = Field(default_factory=list)
-    user: Optional[str] = Field(None, max_length=100)
+    user_name: Optional[str] = Field(None, max_length=100)
     details: Optional[Dict[str, Any]] = None
 
 class RecentActivity(RecentActivityBase):

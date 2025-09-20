@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List
 
 from app.database import get_db
@@ -18,7 +19,7 @@ def create_team(team: TeamCreate, db: Session = Depends(get_db)):
     
     # Check if abbreviation is unique (if provided)
     if team.abbreviation:
-        existing_abbrev = db.query(Team).filter(Team.abbreviation == team.abbreviation).first()
+        existing_abbrev = db.query(Team).filter(func.upper(Team.abbreviation) == team.abbreviation.upper()).first()
         if existing_abbrev:
             raise HTTPException(status_code=400, detail="Team with this abbreviation already exists")
     
@@ -51,7 +52,7 @@ def update_team(team_id: int, team_update: TeamUpdate, db: Session = Depends(get
     
     # Check if abbreviation is unique (if being updated)
     if team_update.abbreviation and team_update.abbreviation != db_team.abbreviation:
-        existing_abbrev = db.query(Team).filter(Team.abbreviation == team_update.abbreviation).first()
+        existing_abbrev = db.query(Team).filter(func.upper(Team.abbreviation) == team_update.abbreviation.upper()).first()
         if existing_abbrev:
             raise HTTPException(status_code=400, detail="Team with this abbreviation already exists")
     

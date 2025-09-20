@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from typing import List, Optional
 import uuid
 
@@ -48,10 +49,10 @@ def get_players(
     query = db.query(Player)
     
     if position:
-        query = query.filter(Player.position == position)
+        query = query.filter(func.upper(Player.position) == position.upper())
     
     if team_id:
-        query = query.filter(Player.team == team_id)
+        query = query.filter(func.upper(Player.team) == team_id.upper())
     
     if search:
         query = query.filter(Player.displayName.ilike(f"%{search}%"))
@@ -80,10 +81,10 @@ def get_player_profiles(
     query = db.query(Player)
     
     if position and position != "All":
-        query = query.filter(Player.position == position)
+        query = query.filter(func.upper(Player.position) == position.upper())
     
     if team_id and team_id != "All":
-        query = query.filter(Player.team == team_id)
+        query = query.filter(func.upper(Player.team) == team_id.upper())
     
     if search:
         query = query.filter(Player.displayName.ilike(f"%{search}%"))
@@ -191,10 +192,10 @@ def get_player_pool(
     query = db.query(PlayerPoolEntry).join(Player).filter(PlayerPoolEntry.week_id == week_id)
     
     if position:
-        query = query.filter(Player.position == position)
+        query = query.filter(func.upper(Player.position) == position.upper())
     
     if team_id:
-        query = query.filter(Player.team == team_id)  # Changed from team_id to team
+        query = query.filter(func.upper(Player.team) == team_id.upper())  # Changed from team_id to team
     
     if excluded is not None:
         query = query.filter(PlayerPoolEntry.excluded == excluded)
@@ -304,10 +305,10 @@ def get_player_pool_complete(
     
     # Apply filters
     if position:
-        query = query.filter(Player.position == position)
+        query = query.filter(func.upper(Player.position) == position.upper())
     
     if team_id:
-        query = query.filter(Player.team == team_id)
+        query = query.filter(func.upper(Player.team) == team_id.upper())
     
     if excluded is not None:
         query = query.filter(PlayerPoolEntry.excluded == excluded)

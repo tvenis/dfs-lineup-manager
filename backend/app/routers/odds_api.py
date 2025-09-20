@@ -883,7 +883,7 @@ async def import_player_props(
             recordsUpdated=total_updated,
             recordsSkipped=len(unmatched_players),
             errors=errors,
-            user="system",
+            user_name="system",
             details={
                 "unmatched_players": unmatched_players,
                 "api_requests": api_requests,

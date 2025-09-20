@@ -502,7 +502,7 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
             recordsUpdated=updated,
             recordsSkipped=len(errors),
             errors=errors,
-            user=None,
+            user_name=None,
             details={
                 'total_processed': len(rows),
                 'created': created,

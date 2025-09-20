@@ -205,6 +205,12 @@ class RecentActivity(Base):
     
     # Relationships
     week = relationship("Week")
+    
+    def __init__(self, **kwargs):
+        # Handle legacy 'user' parameter by mapping it to 'user_name'
+        if 'user' in kwargs:
+            kwargs['user_name'] = kwargs.pop('user')
+        super().__init__(**kwargs)
 
 class Lineup(Base):
     __tablename__ = "lineups"
