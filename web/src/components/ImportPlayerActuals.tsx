@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from './ui/alert'
 import { Badge } from './ui/badge'
 import { Upload, FileText, RefreshCw } from 'lucide-react'
 import { buildApiUrl } from '@/config/api'
+import { ImportResultDialog } from './ImportResultDialog'
 
 interface ImportPlayerActualsProps {
   onImportComplete: (importData: {

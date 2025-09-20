@@ -9,6 +9,31 @@ import { Alert, AlertDescription } from './ui/alert'
 import { Badge } from './ui/badge'
 import { Upload, FileText, RefreshCw } from 'lucide-react'
 import { buildApiUrl } from '@/config/api'
+import { ImportResultDialog } from './ImportResultDialog'
+
+interface ProjectionImportResponse {
+  total_processed: number
+  successful_matches: number
+  failed_matches: number
+  projections_created: number
+  projections_updated: number
+  player_pool_updated: number
+  errors: string[]
+  unmatched_players: Array<{
+    csv_data: {
+      name: string
+      position: string
+      team?: string
+      pprProjections?: number
+    }
+    match_confidence: string
+    possible_matches?: Array<{
+      name: string
+      position: string
+      team: string
+    }>
+  }>
+}
 
 interface ImportPlayerProjectionsProps {
   onImportComplete: (importData: {
@@ -64,7 +89,7 @@ interface MatchedPlayer extends CSVPlayer {
   possibleMatches?: Player[]
 }
 
-export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
+export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjectionsProps) {
   const router = useRouter()
   const [weeks, setWeeks] = useState<Week[]>([])
   const [selectedWeek, setSelectedWeek] = useState<string>('')
@@ -75,6 +100,14 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
   const [isParsing, setIsParsing] = useState(false)
   const [projectionSource, setProjectionSource] = useState<string>('')
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
+  
+  // Import result dialog state
+  const [importResult, setImportResult] = useState<{
+    success: boolean
+    data?: ProjectionImportResponse
+    error?: string
+  } | null>(null)
+  const [showResultDialog, setShowResultDialog] = useState(false)
 
   // Fetch weeks and players on component mount
   useEffect(() => {
@@ -293,6 +326,7 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
     }
     
     setIsProcessing(true)
+    setImportResult(null)
     
     try {
       // Use backend matching instead of client-side matching
@@ -311,19 +345,44 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
         const errorMessage = typeof errorData.detail === 'string' 
           ? errorData.detail 
           : errorData.detail?.message || errorData.detail?.error || 'Import failed'
-        throw new Error(errorMessage)
+        
+        // Show error dialog instead of alert
+        setImportResult({
+          success: false,
+          error: errorMessage
+        })
+        setShowResultDialog(true)
+        return
       }
       
-      const result = await response.json()
+      const result = await response.json() as ProjectionImportResponse
       console.log('Backend import result:', result)
       
-      // Import was successful - redirect to import page with success
-      router.push('/import?success=true')
+      // Show success dialog instead of redirect
+      setImportResult({
+        success: true,
+        data: result
+      })
+      setShowResultDialog(true)
+      
+      // Call the callback for activity tracking
+      onImportComplete({
+        filename: csvFile.name,
+        timestamp: new Date().toISOString(),
+        failedImports: result.failed_matches,
+        successfulImports: result.successful_matches,
+        projectionSource: projectionSource || 'Custom Projections',
+        week: parseInt(selectedWeek)
+      })
       
     } catch (error) {
       console.error('Error during processing:', error)
-      // Show error to user
-      alert(error instanceof Error ? error.message : 'Import failed')
+      // Show error dialog instead of alert
+      setImportResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'Import failed'
+      })
+      setShowResultDialog(true)
     } finally {
       setIsProcessing(false)
     }
@@ -484,6 +543,23 @@ export function ImportPlayerProjections({ }: ImportPlayerProjectionsProps) {
         </CardContent>
       </Card>
 
+      {/* Import Result Dialog */}
+      <ImportResultDialog
+        isOpen={showResultDialog}
+        onClose={() => {
+          setShowResultDialog(false)
+          setImportResult(null)
+          // Reset form for next import
+          setCsvFile(null)
+          setCsvData([])
+          setProjectionSource('')
+        }}
+        result={importResult?.data}
+        error={importResult?.error}
+        filename={csvFile?.name || 'Unknown'}
+        week={weeks.find(w => w.id.toString() === selectedWeek)?.label || 'Unknown'}
+        source={projectionSource || 'Custom Projections'}
+      />
 
     </div>
   )

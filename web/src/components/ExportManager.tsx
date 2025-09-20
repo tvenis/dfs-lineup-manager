@@ -61,10 +61,11 @@ export function ExportManager() {
 
   const fetchRecentActivity = async () => {
     try {
-      // Fetch from both activity endpoints
-      const [draftkingsResponse, projectionsResponse] = await Promise.all([
+      // Fetch from all three activity endpoints
+      const [draftkingsResponse, projectionsResponse, oddsApiResponse] = await Promise.all([
         fetch('http://localhost:8000/api/draftkings/activity?limit=20'),
-        fetch('http://localhost:8000/api/projections/activity?limit=20')
+        fetch('http://localhost:8000/api/projections/activity?limit=20'),
+        fetch('http://localhost:8000/api/odds-api/activity?limit=20')
       ])
       
       const allActivities: RecentActivity[] = []
@@ -77,6 +78,11 @@ export function ExportManager() {
       if (projectionsResponse.ok) {
         const projectionsData = await projectionsResponse.json()
         allActivities.push(...projectionsData)
+      }
+      
+      if (oddsApiResponse.ok) {
+        const oddsApiData = await oddsApiResponse.json()
+        allActivities.push(...oddsApiData)
       }
       
       // Sort by timestamp (most recent first) and limit to 20

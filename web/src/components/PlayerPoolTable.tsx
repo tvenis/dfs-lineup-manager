@@ -555,7 +555,7 @@ export function PlayerPoolTable({
                   </TableCell>
                   <TableCell>
                     <div className="font-mono text-sm">
-                      {entry.projectedPoints?.toFixed(1) || 'N/A'}
+                      {entry.projectedPoints?.toFixed(2) || 'N/A'}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -566,7 +566,7 @@ export function PlayerPoolTable({
                   <TableCell>
                     <div className="font-mono text-sm text-primary">
                       {entry.projectedPoints && entry.salary 
-                        ? ((entry.projectedPoints / entry.salary) * 1000).toFixed(1)
+                        ? ((entry.projectedPoints / entry.salary) * 1000).toFixed(2)
                         : 'N/A'
                       }
                     </div>

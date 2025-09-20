@@ -2792,7 +2792,7 @@ export default function PlayerPoolPage() {
 
                       <div className="col-span-1 text-right text-sm font-medium text-primary">
                         {player.projectedPoints && player.salary 
-                          ? ((player.projectedPoints / player.salary) * 1000).toFixed(1)
+                          ? ((player.projectedPoints / player.salary) * 1000).toFixed(2)
                           : 'N/A'
                         }
                       </div>

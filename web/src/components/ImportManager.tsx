@@ -223,10 +223,11 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
 
   const fetchRecentActivity = async () => {
     try {
-      // Fetch from both activity endpoints
-      const [draftkingsResponse, projectionsResponse] = await Promise.all([
+      // Fetch from all three activity endpoints
+      const [draftkingsResponse, projectionsResponse, oddsApiResponse] = await Promise.all([
         fetch('http://localhost:8000/api/draftkings/activity?limit=20'),
-        fetch('http://localhost:8000/api/projections/activity?limit=20')
+        fetch('http://localhost:8000/api/projections/activity?limit=20'),
+        fetch('http://localhost:8000/api/odds-api/activity?limit=20')
       ])
       
       const allActivities: RecentActivity[] = []
@@ -241,11 +242,17 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         allActivities.push(...projectionsData)
       }
       
+      if (oddsApiResponse.ok) {
+        const oddsApiData = await oddsApiResponse.json()
+        allActivities.push(...oddsApiData)
+      }
+      
       // Add import types to existing activities and sort by timestamp (most recent first)
       const sortedActivities = allActivities
         .map(activity => ({
           ...activity,
           importType: activity.importType || (
+            activity.fileName?.startsWith('odds-api:') ? 'odds-api' :
             activity.draftGroup === 'Odds-API' ? 'odds-api' :
             activity.fileType === 'CSV' ? 'projections' :
             'player-pool'

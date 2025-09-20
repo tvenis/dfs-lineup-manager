@@ -270,7 +270,7 @@ export default function OptimizedPlayerPool() {
                           </TableCell>
                           <TableCell>{entry.entry.player.team}</TableCell>
                           <TableCell>${entry.entry.salary?.toLocaleString()}</TableCell>
-                          <TableCell>{entry.entry.projectedPoints?.toFixed(1)}</TableCell>
+                          <TableCell>{entry.entry.projectedPoints?.toFixed(2)}</TableCell>
                           <TableCell>
                             {props.point && (
                               <span className="text-sm text-gray-600">

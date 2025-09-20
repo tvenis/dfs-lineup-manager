@@ -429,6 +429,8 @@ def process_matched_players(db: Session, week_id: int, projection_source: str, m
                 existing_projection.rank = _safe_int(player_data.get('rank'))
                 existing_projection.pprProjections = ppr_projection
                 existing_projection.actuals = actuals
+                # Explicitly set updated_at timestamp
+                existing_projection.updated_at = datetime.utcnow()
                 projections_updated += 1
                 if i < 3:
                     print(f"DEBUG: Player {i+1}: UPDATED existing projection (PPR: {ppr_projection}, Actuals: {actuals})")
@@ -580,6 +582,8 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
                         existing_projection.actuals = float(projection_data['actuals'])
                     except Exception:
                         pass
+                # Explicitly set updated_at timestamp
+                existing_projection.updated_at = datetime.utcnow()
                 projections_updated += 1
             else:
                 # Create new projection with minimal fields

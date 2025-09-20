@@ -916,6 +916,18 @@ async def import_player_props(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to import player props: {str(e)}")
 
+@router.get("/activity")
+async def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
+    """Get recent Odds-API import activity"""
+    try:
+        activities = db.query(RecentActivity).filter(
+            RecentActivity.fileName.like('odds-api:%')
+        ).order_by(RecentActivity.timestamp.desc()).limit(limit).all()
+        
+        return activities
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/teams")
 async def get_teams_with_odds_ids(db: Session = Depends(get_db)):
     """
