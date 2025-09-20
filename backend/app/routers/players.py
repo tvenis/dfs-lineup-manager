@@ -448,7 +448,7 @@ def get_player_pool_complete(
 
 @router.put("/pool/{entry_id}", response_model=PlayerPoolEntrySchema)
 def update_player_pool_entry(
-    entry_id: str,
+    entry_id: int,
     entry_update: PlayerPoolEntryUpdate,
     db: Session = Depends(get_db)
 ):
@@ -465,7 +465,7 @@ def update_player_pool_entry(
     return db_entry
 
 @router.delete("/pool/{entry_id}")
-def delete_player_pool_entry(entry_id: str, db: Session = Depends(get_db)):
+def delete_player_pool_entry(entry_id: int, db: Session = Depends(get_db)):
     """Delete a player pool entry"""
     db_entry = db.query(PlayerPoolEntry).filter(PlayerPoolEntry.id == entry_id).first()
     if not db_entry:
