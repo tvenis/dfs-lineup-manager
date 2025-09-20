@@ -746,7 +746,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                     <SelectContent>
                       {draftGroups.map((group) => (
                         <SelectItem key={group.draftGroup} value={group.draftGroup.toString()}>
-                          {group.draftGroup_description || `Group ${group.draftGroup}`}
+                          {group.draftGroup_description ? `${group.draftGroup_description} (${group.draftGroup})` : `Group ${group.draftGroup}`}
                         </SelectItem>
                       ))}
                     </SelectContent>
