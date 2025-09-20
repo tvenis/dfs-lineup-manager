@@ -21,7 +21,7 @@ from app.schemas import (
 router = APIRouter()
 
 # Lineup CRUD operations
-@router.post("/", response_model=LineupSchema)
+@router.post("", response_model=LineupSchema)
 def create_lineup(lineup: LineupCreate, db: Session = Depends(get_db)):
     """Create a new lineup"""
     # Check if week exists
