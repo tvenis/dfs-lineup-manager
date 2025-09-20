@@ -130,6 +130,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# But allow web/src/lib for frontend services
+!web/src/lib/
 lib64/
 parts/
 sdist/
