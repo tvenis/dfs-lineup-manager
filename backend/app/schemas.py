@@ -184,7 +184,7 @@ class RecentActivityBase(BaseModel):
     fileType: str = Field(..., pattern="^(API|CSV)$")
     fileName: Optional[str] = Field(None, max_length=200)
     week_id: int = Field(..., description="Week ID from weeks table")
-    draftGroup: str = Field(..., max_length=20)
+    draftGroup: str = Field(..., max_length=30)
     recordsAdded: int = Field(default=0, ge=0)
     recordsUpdated: int = Field(default=0, ge=0)
     recordsSkipped: int = Field(default=0, ge=0)

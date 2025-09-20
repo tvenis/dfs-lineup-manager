@@ -195,7 +195,7 @@ class RecentActivity(Base):
     fileType = Column(String(20), nullable=False)  # 'API' | 'CSV'
     fileName = Column(String(200))  # nullable, filename if applicable
     week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)  # Foreign key to weeks table
-    draftGroup = Column(String(20), nullable=False)  # draft group ID
+    draftGroup = Column(String(30), nullable=False)  # draft group ID
     recordsAdded = Column(Integer, default=0)  # count of records added
     recordsUpdated = Column(Integer, default=0)  # count of records updated
     recordsSkipped = Column(Integer, default=0)  # count of records skipped
