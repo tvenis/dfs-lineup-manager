@@ -16,8 +16,10 @@ router = APIRouter(prefix="/api/odds-api", tags=["odds-api"])
 ODDS_API_BASE_URL = "https://api.the-odds-api.com/v4"
 
 class OddsApiService:
-    def __init__(self, api_key: str):
-        self.api_key = api_key
+    def __init__(self):
+        self.api_key = os.getenv("ODDS_API_KEY")
+        if not self.api_key:
+            raise ValueError("ODDS_API_KEY environment variable is required")
         self.base_url = ODDS_API_BASE_URL
     
     def american_to_decimal(self, american_odds: float) -> float:
@@ -192,19 +194,17 @@ async def import_participants(
     
     Args:
         sport: Sport identifier (e.g., 'americanfootball_nfl')
-        api_key: Odds-API key
         db: Database session
     
     Returns:
         Import results with counts and details
-    """
-    api_key = request.get("api_key")
-    if not api_key or not api_key.strip():
-        raise HTTPException(status_code=400, detail="API key is required")
     
+    Note:
+        Requires ODDS_API_KEY environment variable to be set
+    """
     try:
         # Initialize Odds-API service
-        odds_service = OddsApiService(api_key)
+        odds_service = OddsApiService()
         
         # Fetch participants from Odds-API
         participants = await odds_service.get_participants(sport)
@@ -292,11 +292,7 @@ async def import_events(
     Returns:
         Import results with counts and details
     """
-    api_key = request.get("api_key")
     week_id = request.get("week_id")
-    
-    if not api_key or not api_key.strip():
-        raise HTTPException(status_code=400, detail="API key is required")
     
     if not week_id:
         raise HTTPException(status_code=400, detail="week_id is required")
@@ -311,7 +307,7 @@ async def import_events(
     
     try:
         # Initialize Odds-API service
-        odds_service = OddsApiService(api_key)
+        odds_service = OddsApiService()
         
         # Fetch events from Odds-API
         events = await odds_service.get_events(
@@ -459,11 +455,7 @@ async def import_odds(
     Returns:
         Import results with counts and details
     """
-    api_key = request.get("api_key")
     week_id = request.get("week_id")
-    
-    if not api_key or not api_key.strip():
-        raise HTTPException(status_code=400, detail="API key is required")
     
     if not week_id:
         raise HTTPException(status_code=400, detail="week_id is required")
@@ -479,7 +471,7 @@ async def import_odds(
     
     try:
         # Initialize Odds-API service
-        odds_service = OddsApiService(api_key)
+        odds_service = OddsApiService()
         
         print(f"DEBUG: Using odds format (forced): {odds_format}")
         
@@ -649,7 +641,6 @@ async def import_player_props(
     - If bookmakers is 'all', fetch from all bookmakers (omit param).
     - Only imports Over bets; Under bets are automatically filtered out.
     """
-    api_key = request.get("api_key")
     week_id = request.get("week_id")
     # Accept single or multiple markets
     markets = request.get("markets")
@@ -663,13 +654,11 @@ async def import_player_props(
     event_id = request.get("event_id")  # odds_api_gameid, optional when 'All'
     bookmakers = request.get("bookmakers", "all")  # 'all' or specific key like 'fanduel'
 
-    if not api_key or not api_key.strip():
-        raise HTTPException(status_code=400, detail="API key is required")
     if not week_id:
         raise HTTPException(status_code=400, detail="week_id is required")
 
     try:
-        odds_service = OddsApiService(api_key)
+        odds_service = OddsApiService()
 
         # Resolve list of event IDs
         event_ids: List[str] = []
@@ -763,7 +752,7 @@ async def import_player_props(
                 # Record the exact request for observability
                 req_url = f"{odds_service.base_url}/sports/{sport}/events/{eid}/odds"
                 req_params = {
-                    "apiKey": api_key,
+                    "apiKey": odds_service.api_key,
                     "regions": regions,
                     "markets": markets_param,
                     "oddsFormat": "american",

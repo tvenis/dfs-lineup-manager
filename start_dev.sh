@@ -54,6 +54,16 @@ pip install -r requirements.txt
 # Note: Database setup should be done through migrations, not SQLite files
 echo "🗄️  Using Neon PostgreSQL database..."
 
+# Check if ODDS_API_KEY is set
+if [ -z "$ODDS_API_KEY" ]; then
+    echo "⚠️  ODDS_API_KEY environment variable not set"
+    echo "   To use Odds-API features, set the environment variable:"
+    echo "   export ODDS_API_KEY=\"your_api_key_here\""
+    echo "   Or add it to your shell profile (~/.bashrc, ~/.zshrc)"
+else
+    echo "✅ ODDS_API_KEY environment variable is set"
+fi
+
 # Start backend in background
 echo "🚀 Starting backend server on port 8000..."
 python main.py &
