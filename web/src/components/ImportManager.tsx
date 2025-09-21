@@ -978,32 +978,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   </div>
                 </div>
 
-                {/* Markets */}
-                <div className="space-y-3">
-                  <Label>Markets</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {marketOptions.map((market) => (
-                      <div key={market.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={market.id}
-                          checked={oddsMarkets.includes(market.id)}
-                          onCheckedChange={(checked) => handleMarketChange(market.id, checked as boolean)}
-                        />
-                        <div className="grid gap-1.5 leading-none">
-                          <label
-                            htmlFor={market.id}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {market.label}
-                          </label>
-                          <p className="text-xs text-muted-foreground">
-                            {market.description}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
                 {/* Game (Required for Player Props) */}
                 <div className="space-y-2">
@@ -1326,6 +1300,34 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                     </div>
                     <Badge variant="outline">Odds</Badge>
                   </div>
+                  
+                  {/* Markets Selection - specific to Odds endpoint */}
+                  <div className="space-y-3">
+                    <Label>Markets</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {marketOptions.map((market) => (
+                        <div key={market.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`odds-${market.id}`}
+                            checked={oddsMarkets.includes(market.id)}
+                            onCheckedChange={(checked) => handleMarketChange(market.id, checked as boolean)}
+                          />
+                          <div className="grid gap-1.5 leading-none">
+                            <label
+                              htmlFor={`odds-${market.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              {market.label}
+                            </label>
+                            <p className="text-xs text-muted-foreground">
+                              {market.description}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
                   <Button 
                     onClick={() => handleOddsApiImport('odds')}
                     disabled={isImportingOdds || !oddsStartTime || !oddsEndTime || !selectedWeekId}
