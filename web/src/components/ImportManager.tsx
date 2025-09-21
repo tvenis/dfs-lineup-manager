@@ -79,7 +79,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   const [oddsMarkets, setOddsMarkets] = useState<string[]>(['h2h', 'spreads', 'totals']) // Default selection
   // Odds/Date format removed; odds always requested in american and date in iso by backend
   const [oddsBookmakers, setOddsBookmakers] = useState<string>('draftkings')
-  const [oddsDaysFrom, setOddsDaysFrom] = useState<string>('1')
   const [oddsGame, setOddsGame] = useState<string>('All')
   const [isImportingOdds, setIsImportingOdds] = useState(false)
   const [activeTab, setActiveTab] = useState<string>('import-pool')
@@ -1220,20 +1219,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   </div>
                 </div>
 
-                {/* Days From */}
-                <div className="mt-2 space-y-2">
-                  <Label>Days From</Label>
-                  <Select value={oddsDaysFrom} onValueChange={setOddsDaysFrom}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select days" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 Day</SelectItem>
-                      <SelectItem value="2">2 Days</SelectItem>
-                      <SelectItem value="3">3 Days</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 {/* Odds/Date format configuration removed; backend forces american/iso */}
 
