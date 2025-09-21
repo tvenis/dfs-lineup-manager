@@ -979,219 +979,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                 </div>
 
 
-                {/* Game (Required for Player Props) */}
-                <div className="space-y-2">
-                  <Label>Game (Required for Player Props)</Label>
-                  <Select value={oddsGame} onValueChange={setOddsGame}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select game for player props" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gameOptions.map((game) => (
-                        <SelectItem key={game.value} value={game.value}>
-                          {game.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Player Prop Markets */}
-                <div className="mt-2 space-y-2">
-                  <Label>Player Prop Markets</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="player_pass_tds"
-                        checked={playerPropMarkets.includes('player_pass_tds')}
-                        onCheckedChange={(checked) => {
-                          setPlayerPropMarkets((prev) => {
-                            const exists = prev.includes('player_pass_tds')
-                            if (checked && !exists) return [...prev, 'player_pass_tds']
-                            if (!checked && exists) return prev.filter(m => m !== 'player_pass_tds')
-                            return prev
-                          })
-                        }}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_pass_tds" className="text-sm font-medium leading-none">
-                          Passing TDs
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player passing touchdowns</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="player_pass_attempts"
-                        checked={playerPropMarkets.includes('player_pass_attempts')}
-                        onCheckedChange={(checked) => {
-                          setPlayerPropMarkets((prev) => {
-                            const exists = prev.includes('player_pass_attempts')
-                            if (checked && !exists) return [...prev, 'player_pass_attempts']
-                            if (!checked && exists) return prev.filter(m => m !== 'player_pass_attempts')
-                            return prev
-                          })
-                        }}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_pass_attempts" className="text-sm font-medium leading-none">
-                          Pass Attempts
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player passing attempts</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="player_pass_completions"
-                        checked={playerPropMarkets.includes('player_pass_completions')}
-                        onCheckedChange={(checked) => {
-                          setPlayerPropMarkets((prev) => {
-                            const exists = prev.includes('player_pass_completions')
-                            if (checked && !exists) return [...prev, 'player_pass_completions']
-                            if (!checked && exists) return prev.filter(m => m !== 'player_pass_completions')
-                            return prev
-                          })
-                        }}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_pass_completions" className="text-sm font-medium leading-none">
-                          Pass Completions
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player passing completions</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="player_pass_yds"
-                        checked={playerPropMarkets.includes('player_pass_yds')}
-                        onCheckedChange={(checked) => {
-                          setPlayerPropMarkets((prev) => {
-                            const exists = prev.includes('player_pass_yds')
-                            if (checked && !exists) return [...prev, 'player_pass_yds']
-                            if (!checked && exists) return prev.filter(m => m !== 'player_pass_yds')
-                            return prev
-                          })
-                        }}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_pass_yds" className="text-sm font-medium leading-none">
-                          Passing Yards
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player passing yards</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="player_receptions"
-                        checked={playerPropMarkets.includes('player_receptions')}
-                        onCheckedChange={(checked) => {
-                          setPlayerPropMarkets((prev) => {
-                            const exists = prev.includes('player_receptions')
-                            if (checked && !exists) return [...prev, 'player_receptions']
-                            if (!checked && exists) return prev.filter(m => m !== 'player_receptions')
-                            return prev
-                          })
-                        }}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_receptions" className="text-sm font-medium leading-none">
-                          Receptions
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player receptions</p>
-                      </div>
-                    </div>
-
-                    
-
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="player_reception_yds"
-                        checked={playerPropMarkets.includes('player_reception_yds')}
-                        onCheckedChange={(checked) => {
-                          setPlayerPropMarkets((prev) => {
-                            const exists = prev.includes('player_reception_yds')
-                            if (checked && !exists) return [...prev, 'player_reception_yds']
-                            if (!checked && exists) return prev.filter(m => m !== 'player_reception_yds')
-                            return prev
-                          })
-                        }}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_reception_yds" className="text-sm font-medium leading-none">
-                          Reception Yards
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player reception yards</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="player_rush_attempts"
-                        checked={playerPropMarkets.includes('player_rush_attempts')}
-                        onCheckedChange={(checked) => {
-                          setPlayerPropMarkets((prev) => {
-                            const exists = prev.includes('player_rush_attempts')
-                            if (checked && !exists) return [...prev, 'player_rush_attempts']
-                            if (!checked && exists) return prev.filter(m => m !== 'player_rush_attempts')
-                            return prev
-                          })
-                        }}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_rush_attempts" className="text-sm font-medium leading-none">
-                          Rush Attempts
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player rushing attempts</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="player_rush_yds"
-                        checked={playerPropMarkets.includes('player_rush_yds')}
-                        onCheckedChange={(checked) => {
-                          setPlayerPropMarkets((prev) => {
-                            const exists = prev.includes('player_rush_yds')
-                            if (checked && !exists) return [...prev, 'player_rush_yds']
-                            if (!checked && exists) return prev.filter(m => m !== 'player_rush_yds')
-                            return prev
-                          })
-                        }}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_rush_yds" className="text-sm font-medium leading-none">
-                          Rushing Yards
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player rushing yards</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-2">
-                      <Checkbox
-                        id="player_tds_over"
-                        checked={playerPropMarkets.includes('player_tds_over')}
-                        onCheckedChange={(checked) => {
-                          setPlayerPropMarkets((prev) => {
-                            const exists = prev.includes('player_tds_over')
-                            if (checked && !exists) return [...prev, 'player_tds_over']
-                            if (!checked && exists) return prev.filter(m => m !== 'player_tds_over')
-                            return prev
-                          })
-                        }}
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor="player_tds_over" className="text-sm font-medium leading-none">
-                          Touchdown Overs
-                        </label>
-                        <p className="text-xs text-muted-foreground">Player total touchdown overs</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
 
                 {/* Odds/Date format configuration removed; backend forces american/iso */}
@@ -1364,6 +1151,219 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                     </div>
                     <Badge variant="outline">Player Props</Badge>
                   </div>
+                  
+                  {/* Game Selection - specific to Player Props endpoint */}
+                  <div className="space-y-2">
+                    <Label>Game</Label>
+                    <Select value={oddsGame} onValueChange={setOddsGame}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select game for player props" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {gameOptions.map((game) => (
+                          <SelectItem key={game.value} value={game.value}>
+                            {game.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Player Prop Markets - specific to Player Props endpoint */}
+                  <div className="mt-2 space-y-2">
+                    <Label>Player Prop Markets</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="props-player_pass_tds"
+                          checked={playerPropMarkets.includes('player_pass_tds')}
+                          onCheckedChange={(checked) => {
+                            setPlayerPropMarkets((prev) => {
+                              const exists = prev.includes('player_pass_tds')
+                              if (checked && !exists) return [...prev, 'player_pass_tds']
+                              if (!checked && exists) return prev.filter(m => m !== 'player_pass_tds')
+                              return prev
+                            })
+                          }}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label htmlFor="props-player_pass_tds" className="text-sm font-medium leading-none">
+                            Passing TDs
+                          </label>
+                          <p className="text-xs text-muted-foreground">Player passing touchdowns</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="props-player_pass_attempts"
+                          checked={playerPropMarkets.includes('player_pass_attempts')}
+                          onCheckedChange={(checked) => {
+                            setPlayerPropMarkets((prev) => {
+                              const exists = prev.includes('player_pass_attempts')
+                              if (checked && !exists) return [...prev, 'player_pass_attempts']
+                              if (!checked && exists) return prev.filter(m => m !== 'player_pass_attempts')
+                              return prev
+                            })
+                          }}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label htmlFor="props-player_pass_attempts" className="text-sm font-medium leading-none">
+                            Pass Attempts
+                          </label>
+                          <p className="text-xs text-muted-foreground">Player passing attempts</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="props-player_pass_completions"
+                          checked={playerPropMarkets.includes('player_pass_completions')}
+                          onCheckedChange={(checked) => {
+                            setPlayerPropMarkets((prev) => {
+                              const exists = prev.includes('player_pass_completions')
+                              if (checked && !exists) return [...prev, 'player_pass_completions']
+                              if (!checked && exists) return prev.filter(m => m !== 'player_pass_completions')
+                              return prev
+                            })
+                          }}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label htmlFor="props-player_pass_completions" className="text-sm font-medium leading-none">
+                            Pass Completions
+                          </label>
+                          <p className="text-xs text-muted-foreground">Player passing completions</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="props-player_pass_yds"
+                          checked={playerPropMarkets.includes('player_pass_yds')}
+                          onCheckedChange={(checked) => {
+                            setPlayerPropMarkets((prev) => {
+                              const exists = prev.includes('player_pass_yds')
+                              if (checked && !exists) return [...prev, 'player_pass_yds']
+                              if (!checked && exists) return prev.filter(m => m !== 'player_pass_yds')
+                              return prev
+                            })
+                          }}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label htmlFor="props-player_pass_yds" className="text-sm font-medium leading-none">
+                            Passing Yards
+                          </label>
+                          <p className="text-xs text-muted-foreground">Player passing yards</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="props-player_receptions"
+                          checked={playerPropMarkets.includes('player_receptions')}
+                          onCheckedChange={(checked) => {
+                            setPlayerPropMarkets((prev) => {
+                              const exists = prev.includes('player_receptions')
+                              if (checked && !exists) return [...prev, 'player_receptions']
+                              if (!checked && exists) return prev.filter(m => m !== 'player_receptions')
+                              return prev
+                            })
+                          }}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label htmlFor="props-player_receptions" className="text-sm font-medium leading-none">
+                            Receptions
+                          </label>
+                          <p className="text-xs text-muted-foreground">Player receptions</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="props-player_reception_yds"
+                          checked={playerPropMarkets.includes('player_reception_yds')}
+                          onCheckedChange={(checked) => {
+                            setPlayerPropMarkets((prev) => {
+                              const exists = prev.includes('player_reception_yds')
+                              if (checked && !exists) return [...prev, 'player_reception_yds']
+                              if (!checked && exists) return prev.filter(m => m !== 'player_reception_yds')
+                              return prev
+                            })
+                          }}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label htmlFor="props-player_reception_yds" className="text-sm font-medium leading-none">
+                            Reception Yards
+                          </label>
+                          <p className="text-xs text-muted-foreground">Player reception yards</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="props-player_rush_attempts"
+                          checked={playerPropMarkets.includes('player_rush_attempts')}
+                          onCheckedChange={(checked) => {
+                            setPlayerPropMarkets((prev) => {
+                              const exists = prev.includes('player_rush_attempts')
+                              if (checked && !exists) return [...prev, 'player_rush_attempts']
+                              if (!checked && exists) return prev.filter(m => m !== 'player_rush_attempts')
+                              return prev
+                            })
+                          }}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label htmlFor="props-player_rush_attempts" className="text-sm font-medium leading-none">
+                            Rush Attempts
+                          </label>
+                          <p className="text-xs text-muted-foreground">Player rushing attempts</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="props-player_rush_yds"
+                          checked={playerPropMarkets.includes('player_rush_yds')}
+                          onCheckedChange={(checked) => {
+                            setPlayerPropMarkets((prev) => {
+                              const exists = prev.includes('player_rush_yds')
+                              if (checked && !exists) return [...prev, 'player_rush_yds']
+                              if (!checked && exists) return prev.filter(m => m !== 'player_rush_yds')
+                              return prev
+                            })
+                          }}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label htmlFor="props-player_rush_yds" className="text-sm font-medium leading-none">
+                            Rushing Yards
+                          </label>
+                          <p className="text-xs text-muted-foreground">Player rushing yards</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="props-player_tds_over"
+                          checked={playerPropMarkets.includes('player_tds_over')}
+                          onCheckedChange={(checked) => {
+                            setPlayerPropMarkets((prev) => {
+                              const exists = prev.includes('player_tds_over')
+                              if (checked && !exists) return [...prev, 'player_tds_over']
+                              if (!checked && exists) return prev.filter(m => m !== 'player_tds_over')
+                              return prev
+                            })
+                          }}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label htmlFor="props-player_tds_over" className="text-sm font-medium leading-none">
+                            Touchdown Overs
+                          </label>
+                          <p className="text-xs text-muted-foreground">Player total touchdown overs</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <Button
                     onClick={() => handleOddsApiImport('player-props')}
                     disabled={isImportingOdds || !selectedWeekId}
