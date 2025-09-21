@@ -71,7 +71,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   const [, setLastImportResult] = useState<DraftKingsImportResponse | null>(null)
   
   // Odds-API Integration state
-  const [oddsApiKey, setOddsApiKey] = useState<string>('')
   const [oddsWeek, setOddsWeek] = useState<string>(selectedWeek) // Default to active week
   const [oddsSport, setOddsSport] = useState<string>('NFL')
   const [oddsStartTime, setOddsStartTime] = useState<Date | undefined>(undefined)
@@ -443,10 +442,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   }
 
   const handleOddsApiImport = async (endpoint: string) => {
-    if (!oddsApiKey.trim()) {
-      alert('Please enter your Odds-API key')
-      return
-    }
 
     // Validate required parameters for Events endpoint
     if (endpoint === 'events' && (!oddsStartTime || !oddsEndTime)) {
@@ -476,9 +471,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       let apiUrl = ''
       let description = ''
       let sport = ''
-      let requestBody: any = {
-        api_key: oddsApiKey
-      }
+      let requestBody: any = {}
       
       switch (endpoint) {
         case 'participants':
@@ -871,17 +864,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* API Key */}
-                <div className="space-y-2">
-                  <Label htmlFor="odds-api-key">API Key</Label>
-                  <Input
-                    id="odds-api-key"
-                    type="password"
-                    placeholder="Enter your Odds-API key"
-                    value={oddsApiKey}
-                    onChange={(e) => setOddsApiKey(e.target.value)}
-                  />
-                </div>
 
                 {/* Week and Sport */}
                 <div className="grid grid-cols-2 gap-4">
@@ -1258,7 +1240,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                 <Alert>
                   <CheckCircle className="h-4 w-4" />
                   <AlertDescription>
-                    These parameters will be applied to all Odds-API endpoint calls. Get your free API key from the-odds-api.com.
+                    These parameters will be applied to all Odds-API endpoint calls. The API key is configured via environment variables.
                   </AlertDescription>
                 </Alert>
               </CardContent>
@@ -1286,7 +1268,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   </div>
                   <Button 
                     onClick={() => handleOddsApiImport('participants')}
-                    disabled={isImportingOdds || !oddsApiKey.trim()}
+                    disabled={isImportingOdds}
                     className="w-full gap-2"
                     size="sm"
                   >
@@ -1320,7 +1302,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   </div>
                   <Button 
                     onClick={() => handleOddsApiImport('events')}
-                    disabled={isImportingOdds || !oddsApiKey.trim() || !oddsStartTime || !oddsEndTime || !selectedWeekId}
+                    disabled={isImportingOdds || !oddsStartTime || !oddsEndTime || !selectedWeekId}
                     className="w-full gap-2"
                     size="sm"
                   >
@@ -1361,7 +1343,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   </div>
                   <Button 
                     onClick={() => handleOddsApiImport('odds')}
-                    disabled={isImportingOdds || !oddsApiKey.trim() || !oddsStartTime || !oddsEndTime || !selectedWeekId}
+                    disabled={isImportingOdds || !oddsStartTime || !oddsEndTime || !selectedWeekId}
                     className="w-full gap-2"
                     size="sm"
                   >
@@ -1397,7 +1379,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                   </div>
                   <Button
                     onClick={() => handleOddsApiImport('player-props')}
-                    disabled={isImportingOdds || !oddsApiKey.trim() || !selectedWeekId}
+                    disabled={isImportingOdds || !selectedWeekId}
                     className="w-full gap-2"
                     size="sm"
                   >
