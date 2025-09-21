@@ -143,14 +143,11 @@ def export_lineup_csv(lineup_id: str, db: Session = Depends(get_db)):
         if not lineup_row:
             raise HTTPException(status_code=404, detail="Lineup not found")
         
-        lineup_id, name, week_id, slots_json = lineup_row
+        lineup_id, name, week_id, slots = lineup_row
         
-        # Parse the slots JSON string
-        try:
-            import json
-            slots = json.loads(slots_json)
-        except json.JSONDecodeError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid lineup slots format: {str(e)}")
+        # slots is already a dictionary from the JSON column type
+        if not isinstance(slots, dict):
+            raise HTTPException(status_code=400, detail="Invalid lineup slots format")
         
         # Get the week using raw SQL
         week_result = db.execute(text("SELECT week_number, year FROM weeks WHERE id = :week_id"), 
@@ -163,12 +160,12 @@ def export_lineup_csv(lineup_id: str, db: Session = Depends(get_db)):
         week_number, year = week_row
         
         # Get player pool entries for this week to access draftableId
-        pool_result = db.execute(text("SELECT playerDkId, draftableId FROM player_pool_entries WHERE week_id = :week_id"), 
+        pool_result = db.execute(text('SELECT "playerDkId", "draftableId" FROM player_pool_entries WHERE week_id = :week_id'), 
                                 {"week_id": week_id})
         pool_entries = pool_result.fetchall()
         
         # Create a mapping of playerDkId to draftableId
-        player_to_draftable = {entry.playerDkId: entry.draftableId for entry in pool_entries}
+        player_to_draftable = {entry[0]: entry[1] for entry in pool_entries}
         
         # Create CSV content
         output = io.StringIO()
@@ -280,14 +277,14 @@ def export_all_lineups_csv(
                 week_info = f"_week{week_number}_{year}"
         
         # Get player pool entries for all weeks to access draftableId
-        pool_result = db.execute(text("SELECT week_id, playerDkId, draftableId FROM player_pool_entries"))
+        pool_result = db.execute(text('SELECT week_id, "playerDkId", "draftableId" FROM player_pool_entries'))
         pool_entries = pool_result.fetchall()
         
         # Create a mapping of (week_id, playerDkId) to draftableId
         player_to_draftable = {}
         for entry in pool_entries:
-            key = (entry.week_id, entry.playerDkId)
-            player_to_draftable[key] = entry.draftableId
+            key = (entry[0], entry[1])  # week_id, playerDkId
+            player_to_draftable[key] = entry[2]  # draftableId
         
         # Create CSV content
         output = io.StringIO()
@@ -298,10 +295,12 @@ def export_all_lineups_csv(
         writer.writerow(header)
         
         # Process each lineup
-        for lineup_id, name, week_id, slots_json in lineups:
+        for lineup_id, name, week_id, slots in lineups:
             try:
-                # Parse the slots JSON string
-                slots = json.loads(slots_json)
+                # slots is already a dictionary from the JSON column type
+                if not isinstance(slots, dict):
+                    print(f"Invalid slots format for lineup {lineup_id}: {slots}")
+                    continue
                 
                 # Create data row for this lineup
                 data_row = []
@@ -359,8 +358,8 @@ def export_all_lineups_csv(
                 # Write the row
                 writer.writerow(data_row)
                 
-            except json.JSONDecodeError as e:
-                print(f"Error parsing slots for lineup {lineup_id}: {str(e)}")
+            except Exception as e:
+                print(f"Error processing lineup {lineup_id}: {str(e)}")
                 # Write empty row for this lineup
                 writer.writerow([''] * 9)
                 continue
