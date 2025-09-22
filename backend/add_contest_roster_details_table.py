@@ -69,6 +69,10 @@ def create_contest_roster_details_table(session):
                 fantasy_points DOUBLE PRECISION,
                 qb_name VARCHAR(255),
                 qb_score DOUBLE PRECISION,
+                rb1_name VARCHAR(255),
+                rb1_score DOUBLE PRECISION,
+                rb2_name VARCHAR(255),
+                rb2_score DOUBLE PRECISION,
                 wr1_name VARCHAR(255),
                 wr1_score DOUBLE PRECISION,
                 wr2_name VARCHAR(255),
@@ -114,6 +118,17 @@ def create_indexes(session):
             # Performance indexes
             "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_fantasy_points ON contest_roster_details(fantasy_points DESC);",
             "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_created_at ON contest_roster_details(created_at DESC);",
+            
+            # Player position indexes for roster analysis
+            "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_qb_name ON contest_roster_details(qb_name);",
+            "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_rb1_name ON contest_roster_details(rb1_name);",
+            "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_rb2_name ON contest_roster_details(rb2_name);",
+            "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_wr1_name ON contest_roster_details(wr1_name);",
+            "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_wr2_name ON contest_roster_details(wr2_name);",
+            "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_wr3_name ON contest_roster_details(wr3_name);",
+            "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_te_name ON contest_roster_details(te_name);",
+            "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_flex_name ON contest_roster_details(flex_name);",
+            "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_dst_name ON contest_roster_details(dst_name);",
             
             # JSONB index for contest_json queries
             "CREATE INDEX IF NOT EXISTS idx_contest_roster_details_contest_json ON contest_roster_details USING GIN (contest_json);"
