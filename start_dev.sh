@@ -64,6 +64,17 @@ else
     echo "✅ ODDS_API_KEY environment variable is set"
 fi
 
+# Check if OPENAI_API_KEY is set
+if [ -z "$OPENAI_API_KEY" ]; then
+    echo "⚠️  OPENAI_API_KEY environment variable not set"
+    echo "   To use ChatGPT Vector Service features, set the environment variable:"
+    echo "   export OPENAI_API_KEY=\"your_api_key_here\""
+    echo "   Or run: python setup_openai_env.py"
+    echo "   Or add it to your shell profile (~/.bashrc, ~/.zshrc)"
+else
+    echo "✅ OPENAI_API_KEY environment variable is set"
+fi
+
 # Start backend in background
 echo "🚀 Starting backend server on port 8000..."
 python main.py &

@@ -88,6 +88,34 @@ The API will be available at `http://localhost:8000`
 - `GET /api/csv/weeks` - List available weeks
 - `POST /api/csv/week` - Create new week
 
+### ChatGPT Vector Service
+The backend includes a ChatGPT Vector Service for AI-powered analysis of DFS data:
+
+- **User-scoped vector stores**: Each user gets their own `{username}-dfs` vector store
+- **File upload support**: Upload CSV, PDF, and other files for AI analysis
+- **Natural language queries**: Ask questions about your DFS data in plain English
+- **Automated store management**: Automatically finds existing stores or creates new ones
+
+#### Usage Example:
+```python
+from app.chatgpt_vector import ChatGPTVectorService
+
+# Initialize for user "tvenis"
+service = ChatGPTVectorService("tvenis")
+
+# Get or create user's vector store
+vs_id = await service.get_or_create_user_vector_store()
+
+# Upload DFS data file
+file_id = await service.upload_file("week2_ownership.csv", vs_id)
+
+# Query the data with natural language
+response = await service.chat_with_file_search(
+    "Who are the safest cash TEs from my uploads?",
+    vs_id
+)
+```
+
 ## 🗄️ Database Schema
 
 ### Core Tables
@@ -139,8 +167,15 @@ backend/
 Create a `.env` file for configuration:
 
 ```env
-# Database
-DATABASE_URL=sqlite:///./dfs_app.db
+# Database (Neon PostgreSQL)
+DATABASE_URL=postgresql://username:password@host:port/database
+LOCAL_DATABASE_URL=postgresql://username:password@host:port/database
+
+# OpenAI API (for ChatGPT Vector Service)
+OPENAI_API_KEY=sk-your-openai-api-key-here
+
+# Odds API (optional - for sports data)
+ODDS_API_KEY=your-odds-api-key-here
 
 # API Settings
 API_HOST=0.0.0.0
@@ -149,6 +184,21 @@ DEBUG=true
 
 # CORS
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+```
+
+#### Environment Setup
+
+Use the provided setup scripts to configure environment variables:
+
+```bash
+# Interactive setup for all environment variables
+python setup_env.py
+
+# Dedicated OpenAI API key setup
+python setup_openai_env.py
+
+# Check current environment status
+python setup_openai_env.py check
 ```
 
 ### Database URLs
