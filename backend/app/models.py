@@ -436,3 +436,78 @@ class TipsConfiguration(Base):
         Index('idx_tips_config_active', 'is_active'),
         Index('idx_tips_config_name', 'name'),
     )
+
+
+class ScrapedData(Base):
+    """Model for storing scraped data from Firecrawl API"""
+    __tablename__ = "scraped_data"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    url = Column(String(2000), nullable=False)
+    scraped_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    raw_data = Column(JSON, nullable=False)  # The actual scraped JSON data
+    metadata = Column(JSON)  # Firecrawl metadata (title, description, etc.)
+    processing_status = Column(String(50), default="pending")  # pending, processing, completed, failed
+    processing_error = Column(Text)  # Error message if processing failed
+    import_program_used = Column(String(100))  # Name of the import program that processed this data
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Indexes for common lookup patterns
+    __table_args__ = (
+        Index('idx_scraped_data_url', 'url'),
+        Index('idx_scraped_data_scraped_at', 'scraped_at'),
+        Index('idx_scraped_data_status', 'processing_status'),
+        Index('idx_scraped_data_import_program', 'import_program_used'),
+    )
+
+
+class ScrapingJob(Base):
+    """Model for tracking scraping jobs and batch operations"""
+    __tablename__ = "scraping_jobs"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_name = Column(String(200), nullable=False)
+    job_type = Column(String(50), nullable=False)  # single, batch, scheduled
+    status = Column(String(50), default="pending")  # pending, running, completed, failed
+    total_urls = Column(Integer, default=0)
+    completed_urls = Column(Integer, default=0)
+    failed_urls = Column(Integer, default=0)
+    schema_used = Column(String(200))  # Name of schema or prompt used
+    error_message = Column(Text)
+    started_at = Column(DateTime(timezone=True))
+    completed_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Indexes for common lookup patterns
+    __table_args__ = (
+        Index('idx_scraping_jobs_status', 'status'),
+        Index('idx_scraping_jobs_type', 'job_type'),
+        Index('idx_scraping_jobs_created_at', 'created_at'),
+    )
+
+
+class ScrapingJobUrl(Base):
+    """Model for tracking individual URLs within a scraping job"""
+    __tablename__ = "scraping_job_urls"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_id = Column(Integer, ForeignKey("scraping_jobs.id"), nullable=False)
+    url = Column(String(2000), nullable=False)
+    status = Column(String(50), default="pending")  # pending, completed, failed
+    scraped_data_id = Column(Integer, ForeignKey("scraped_data.id"))  # Link to scraped data
+    error_message = Column(Text)
+    processed_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    job = relationship("ScrapingJob")
+    scraped_data = relationship("ScrapedData")
+    
+    # Indexes for common lookup patterns
+    __table_args__ = (
+        Index('idx_scraping_job_urls_job_id', 'job_id'),
+        Index('idx_scraping_job_urls_status', 'status'),
+        Index('idx_scraping_job_urls_scraped_data_id', 'scraped_data_id'),
+    )
