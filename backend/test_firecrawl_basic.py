@@ -25,8 +25,11 @@ def test_firecrawl_initialization():
     try:
         from firecrawl import Firecrawl
         
-        # Test with API key
-        api_key = "fc-91a8ab6e29dc438caaa9afac2f935a12"
+        # Test with API key from environment
+        api_key = os.getenv("FIRECRAWL_API_KEY", "")
+        if not api_key:
+            print("⚠️  FIRECRAWL_API_KEY not set in environment")
+            return False
         app = Firecrawl(api_key=api_key)
         print("✅ Firecrawl client initialized successfully")
         
@@ -88,7 +91,7 @@ def test_environment_variables():
         else:
             print("⚠️  FIRECRAWL_API_KEY is not set")
             # Set it for testing
-            os.environ["FIRECRAWL_API_KEY"] = "fc-91a8ab6e29dc438caaa9afac2f935a12"
+            os.environ["FIRECRAWL_API_KEY"] = os.getenv("FIRECRAWL_API_KEY", "")
             print("✅ FIRECRAWL_API_KEY set for testing")
         
         return True

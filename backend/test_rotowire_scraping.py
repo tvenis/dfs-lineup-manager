@@ -155,7 +155,7 @@ def test_firecrawl_service_with_ownership():
     
     try:
         # Set API key for testing
-        os.environ["FIRECRAWL_API_KEY"] = "fc-91a8ab6e29dc438caaa9afac2f935a12"
+        os.environ["FIRECRAWL_API_KEY"] = os.getenv("FIRECRAWL_API_KEY", "")
         
         from app.services.firecrawl_service import FirecrawlService, OwnershipDataSchema, scrape_ownership_data
         

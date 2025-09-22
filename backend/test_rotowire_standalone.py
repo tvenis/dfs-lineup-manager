@@ -15,7 +15,7 @@ def test_rotowire_scraping_standalone():
     print("="*60)
     
     # Set up environment
-    os.environ["FIRECRAWL_API_KEY"] = "fc-91a8ab6e29dc438caaa9afac2f935a12"
+    os.environ["FIRECRAWL_API_KEY"] = os.getenv("FIRECRAWL_API_KEY", "")
     
     # RotoWire URL
     rotowire_url = "https://www.rotowire.com/daily/nfl/proj-roster-percent.php?site=DraftKings"

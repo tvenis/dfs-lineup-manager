@@ -592,19 +592,54 @@ def scrape_news_data(url: str, api_key: Optional[str] = None) -> Dict[str, Any]:
     return service.scrape_with_schema(url, NewsDataSchema)
 
 
-def scrape_ownership_data(url: str, api_key: Optional[str] = None) -> Dict[str, Any]:
+def scrape_ownership_data(url: Optional[str] = None, slate_id: Optional[str] = None, api_key: Optional[str] = None) -> Dict[str, Any]:
     """
-    Convenience function to scrape DFS ownership data from a URL.
+    Convenience function to scrape DFS ownership data from RotoWire.
     
     Args:
-        url: URL containing ownership information (e.g., RotoWire)
+        url: Full URL containing ownership information (optional)
+        slate_id: RotoWire slate ID (e.g., "8536" for main Sunday slate)
         api_key: Firecrawl API key (optional)
         
     Returns:
         Scraped ownership data
+        
+    Examples:
+        # Using slate ID (recommended)
+        data = scrape_ownership_data(slate_id="8536")  # Main Sunday slate
+        
+        # Using full URL
+        data = scrape_ownership_data(url="https://www.rotowire.com/daily/nfl/proj-roster-percent.php?site=DraftKings&slateID=8536")
     """
     service = FirecrawlService(api_key)
-    return service.scrape_with_schema(url, OwnershipDataSchema)
+    
+    # Build URL if slate_id is provided
+    if slate_id:
+        url = f"https://www.rotowire.com/daily/nfl/proj-roster-percent.php?site=DraftKings&slateID={slate_id}"
+    elif not url:
+        raise ValueError("Either url or slate_id must be provided")
+    
+    # Use custom prompt for correct field mapping
+    corrected_prompt = """
+    Extract DFS ownership data from this RotoWire page. For each player, extract:
+    - name: Player name
+    - position: QB/RB/WR/TE/K/DST
+    - team: Team abbreviation
+    - salary: DraftKings salary (remove $ symbol, use number only)
+    - ownership_percentage: From RST% column (roster percentage 0-100%)
+    - projected_points: From FPTS column (fantasy points prediction)
+    - opponent: Opposing team
+    - game_info: Team @ Opponent
+    
+    IMPORTANT FIELD MAPPING:
+    - ownership_percentage = RST% column (roster percentage)
+    - projected_points = FPTS column (fantasy points)
+    - Do NOT use TM/P (team total) for projected_points
+    
+    Return as JSON with "players" array containing all player data.
+    """
+    
+    return service.scrape_with_prompt(url, corrected_prompt)
 
 
 # Example usage
