@@ -446,7 +446,7 @@ class ScrapedData(Base):
     url = Column(String(2000), nullable=False)
     scraped_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     raw_data = Column(JSON, nullable=False)  # The actual scraped JSON data
-    metadata = Column(JSON)  # Firecrawl metadata (title, description, etc.)
+    firecrawl_metadata = Column(JSON)  # Firecrawl metadata (title, description, etc.)
     processing_status = Column(String(50), default="pending")  # pending, processing, completed, failed
     processing_error = Column(Text)  # Error message if processing failed
     import_program_used = Column(String(100))  # Name of the import program that processed this data

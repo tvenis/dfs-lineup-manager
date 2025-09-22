@@ -116,12 +116,12 @@ async def scrape_url(
         if request.schema_name:
             schema_class = get_schema_by_name(request.schema_name)
             if not schema_class:
-                raise HTTPException(status_code=400, f"Unknown schema: {request.schema_name}")
+                raise HTTPException(status_code=400, detail=f"Unknown schema: {request.schema_name}")
             schema = schema_class()
         elif request.custom_prompt:
             prompt = request.custom_prompt
         else:
-            raise HTTPException(status_code=400, "Either schema_name or custom_prompt must be provided")
+            raise HTTPException(status_code=400, detail="Either schema_name or custom_prompt must be provided")
         
         # Scrape and store
         scraped_data_id = service.scrape_and_store(
@@ -169,12 +169,12 @@ async def scrape_urls_batch(
         if request.schema_name:
             schema_class = get_schema_by_name(request.schema_name)
             if not schema_class:
-                raise HTTPException(status_code=400, f"Unknown schema: {request.schema_name}")
+                raise HTTPException(status_code=400, detail=f"Unknown schema: {request.schema_name}")
             schema = schema_class()
         elif request.custom_prompt:
             prompt = request.custom_prompt
         else:
-            raise HTTPException(status_code=400, "Either schema_name or custom_prompt must be provided")
+            raise HTTPException(status_code=400, detail="Either schema_name or custom_prompt must be provided")
         
         # Create scraping job
         job_id = service.create_scraping_job(

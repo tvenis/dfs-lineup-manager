@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, RefreshCw, Upload } from 'lucide-react'
+import { ContestImportResultDialog } from '@/components/ContestImportResultDialog'
 
 interface Row {
   entry_key: number
@@ -31,6 +32,13 @@ interface Row {
   result?: number | boolean
 }
 
+interface ContestImportResponse {
+  total_processed: number
+  created: number
+  updated: number
+  errors: string[]
+}
+
 export default function ContestReviewPage() {
   const router = useRouter()
   const [rows, setRows] = useState<Row[]>([])
@@ -38,6 +46,14 @@ export default function ContestReviewPage() {
   const [filename, setFilename] = useState<string>('contests.csv')
   const [isSaving, setIsSaving] = useState(false)
   const [lineups, setLineups] = useState<{id: string, name: string}[]>([])
+  
+  // Import result dialog state
+  const [importResult, setImportResult] = useState<{
+    success: boolean
+    data?: ContestImportResponse
+    error?: string
+  } | null>(null)
+  const [showResultDialog, setShowResultDialog] = useState(false)
 
   useEffect(() => {
     const stored = sessionStorage.getItem('contestImportReview')
@@ -68,6 +84,18 @@ export default function ContestReviewPage() {
   }, [weekId])
 
   const total = useMemo(() => rows.length, [rows])
+  
+  // Get week label for display
+  const weekLabel = useMemo(() => {
+    if (!weekId) return 'Unknown Week'
+    // Try to get week info from the stored data or construct from weekId
+    const stored = sessionStorage.getItem('contestImportReview')
+    if (stored) {
+      const data = JSON.parse(stored)
+      return `Week ${data.week_number || weekId} (${data.year || new Date().getFullYear()})`
+    }
+    return `Week ${weekId}`
+  }, [weekId])
 
   const updateRow = (i: number, key: keyof Row, value: any) => {
     setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [key]: value } : r))
@@ -75,23 +103,47 @@ export default function ContestReviewPage() {
 
   const saveAll = async () => {
     setIsSaving(true)
+    setImportResult(null)
+    
     try {
       const res = await fetch('http://localhost:8000/api/contests/commit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ week_id: weekId, filename, rows })
       })
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || 'Failed to save contests')
+        const errorMessage = err.detail || 'Failed to save contests'
+        
+        // Show error dialog instead of alert
+        setImportResult({
+          success: false,
+          error: errorMessage
+        })
+        setShowResultDialog(true)
+        return
       }
-      const result = await res.json()
+      
+      const result = await res.json() as ContestImportResponse
+      
+      // Show success dialog instead of redirect
+      setImportResult({
+        success: true,
+        data: result
+      })
+      setShowResultDialog(true)
+      
       // Clear staged data
       sessionStorage.removeItem('contestImportReview')
-      // Redirect back to import with success
-      router.push('/import?success=true')
+      
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Save failed')
+      console.error('Error during save:', e)
+      setImportResult({
+        success: false,
+        error: e instanceof Error ? e.message : 'Save failed'
+      })
+      setShowResultDialog(true)
     } finally {
       setIsSaving(false)
     }
@@ -202,6 +254,16 @@ export default function ContestReviewPage() {
           )}
         </Button>
       </div>
+
+      {/* Import Result Dialog */}
+      <ContestImportResultDialog
+        isOpen={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        result={importResult?.data}
+        error={importResult?.error}
+        filename={filename}
+        week={weekLabel}
+      />
     </div>
   )
 }

@@ -20,6 +20,56 @@ import httpx
 router = APIRouter(tags=["contests"])
 
 
+def _normalize_attr_key(key: Any) -> str:
+    try:
+        s = str(key).strip().lower()
+    except Exception:
+        return ""
+    return re.sub(r"[^a-z0-9]", "", s)
+
+
+def _is_h2h_from_attributes(attributes: Dict[str, Any] | None) -> bool:
+    if not attributes:
+        return False
+    normalized = { _normalize_attr_key(k): str(v).lower() for k, v in attributes.items() }
+    h2h_markers = ["ish2h", "isheadtohead", "headtohead", "h2h"]
+    for marker in h2h_markers:
+        if marker in normalized and normalized.get(marker) in ("true", "1", "yes"):
+            return True
+    for k, v in normalized.items():
+        if "h2h" in k and v in ("true", "1", "yes"):
+            return True
+    return False
+
+
+def _extract_h2h_opponent(attributes: Dict[str, Any] | None) -> str | None:
+    if not attributes:
+        return None
+    preferred_keys = [
+        "Head to Head Opponent Name",
+        "Head To Head Opponent Name",
+        "head_to_head_opponent_name",
+        "HeadToHeadOpponentName",
+        "Opponent Name",
+        "opponentName",
+        "Opponent",
+        "opponent",
+    ]
+    for key in preferred_keys:
+        if key in attributes and attributes.get(key):
+            val = str(attributes.get(key)).strip()
+            if val:
+                return val
+    for k, v in attributes.items():
+        try:
+            k_norm = _normalize_attr_key(k)
+            if "opponent" in k_norm and str(v).strip():
+                return str(v).strip()
+        except Exception:
+            continue
+    return None
+
+
 def _parse_money(value: str) -> float:
     if value is None:
         return 0.0
@@ -151,17 +201,18 @@ async def _ensure_dk_contest_details(db: Session, contest_ids: Set[str]):
                 summary = detail.get("contestSummary")
                 attributes = detail.get("attributes") or {}
 
-                # Detect contest type strictly from attributes
-                at = {str(k).lower(): str(v).lower() for k, v in attributes.items()}
+                # Detect contest type from attributes (handle variant keys/casing)
                 inferred_code = None
-                if at.get("is h2h") == "true":
+                if _is_h2h_from_attributes(attributes):
                     inferred_code = "H2H"
-                elif at.get("is fiftyfifty") == "true":
-                    inferred_code = "50/50"
-                elif at.get("isdoubleup") == "true":
-                    inferred_code = "DoubleUp"
-                elif at.get("istournament") == "true":
-                    inferred_code = "Tournament"
+                else:
+                    at_norm = { _normalize_attr_key(k): str(v).lower() for k, v in (attributes or {}).items() }
+                    if at_norm.get("isfiftyfifty") == "true":
+                        inferred_code = "50/50"
+                    elif at_norm.get("isdoubleup") == "true":
+                        inferred_code = "DoubleUp"
+                    elif at_norm.get("istournament") == "true":
+                        inferred_code = "Tournament"
                 contest_type_id = ctype_code_to_id.get(inferred_code) if inferred_code else None
 
                 # Rake
@@ -343,9 +394,8 @@ async def parse_contests_csv(
                         staged_row["contest_type_code"] = contest_type_code
                 
                 # Update opponent name for H2H contests
-                if dk_detail.contest_type_id == code_to_contest_type.get("H2H"):
-                    attributes = dk_detail.attributes or {}
-                    opponent_name = attributes.get("Head to Head Opponent Name")
+                if dk_detail.contest_type_id == code_to_contest_type.get("H2H") or _is_h2h_from_attributes(dk_detail.attributes):
+                    opponent_name = _extract_h2h_opponent(dk_detail.attributes)
                     if opponent_name:
                         staged_row["contest_opponent"] = opponent_name
     except Exception as e:
@@ -375,6 +425,12 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
         
         # Build DK contest detail lookup map
         contest_ids = [str(r.get("contest_id")) for r in rows if r.get("contest_id")]
+        # Ensure DK details exist for all contest_ids (auto-fetch from DK API if missing)
+        try:
+            await _ensure_dk_contest_details(db, set(contest_ids))
+        except Exception:
+            # proceed even if ensure fails; fallback logic will still use CSV data
+            pass
         dk_details = db.query(DKContestDetail).filter(DKContestDetail.contest_id.in_(contest_ids)).all()
         dk_detail_map = {d.contest_id: d for d in dk_details}
 
@@ -400,9 +456,8 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                 if dk_detail:
                     contest_type_id = dk_detail.contest_type_id
                     # Extract opponent from attributes if it's H2H
-                    if dk_detail.contest_type_id == code_to_contest_type.get("H2H"):
-                        attributes = dk_detail.attributes or {}
-                        contest_opponent = attributes.get("Head to Head Opponent Name")
+                    if dk_detail.contest_type_id == code_to_contest_type.get("H2H") or _is_h2h_from_attributes(dk_detail.attributes):
+                        contest_opponent = _extract_h2h_opponent(dk_detail.attributes)
                 
                 # Fallback to CSV contest_type_code if no DK detail
                 if not contest_type_id and r.get("contest_type_code"):
@@ -478,9 +533,8 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                     if contest_id:
                         dk = db.query(DKContestDetail).filter(DKContestDetail.contest_id == str(contest_id)).first()
                         if dk and dk.attributes:
-                            at = {str(k).lower(): str(v) for k, v in dk.attributes.items()}
-                            if at.get('is h2h', '').lower() == 'true':
-                                opp = dk.attributes.get('Head to Head Opponent Name') or dk.attributes.get('opponent')
+                            if _is_h2h_from_attributes(dk.attributes):
+                                opp = _extract_h2h_opponent(dk.attributes)
                                 if opp:
                                     (existing if existing else obj).contest_opponent = opp
                 except Exception:

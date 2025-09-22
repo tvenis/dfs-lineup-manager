@@ -11,7 +11,7 @@ const getApiBaseUrl = () => {
   }
   
   // Local development fallback
-  return 'http://localhost:8000';
+  return 'http://localhost:8001';
 };
 
 export const API_CONFIG = {
