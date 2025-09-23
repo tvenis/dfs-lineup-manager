@@ -252,34 +252,78 @@ async def get_h2h_contests_for_week(week_id: str, leaderboard_service: DraftKing
         List of contest information dictionaries
     """
     try:
-        # This is a placeholder implementation
-        # In a real implementation, you would:
-        # 1. Query your database for H2H contests for the given week
-        # 2. For each contest, call the leaderboard API to get opponent info
-        # 3. Filter for contests where opponent username != 'tvenis'
+        # Extract week number from week_id (e.g., "week3" -> 3)
+        week_number = int(week_id.replace('week', ''))
         
-        # For now, return mock data for testing
-        mock_contests = [
-            {
-                'contest_id': '182400523',
-                'draft_group_id': 133903,
-                'opponent_username': 'tdavis24',
-                'opponent_entry_key': '4864049590',
-                'opponent_fantasy_points': 176.68,
-                'opponent_rank': 1
-            },
-            {
-                'contest_id': '182400524',
-                'draft_group_id': 133903,
-                'opponent_username': 'test_opponent2',
-                'opponent_entry_key': '4864049592',
-                'opponent_fantasy_points': 165.5,
-                'opponent_rank': 2
-            }
-        ]
+        # Query database for H2H contests for the given week
+        from app.database import get_db
+        from sqlalchemy import text
         
-        logger.info(f"Found {len(mock_contests)} H2H contests for week {week_id}")
-        return mock_contests
+        db = next(get_db())
+        
+        query = text('''
+            SELECT contest_id, contest_description, contest_opponent, contest_date_utc, 
+                   contest_place, contest_points, contest_entries, entry_fee_usd, 
+                   prize_pool_usd, week_id, sport_id, game_type_id, entry_key
+            FROM contest 
+            WHERE contest_opponent IS NOT NULL 
+            AND contest_opponent != ''
+            AND week_id = :week_number
+            ORDER BY contest_date_utc DESC
+        ''')
+        
+        result = db.execute(query, {'week_number': week_number})
+        contests = result.fetchall()
+        
+        h2h_contests = []
+        
+        for contest in contests:
+            try:
+                # Call leaderboard API to get opponent details
+                contest_id_str = str(contest.contest_id)
+                leaderboard_data = await leaderboard_service.get_leaderboard(contest_id_str)
+                
+                if leaderboard_data and 'opponent' in leaderboard_data:
+                    opponent = leaderboard_data['opponent']
+                    h2h_contests.append({
+                        'contest_id': contest_id_str,
+                        'draft_group_id': contest.entry_key,  # Using entry_key as draft_group_id
+                        'opponent_username': opponent.get('username', contest.contest_opponent),
+                        'opponent_entry_key': opponent.get('entry_key', str(contest.entry_key)),
+                        'opponent_fantasy_points': opponent.get('fantasy_points', contest.contest_points or 0),
+                        'opponent_rank': opponent.get('rank', contest.contest_place or 1),
+                        'contest_description': contest.contest_description,
+                        'contest_date_utc': contest.contest_date_utc.isoformat() if contest.contest_date_utc else None
+                    })
+                else:
+                    # Fallback to database data if API call fails
+                    h2h_contests.append({
+                        'contest_id': contest_id_str,
+                        'draft_group_id': contest.entry_key,
+                        'opponent_username': contest.contest_opponent,
+                        'opponent_entry_key': str(contest.entry_key),
+                        'opponent_fantasy_points': contest.contest_points or 0,
+                        'opponent_rank': contest.contest_place or 1,
+                        'contest_description': contest.contest_description,
+                        'contest_date_utc': contest.contest_date_utc.isoformat() if contest.contest_date_utc else None
+                    })
+                    
+            except Exception as e:
+                logger.warning(f"Failed to get leaderboard data for contest {contest.contest_id}: {e}")
+                # Still add the contest with database data
+                h2h_contests.append({
+                    'contest_id': str(contest.contest_id),
+                    'draft_group_id': contest.entry_key,
+                    'opponent_username': contest.contest_opponent,
+                    'opponent_entry_key': str(contest.entry_key),
+                    'opponent_fantasy_points': contest.contest_points or 0,
+                    'opponent_rank': contest.contest_place or 1,
+                    'contest_description': contest.contest_description,
+                    'contest_date_utc': contest.contest_date_utc.isoformat() if contest.contest_date_utc else None
+                })
+        
+        logger.info(f"Found {len(h2h_contests)} H2H contests for week {week_id}")
+        return h2h_contests
         
     except Exception as e:
         logger.error(f"Error fetching H2H contests for week {week_id}: {e}")
