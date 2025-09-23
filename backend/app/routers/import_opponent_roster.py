@@ -303,14 +303,14 @@ async def get_h2h_contests_for_week(week_id: str, leaderboard_service: DraftKing
             # for private contests. The database contains the contest information we need.
             contest_id_str = str(contest.contest_id)
             
-            # Try to get real leaderboard data first, fallback to estimation
+            # Note: DraftKings API is public but H2H contests are private and require authentication
+            # For now, we'll use estimation based on your example data until we can access real API data
             your_points = contest.contest_points or 0
             your_place = contest.contest_place or 2
             
-            # For now, use a more accurate estimation based on your example
-            # azabern2 had 176.68 points vs your 128.68 points (48 point difference)
+            # Estimation based on your example: azabern2 had 176.68 points vs your 128.68 points (48 point difference)
             if your_place == 2:
-                # Based on your example: opponent typically has 40-50 points more
+                # When you're in 2nd place, opponent is typically in 1st with higher points
                 estimated_opponent_points = your_points + 48  # Using actual difference from your example
             elif your_place == 1:
                 # If you're in 1st, opponent is in 2nd with lower points
@@ -328,7 +328,7 @@ async def get_h2h_contests_for_week(week_id: str, leaderboard_service: DraftKing
                 'opponent_rank': 1 if your_place == 2 else 2,  # Opponent rank is opposite of yours
                 'contest_description': contest.contest_description,
                 'contest_date_utc': contest.contest_date_utc.isoformat() if contest.contest_date_utc else None,
-                'note': f'Estimated points (API auth required for exact values)'
+                'note': f'Estimated points (H2H contests are private, API auth required for exact values)'
             })
         
         logger.info(f"Found {len(h2h_contests)} H2H contests for week {week_id}")
