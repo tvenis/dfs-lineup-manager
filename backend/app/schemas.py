@@ -722,3 +722,119 @@ class TipsConfigResponse(TipsConfigBase):
     
     class Config:
         from_attributes = True
+
+# Contest Roster Details schemas
+class ContestRosterDetailsBase(BaseModel):
+    draftgroup: Optional[int] = Field(None, description="Draft Group ID")
+    contest_id: int = Field(..., description="Contest ID from DraftKings")
+    enter_key: int = Field(..., description="Entry key from DraftKings")
+    username: str = Field(..., min_length=1, max_length=255, description="Opponent username")
+    fantasy_points: float = Field(..., ge=0, description="Total fantasy points scored")
+    
+    # Player positions and scores
+    qb_name: Optional[str] = Field(None, max_length=255, description="Quarterback name")
+    qb_score: Optional[float] = Field(None, ge=0, description="Quarterback fantasy points")
+    rb1_name: Optional[str] = Field(None, max_length=255, description="Running back 1 name")
+    rb1_score: Optional[float] = Field(None, ge=0, description="Running back 1 fantasy points")
+    rb2_name: Optional[str] = Field(None, max_length=255, description="Running back 2 name")
+    rb2_score: Optional[float] = Field(None, ge=0, description="Running back 2 fantasy points")
+    wr1_name: Optional[str] = Field(None, max_length=255, description="Wide receiver 1 name")
+    wr1_score: Optional[float] = Field(None, ge=0, description="Wide receiver 1 fantasy points")
+    wr2_name: Optional[str] = Field(None, max_length=255, description="Wide receiver 2 name")
+    wr2_score: Optional[float] = Field(None, ge=0, description="Wide receiver 2 fantasy points")
+    wr3_name: Optional[str] = Field(None, max_length=255, description="Wide receiver 3 name")
+    wr3_score: Optional[float] = Field(None, ge=0, description="Wide receiver 3 fantasy points")
+    te_name: Optional[str] = Field(None, max_length=255, description="Tight end name")
+    te_score: Optional[float] = Field(None, ge=0, description="Tight end fantasy points")
+    flex_name: Optional[str] = Field(None, max_length=255, description="Flex position name")
+    flex_score: Optional[float] = Field(None, ge=0, description="Flex position fantasy points")
+    dst_name: Optional[str] = Field(None, max_length=255, description="Defense/Special teams name")
+    dst_score: Optional[float] = Field(None, ge=0, description="Defense/Special teams fantasy points")
+    
+    # JSON data for flexibility
+    contest_json: Optional[Dict[str, Any]] = Field(None, description="Complete contest and roster data as JSON")
+
+class ContestRosterDetailsCreate(ContestRosterDetailsBase):
+    pass
+
+class ContestRosterDetailsUpdate(BaseModel):
+    draftgroup: Optional[int] = Field(None, description="Draft Group ID")
+    contest_id: Optional[int] = Field(None, description="Contest ID from DraftKings")
+    enter_key: Optional[int] = Field(None, description="Entry key from DraftKings")
+    username: Optional[str] = Field(None, min_length=1, max_length=255, description="Opponent username")
+    fantasy_points: Optional[float] = Field(None, ge=0, description="Total fantasy points scored")
+    
+    # Player positions and scores
+    qb_name: Optional[str] = Field(None, max_length=255, description="Quarterback name")
+    qb_score: Optional[float] = Field(None, ge=0, description="Quarterback fantasy points")
+    rb1_name: Optional[str] = Field(None, max_length=255, description="Running back 1 name")
+    rb1_score: Optional[float] = Field(None, ge=0, description="Running back 1 fantasy points")
+    rb2_name: Optional[str] = Field(None, max_length=255, description="Running back 2 name")
+    rb2_score: Optional[float] = Field(None, ge=0, description="Running back 2 fantasy points")
+    wr1_name: Optional[str] = Field(None, max_length=255, description="Wide receiver 1 name")
+    wr1_score: Optional[float] = Field(None, ge=0, description="Wide receiver 1 fantasy points")
+    wr2_name: Optional[str] = Field(None, max_length=255, description="Wide receiver 2 name")
+    wr2_score: Optional[float] = Field(None, ge=0, description="Wide receiver 2 fantasy points")
+    wr3_name: Optional[str] = Field(None, max_length=255, description="Wide receiver 3 name")
+    wr3_score: Optional[float] = Field(None, ge=0, description="Wide receiver 3 fantasy points")
+    te_name: Optional[str] = Field(None, max_length=255, description="Tight end name")
+    te_score: Optional[float] = Field(None, ge=0, description="Tight end fantasy points")
+    flex_name: Optional[str] = Field(None, max_length=255, description="Flex position name")
+    flex_score: Optional[float] = Field(None, ge=0, description="Flex position fantasy points")
+    dst_name: Optional[str] = Field(None, max_length=255, description="Defense/Special teams name")
+    dst_score: Optional[float] = Field(None, ge=0, description="Defense/Special teams fantasy points")
+    
+    # JSON data for flexibility
+    contest_json: Optional[Dict[str, Any]] = Field(None, description="Complete contest and roster data as JSON")
+
+class ContestRosterDetails(ContestRosterDetailsBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+class ContestRosterDetailsSimple(BaseModel):
+    """Simplified version for list responses"""
+    id: int
+    contest_id: int
+    enter_key: int
+    username: str
+    fantasy_points: float
+    qb_name: Optional[str] = None
+    qb_score: Optional[float] = None
+    rb1_name: Optional[str] = None
+    rb1_score: Optional[float] = None
+    rb2_name: Optional[str] = None
+    rb2_score: Optional[float] = None
+    wr1_name: Optional[str] = None
+    wr1_score: Optional[float] = None
+    wr2_name: Optional[str] = None
+    wr2_score: Optional[float] = None
+    wr3_name: Optional[str] = None
+    wr3_score: Optional[float] = None
+    te_name: Optional[str] = None
+    te_score: Optional[float] = None
+    flex_name: Optional[str] = None
+    flex_score: Optional[float] = None
+    dst_name: Optional[str] = None
+    dst_score: Optional[float] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+class ContestRosterDetailsListResponse(BaseModel):
+    """Response schema for listing contest roster details"""
+    rosters: List[ContestRosterDetailsSimple]
+    total: int
+    contest_id: int
+
+class ContestRosterDetailsResponse(BaseModel):
+    """Response schema for individual contest roster details"""
+    success: bool
+    message: str
+    roster: Optional[ContestRosterDetails] = None
+    error: Optional[str] = None

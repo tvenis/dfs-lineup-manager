@@ -437,6 +437,64 @@ class TipsConfiguration(Base):
         Index('idx_tips_config_name', 'name'),
     )
 
+class ContestRosterDetails(Base):
+    """Model for storing opponent roster details from DraftKings contests"""
+    __tablename__ = "contest_roster_details"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    draftgroup = Column(Integer, nullable=True)  # Draft Group ID
+    contest_id = Column(BigInteger, nullable=False)  # Contest ID from DraftKings
+    enter_key = Column(BigInteger, nullable=False)  # Entry key from DraftKings
+    username = Column(String(255), nullable=False)  # Opponent username
+    contest_json = Column(JSON)  # Complete contest and roster data as JSON
+    fantasy_points = Column(Float, nullable=False)  # Total fantasy points scored
+    
+    # Player positions and scores
+    qb_name = Column(String(255))  # Quarterback name
+    qb_score = Column(Float)  # Quarterback fantasy points
+    rb1_name = Column(String(255))  # Running back 1 name
+    rb1_score = Column(Float)  # Running back 1 fantasy points
+    rb2_name = Column(String(255))  # Running back 2 name
+    rb2_score = Column(Float)  # Running back 2 fantasy points
+    wr1_name = Column(String(255))  # Wide receiver 1 name
+    wr1_score = Column(Float)  # Wide receiver 1 fantasy points
+    wr2_name = Column(String(255))  # Wide receiver 2 name
+    wr2_score = Column(Float)  # Wide receiver 2 fantasy points
+    wr3_name = Column(String(255))  # Wide receiver 3 name
+    wr3_score = Column(Float)  # Wide receiver 3 fantasy points
+    te_name = Column(String(255))  # Tight end name
+    te_score = Column(Float)  # Tight end fantasy points
+    flex_name = Column(String(255))  # Flex position name
+    flex_score = Column(Float)  # Flex position fantasy points
+    dst_name = Column(String(255))  # Defense/Special teams name
+    dst_score = Column(Float)  # Defense/Special teams fantasy points
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    # Note: Could add relationships to Contest, Player, etc. if needed in the future
+    
+    # Constraints and indexes
+    __table_args__ = (
+        Index('idx_contest_roster_details_contest_id', 'contest_id'),
+        Index('idx_contest_roster_details_enter_key', 'enter_key'),
+        Index('idx_contest_roster_details_username', 'username'),
+        Index('idx_contest_roster_details_fantasy_points', 'fantasy_points'),
+        Index('idx_contest_roster_details_qb_name', 'qb_name'),
+        Index('idx_contest_roster_details_rb1_name', 'rb1_name'),
+        Index('idx_contest_roster_details_rb2_name', 'rb2_name'),
+        Index('idx_contest_roster_details_wr1_name', 'wr1_name'),
+        Index('idx_contest_roster_details_wr2_name', 'wr2_name'),
+        Index('idx_contest_roster_details_wr3_name', 'wr3_name'),
+        Index('idx_contest_roster_details_te_name', 'te_name'),
+        Index('idx_contest_roster_details_flex_name', 'flex_name'),
+        Index('idx_contest_roster_details_dst_name', 'dst_name'),
+        Index('idx_contest_roster_details_unique', 'contest_id', 'enter_key', unique=True),
+        CheckConstraint('fantasy_points >= 0', name='ck_contest_roster_fantasy_points_nonnegative'),
+    )
+
 
 class ScrapedData(Base):
     """Model for storing scraped data from Firecrawl API"""
