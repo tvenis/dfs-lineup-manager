@@ -69,8 +69,7 @@ class DraftKingsLeaderboardService:
             
             url = f"{self.base_url}/scores/v1/leaderboards/{contest_id}"
             params = {
-                'format': 'json',
-                'embed': 'leaderboard'
+                'format': 'json'
             }
             
             logger.info(f"Fetching leaderboard for contest_id: {contest_id}")

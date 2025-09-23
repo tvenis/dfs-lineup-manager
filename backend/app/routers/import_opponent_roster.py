@@ -147,37 +147,38 @@ async def process_opponent_roster_import(
                                 successful += 1
                                 continue
                         
-                        # Create roster data from contest information
-                        # Since DraftKings API requires authentication for private contests,
-                        # we'll use the contest data we have from the database
-                        logger.info(f"Creating roster data for contest {contest['contest_id']}, opponent {contest['opponent_username']}")
+                        # Get real roster data from DraftKings API
+                        logger.info(f"Fetching roster data for contest {contest['contest_id']}, opponent {contest['opponent_username']}")
                         
-                        # Format data according to ContestDetailsService expectations
-                        contest_data = {
-                            'contest_id': contest['contest_id'],
-                            'draft_group_id': contest['draft_group_id'],
-                            'opponent': {
-                                'entry_key': contest['opponent_entry_key'],
-                                'username': contest['opponent_username'],
-                                'fantasy_points': contest['opponent_fantasy_points'],
-                                'rank': contest['opponent_rank']
-                            }
-                        }
-                        
-                        roster_data = {
-                            'roster_data': {
-                                'username': contest['opponent_username'],
-                                'fantasy_points': contest['opponent_fantasy_points'],
-                                'contest_id': contest['contest_id'],
-                                'draft_group_id': contest['draft_group_id'],
-                                'entry_key': contest['opponent_entry_key'],
-                                'rank': contest['opponent_rank'],
-                                'description': contest['contest_description'],
-                                'date_utc': contest['contest_date_utc'],
-                                'players': [],  # Empty since we don't have detailed roster data
-                                'note': 'Roster data limited due to API authentication requirements'
-                            }
-                        }
+                        try:
+                            # Get detailed roster data from DraftKings Scores API
+                            roster_data = await scores_service.get_roster(contest['draft_group_id'], contest['opponent_entry_key'])
+                            
+                            if roster_data.get('success'):
+                                # Format data according to ContestDetailsService expectations
+                                contest_data = {
+                                    'contest_id': contest['contest_id'],
+                                    'draft_group_id': contest['draft_group_id'],
+                                    'opponent': {
+                                        'entry_key': contest['opponent_entry_key'],
+                                        'username': contest['opponent_username'],
+                                        'fantasy_points': contest['opponent_fantasy_points'],
+                                        'rank': contest['opponent_rank']
+                                    }
+                                }
+                                
+                                # Use real roster data from API
+                                roster_data = {
+                                    'roster_data': roster_data.get('roster_data', {}),
+                                    'contest_data': contest_data
+                                }
+                            else:
+                                logger.warning(f"Failed to get roster data for contest {contest['contest_id']}: {roster_data.get('error', 'Unknown error')}")
+                                continue
+                                
+                        except Exception as e:
+                            logger.error(f"Error fetching roster data for contest {contest['contest_id']}: {e}")
+                            continue
                         
                         # Save opponent roster
                         save_result = await contest_service.save_opponent_roster(contest_data, roster_data)
@@ -299,37 +300,32 @@ async def get_h2h_contests_for_week(week_id: str, leaderboard_service: DraftKing
         h2h_contests = []
         
         for contest in contests:
-            # Use database data directly since DraftKings API requires authentication
-            # for private contests. The database contains the contest information we need.
             contest_id_str = str(contest.contest_id)
             
-            # Note: DraftKings API is public but H2H contests are private and require authentication
-            # For now, we'll use estimation based on your example data until we can access real API data
-            your_points = contest.contest_points or 0
-            your_place = contest.contest_place or 2
-            
-            # Estimation based on your example: azabern2 had 176.68 points vs your 128.68 points (48 point difference)
-            if your_place == 2:
-                # When you're in 2nd place, opponent is typically in 1st with higher points
-                estimated_opponent_points = your_points + 48  # Using actual difference from your example
-            elif your_place == 1:
-                # If you're in 1st, opponent is in 2nd with lower points
-                estimated_opponent_points = max(0, your_points - 48)
-            else:
-                # For other placements, use a reasonable estimate
-                estimated_opponent_points = your_points + 40
-            
-            h2h_contests.append({
-                'contest_id': contest_id_str,
-                'draft_group_id': contest.entry_key,
-                'opponent_username': contest.contest_opponent,
-                'opponent_entry_key': str(contest.entry_key),
-                'opponent_fantasy_points': estimated_opponent_points,
-                'opponent_rank': 1 if your_place == 2 else 2,  # Opponent rank is opposite of yours
-                'contest_description': contest.contest_description,
-                'contest_date_utc': contest.contest_date_utc.isoformat() if contest.contest_date_utc else None,
-                'note': f'Estimated points (H2H contests are private, API auth required for exact values)'
-            })
+            # Get real leaderboard data from DraftKings API
+            try:
+                leaderboard_data = await leaderboard_service.get_leaderboard(contest_id_str)
+                
+                if leaderboard_data.get('success'):
+                    opponent = leaderboard_data.get('opponent', {})
+                    h2h_contests.append({
+                        'contest_id': contest_id_str,
+                        'draft_group_id': contest.entry_key,
+                        'opponent_username': opponent.get('username', contest.contest_opponent),
+                        'opponent_entry_key': str(opponent.get('entry_key', contest.entry_key)),
+                        'opponent_fantasy_points': opponent.get('fantasy_points', 0),
+                        'opponent_rank': opponent.get('rank', 1),
+                        'contest_description': contest.contest_description,
+                        'contest_date_utc': contest.contest_date_utc.isoformat() if contest.contest_date_utc else None,
+                        'note': 'Real API data'
+                    })
+                else:
+                    logger.warning(f"Failed to get leaderboard data for contest {contest_id_str}: {leaderboard_data.get('error', 'Unknown error')}")
+                    
+            except Exception as e:
+                logger.error(f"Error fetching leaderboard for contest {contest_id_str}: {e}")
+                # Skip this contest if API call fails
+                continue
         
         logger.info(f"Found {len(h2h_contests)} H2H contests for week {week_id}")
         return h2h_contests
