@@ -5,7 +5,7 @@ import uvicorn
 
 from app.database import engine
 from app.models import Base
-from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl
+from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -49,7 +49,8 @@ app.include_router(actuals.router, prefix="", tags=["actuals"])
 app.include_router(draftgroups.router, tags=["draftgroups"])
 app.include_router(players_batch.router, prefix="", tags=["players-batch"])
 app.include_router(tips.router, prefix="", tags=["tips"])
-app.include_router(firecrawl.router, prefix="/api", tags=["firecrawl"]) 
+app.include_router(firecrawl.router, prefix="/api", tags=["firecrawl"])
+app.include_router(import_opponent_roster.router, tags=["import-opponent-roster"]) 
 
 @app.get("/")
 async def root():
