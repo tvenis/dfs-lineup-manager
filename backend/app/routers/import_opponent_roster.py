@@ -147,7 +147,7 @@ async def process_opponent_roster_import(
                                 successful += 1
                                 continue
                         
-                        # Get real roster data from DraftKings API
+                        # Try to get real roster data from DraftKings API
                         logger.info(f"Fetching roster data for contest {contest['contest_id']}, opponent {contest['opponent_username']}")
                         
                         try:
@@ -173,12 +173,68 @@ async def process_opponent_roster_import(
                                     'contest_data': contest_data
                                 }
                             else:
+                                # API call failed, create minimal data from contest info
                                 logger.warning(f"Failed to get roster data for contest {contest['contest_id']}: {roster_data.get('error', 'Unknown error')}")
-                                continue
+                                
+                                contest_data = {
+                                    'contest_id': contest['contest_id'],
+                                    'draft_group_id': contest['draft_group_id'],
+                                    'opponent': {
+                                        'entry_key': contest['opponent_entry_key'],
+                                        'username': contest['opponent_username'],
+                                        'fantasy_points': contest['opponent_fantasy_points'],
+                                        'rank': contest['opponent_rank']
+                                    }
+                                }
+                                
+                                # Create minimal roster data
+                                roster_data = {
+                                    'roster_data': {
+                                        'username': contest['opponent_username'],
+                                        'fantasy_points': contest['opponent_fantasy_points'],
+                                        'contest_id': contest['contest_id'],
+                                        'draft_group_id': contest['draft_group_id'],
+                                        'entry_key': contest['opponent_entry_key'],
+                                        'rank': contest['opponent_rank'],
+                                        'description': contest['contest_description'],
+                                        'date_utc': contest['contest_date_utc'],
+                                        'players': [],  # Empty since we don't have detailed roster data
+                                        'note': 'Limited data (API requires authentication)'
+                                    },
+                                    'contest_data': contest_data
+                                }
                                 
                         except Exception as e:
                             logger.error(f"Error fetching roster data for contest {contest['contest_id']}: {e}")
-                            continue
+                            
+                            # Create minimal data from contest info
+                            contest_data = {
+                                'contest_id': contest['contest_id'],
+                                'draft_group_id': contest['draft_group_id'],
+                                'opponent': {
+                                    'entry_key': contest['opponent_entry_key'],
+                                    'username': contest['opponent_username'],
+                                    'fantasy_points': contest['opponent_fantasy_points'],
+                                    'rank': contest['opponent_rank']
+                                }
+                            }
+                            
+                            # Create minimal roster data
+                            roster_data = {
+                                'roster_data': {
+                                    'username': contest['opponent_username'],
+                                    'fantasy_points': contest['opponent_fantasy_points'],
+                                    'contest_id': contest['contest_id'],
+                                    'draft_group_id': contest['draft_group_id'],
+                                    'entry_key': contest['opponent_entry_key'],
+                                    'rank': contest['opponent_rank'],
+                                    'description': contest['contest_description'],
+                                    'date_utc': contest['contest_date_utc'],
+                                    'players': [],  # Empty since we don't have detailed roster data
+                                    'note': 'Limited data (API requires authentication)'
+                                },
+                                'contest_data': contest_data
+                            }
                         
                         # Save opponent roster
                         save_result = await contest_service.save_opponent_roster(contest_data, roster_data)
@@ -302,7 +358,7 @@ async def get_h2h_contests_for_week(week_id: str, leaderboard_service: DraftKing
         for contest in contests:
             contest_id_str = str(contest.contest_id)
             
-            # Get real leaderboard data from DraftKings API
+            # Try to get real leaderboard data from DraftKings API first
             try:
                 leaderboard_data = await leaderboard_service.get_leaderboard(contest_id_str)
                 
@@ -320,12 +376,34 @@ async def get_h2h_contests_for_week(week_id: str, leaderboard_service: DraftKing
                         'note': 'Real API data'
                     })
                 else:
-                    logger.warning(f"Failed to get leaderboard data for contest {contest_id_str}: {leaderboard_data.get('error', 'Unknown error')}")
+                    # API call failed, use database data as fallback
+                    logger.warning(f"API call failed for contest {contest_id_str}: {leaderboard_data.get('error', 'Unknown error')}")
+                    h2h_contests.append({
+                        'contest_id': contest_id_str,
+                        'draft_group_id': contest.entry_key,
+                        'opponent_username': contest.contest_opponent,
+                        'opponent_entry_key': str(contest.entry_key),
+                        'opponent_fantasy_points': 0,  # We don't have opponent points in database
+                        'opponent_rank': 1,
+                        'contest_description': contest.contest_description,
+                        'contest_date_utc': contest.contest_date_utc.isoformat() if contest.contest_date_utc else None,
+                        'note': 'Database data (API requires authentication)'
+                    })
                     
             except Exception as e:
                 logger.error(f"Error fetching leaderboard for contest {contest_id_str}: {e}")
-                # Skip this contest if API call fails
-                continue
+                # Use database data as fallback
+                h2h_contests.append({
+                    'contest_id': contest_id_str,
+                    'draft_group_id': contest.entry_key,
+                    'opponent_username': contest.contest_opponent,
+                    'opponent_entry_key': str(contest.entry_key),
+                    'opponent_fantasy_points': 0,  # We don't have opponent points in database
+                    'opponent_rank': 1,
+                    'contest_description': contest.contest_description,
+                    'contest_date_utc': contest.contest_date_utc.isoformat() if contest.contest_date_utc else None,
+                    'note': 'Database data (API requires authentication)'
+                })
         
         logger.info(f"Found {len(h2h_contests)} H2H contests for week {week_id}")
         return h2h_contests
