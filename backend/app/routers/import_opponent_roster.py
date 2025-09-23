@@ -152,22 +152,35 @@ async def process_opponent_roster_import(
                         # we'll use the contest data we have from the database
                         logger.info(f"Creating roster data for contest {contest['contest_id']}, opponent {contest['opponent_username']}")
                         
-                        # Create a simplified roster structure using available data
-                        roster_data = {
-                            'fantasy_points': contest['opponent_fantasy_points'],
-                            'username': contest['opponent_username'],
+                        # Format data according to ContestDetailsService expectations
+                        contest_data = {
                             'contest_id': contest['contest_id'],
                             'draft_group_id': contest['draft_group_id'],
-                            'entry_key': contest['opponent_entry_key'],
-                            'rank': contest['opponent_rank'],
-                            'description': contest['contest_description'],
-                            'date_utc': contest['contest_date_utc'],
-                            'players': [],  # Empty since we don't have detailed roster data
-                            'note': 'Roster data limited due to API authentication requirements'
+                            'opponent': {
+                                'entry_key': contest['opponent_entry_key'],
+                                'username': contest['opponent_username'],
+                                'fantasy_points': contest['opponent_fantasy_points'],
+                                'rank': contest['opponent_rank']
+                            }
+                        }
+                        
+                        roster_data = {
+                            'roster_data': {
+                                'username': contest['opponent_username'],
+                                'fantasy_points': contest['opponent_fantasy_points'],
+                                'contest_id': contest['contest_id'],
+                                'draft_group_id': contest['draft_group_id'],
+                                'entry_key': contest['opponent_entry_key'],
+                                'rank': contest['opponent_rank'],
+                                'description': contest['contest_description'],
+                                'date_utc': contest['contest_date_utc'],
+                                'players': [],  # Empty since we don't have detailed roster data
+                                'note': 'Roster data limited due to API authentication requirements'
+                            }
                         }
                         
                         # Save opponent roster
-                        save_result = await contest_service.save_opponent_roster(contest, roster_data)
+                        save_result = await contest_service.save_opponent_roster(contest_data, roster_data)
                         
                         if save_result['success']:
                             successful += 1
