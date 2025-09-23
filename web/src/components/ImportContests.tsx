@@ -288,15 +288,23 @@ export function ImportContests() {
   }
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      pending: 'outline',
-      in_progress: 'default',
-      completed: 'default',
-      failed: 'destructive',
+    const getVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+      switch (status) {
+        case 'pending':
+          return 'outline'
+        case 'in_progress':
+          return 'default'
+        case 'completed':
+          return 'default'
+        case 'failed':
+          return 'destructive'
+        default:
+          return 'outline'
+      }
     }
     
     return (
-      <Badge variant={variants[status] || 'outline'} className="flex items-center gap-1">
+      <Badge variant={getVariant(status)} className="flex items-center gap-1">
         {getStatusIcon(status)}
         {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
       </Badge>
@@ -562,5 +570,3 @@ export function ImportContests() {
     </div>
   )
 }
-
-
