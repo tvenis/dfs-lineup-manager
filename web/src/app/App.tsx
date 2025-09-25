@@ -140,15 +140,7 @@ export default function App({ children }: { children: React.ReactNode }) {
           </SidebarFooter>
         </Sidebar>
         
-        <main className="flex-1 min-w-0 lg:ml-0" style={{
-          backgroundColor: '#ffffff',
-          minHeight: '100vh',
-          position: 'relative',
-          zIndex: 1,
-          padding: '16px',
-          width: '100%',
-          maxWidth: 'none'
-        }}>
+        <main className="flex-1 min-w-0 bg-white min-h-screen relative z-10 w-full max-w-none px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
           {/* Mobile header with trigger */}
           <div className="flex items-center justify-between mb-4 lg:hidden">
             <SidebarTrigger />
