@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -25,12 +26,19 @@ import {
   Download,
   Settings,
   User,
+  ChevronDown,
+  ChevronRight,
+  Gamepad2,
+  Shield,
+  Calendar,
+  Lightbulb,
 } from "lucide-react";
 import { Toaster } from "sonner";
 
 // Simple layout component - let Next.js handle routing
 export default function App({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   console.log('🎯 App component rendering, pathname:', pathname);
   console.log('🎯 App children:', children);
@@ -78,11 +86,43 @@ export default function App({ children }: { children: React.ReactNode }) {
       icon: Download,
       href: "/export",
     },
+  ];
+
+  const settingsSubItems = [
     {
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-      href: "/settings",
+      id: "draftkings",
+      label: "DraftKings",
+      description: "Game styles and configurations",
+      icon: Gamepad2,
+      href: "/settings?section=draftkings",
+    },
+    {
+      id: "players-settings",
+      label: "Players",
+      description: "Manage player database",
+      icon: Users,
+      href: "/settings?section=players",
+    },
+    {
+      id: "teams",
+      label: "Teams",
+      description: "NFL teams and divisions",
+      icon: Shield,
+      href: "/settings?section=teams",
+    },
+    {
+      id: "weeks",
+      label: "Weeks",
+      description: "Schedule and week data",
+      icon: Calendar,
+      href: "/settings?section=weeks",
+    },
+    {
+      id: "tips",
+      label: "Player Pool Tips",
+      description: "Customize strategy guidance",
+      icon: Lightbulb,
+      href: "/settings?section=tips",
     },
   ];
 
@@ -126,6 +166,57 @@ export default function App({ children }: { children: React.ReactNode }) {
                       </SidebarMenuItem>
                     );
                   })}
+                  
+                  {/* Settings with submenu */}
+                  <SidebarMenuItem>
+                    <button
+                      onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
+                        pathname.startsWith('/settings')
+                          ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
+                          : "text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                      {isSettingsOpen ? (
+                        <ChevronDown className="h-4 w-4 ml-auto" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 ml-auto" />
+                      )}
+                    </button>
+                  </SidebarMenuItem>
+                  
+                  {/* Settings submenu */}
+                  {isSettingsOpen && (
+                    <div className="ml-4 space-y-1">
+                      {settingsSubItems.map((subItem) => {
+                        const SubIcon = subItem.icon;
+                        const isSubActive = pathname === subItem.href || 
+                          (pathname.startsWith('/settings') && new URLSearchParams(window.location.search).get('section') === subItem.id);
+                        
+                        return (
+                          <SidebarMenuItem key={subItem.id}>
+                            <Link 
+                              href={subItem.href} 
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
+                                isSubActive 
+                                  ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
+                                  : "text-[var(--color-text-secondary)]"
+                              }`}
+                              onClick={() => console.log(`🎯 Clicked settings sub-item: ${subItem.label} -> ${subItem.href}`)}
+                            >
+                              <SubIcon className="h-4 w-4" />
+                              <div className="flex flex-col">
+                                <span>{subItem.label}</span>
+                                <span className="text-xs opacity-75">{subItem.description}</span>
+                              </div>
+                            </Link>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </div>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
