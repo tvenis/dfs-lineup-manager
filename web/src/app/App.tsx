@@ -14,6 +14,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Home,
@@ -139,19 +140,24 @@ export default function App({ children }: { children: React.ReactNode }) {
           </SidebarFooter>
         </Sidebar>
         
-        <main className="flex-1 min-w-0" style={{
+        <main className="flex-1 min-w-0 lg:ml-0" style={{
           backgroundColor: '#ffffff',
           minHeight: '100vh',
           position: 'relative',
           zIndex: 1,
-          padding: '20px',
+          padding: '16px',
           width: '100%',
           maxWidth: 'none'
         }}>
+          {/* Mobile header with trigger */}
+          <div className="flex items-center justify-between mb-4 lg:hidden">
+            <SidebarTrigger />
+            <h1 className="text-lg font-semibold">DK Lineup Manager</h1>
+            <div className="w-10" /> {/* Spacer for centering */}
+          </div>
+          
           {children}
         </main>
-        
-        <SidebarTrigger className="fixed left-4 top-4 z-50" />
       </div>
       <Toaster />
     </SidebarProvider>
