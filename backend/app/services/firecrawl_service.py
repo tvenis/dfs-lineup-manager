@@ -621,22 +621,23 @@ def scrape_ownership_data(url: Optional[str] = None, slate_id: Optional[str] = N
     
     # Use custom prompt for correct field mapping
     corrected_prompt = """
-    Extract DFS ownership data from this RotoWire page. For each player, extract:
+    Extract DFS ownership data from this RotoWire table. For each player row, extract ONLY these 6 fields:
     - name: Player name
-    - position: QB/RB/WR/TE/K/DST
+    - position: Position (QB/RB/WR/TE/K/DST)
     - team: Team abbreviation
-    - salary: DraftKings salary (remove $ symbol, use number only)
-    - ownership_percentage: From RST% column (roster percentage 0-100%)
-    - projected_points: From FPTS column (fantasy points prediction)
-    - opponent: Opposing team
-    - game_info: Team @ Opponent
+    - salary: DraftKings salary (number only, no $ symbol)
+    - ownership_percentage: The number from the RST% column (this is roster percentage/ownership)
+    - projected_points: The number from the FPTS column (this is fantasy points prediction)
     
-    IMPORTANT FIELD MAPPING:
-    - ownership_percentage = RST% column (roster percentage)
-    - projected_points = FPTS column (fantasy points)
-    - Do NOT use TM/P (team total) for projected_points
+    EXTREMELY IMPORTANT - DO NOT SWAP THESE VALUES:
+    - ownership_percentage MUST come from the RST% column (roster percentage)
+    - projected_points MUST come from the FPTS column (fantasy points)
     
-    Return as JSON with "players" array containing all player data.
+    IGNORE ALL OTHER COLUMNS:
+    - Do NOT extract OPP, game_info, ML, O/U, SPRD, TM/P, VAL columns
+    - Only extract the 6 fields listed above
+    
+    Return as JSON with "players" array containing only these 6 fields per player.
     """
     
     return service.scrape_with_prompt(url, corrected_prompt)

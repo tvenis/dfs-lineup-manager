@@ -148,8 +148,12 @@ def test_firecrawl_service_initialization():
                 print(f"❌ Unexpected error: {e}")
                 return False
         
-        # Test with mock API key
-        os.environ["FIRECRAWL_API_KEY"] = "fc-test-key"
+        # Test with API key from environment
+        api_key = os.getenv("FIRECRAWL_API_KEY")
+        if not api_key:
+            print("⚠️  FIRECRAWL_API_KEY not set in environment")
+            return False
+        os.environ["FIRECRAWL_API_KEY"] = api_key
         try:
             from app.services.firecrawl_service import FirecrawlService
             service = FirecrawlService()
