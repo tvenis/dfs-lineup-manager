@@ -10,6 +10,11 @@ from app.schemas import Comment as CommentSchema, CommentCreate, CommentUpdate
 
 router = APIRouter()
 
+@router.get("/health")
+def comments_health_check():
+    """Health check for comments API"""
+    return {"status": "healthy", "service": "comments"}
+
 @router.get("", response_model=List[CommentSchema])
 def get_comments(
     playerDkId: Optional[int] = Query(None, description="Filter by player DK ID"),
@@ -115,10 +120,14 @@ def get_player_comments(
     db: Session = Depends(get_db)
 ):
     """Get all comments for a specific player"""
-    # Verify player exists
-    player = db.query(Player).filter(Player.playerDkId == playerDkId).first()
-    if not player:
-        raise HTTPException(status_code=404, detail="Player not found")
-    
-    comments = db.query(Comment).filter(Comment.playerDkId == playerDkId).order_by(desc(Comment.created_at)).offset(offset).limit(limit).all()
-    return comments
+    try:
+        # Verify player exists
+        player = db.query(Player).filter(Player.playerDkId == playerDkId).first()
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
+        
+        comments = db.query(Comment).filter(Comment.playerDkId == playerDkId).order_by(desc(Comment.created_at)).offset(offset).limit(limit).all()
+        return comments
+    except Exception as e:
+        print(f"Error in get_player_comments: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

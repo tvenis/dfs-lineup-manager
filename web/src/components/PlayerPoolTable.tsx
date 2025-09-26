@@ -51,26 +51,11 @@ export function PlayerPoolTable({
       if (players.length === 0) return;
       
       setCommentsLoading(true);
-      const playersWithRecentComments = new Set<number>();
       
-      // Check comments for each player
-      const commentPromises = players.map(async (player) => {
-        const entry = getEntry(player);
-        const playerDkId = entry.player?.playerDkId;
-        if (!playerDkId) return;
-        
-        try {
-          const hasComments = await CommentService.hasRecentComments(playerDkId, 7);
-          if (hasComments) {
-            playersWithRecentComments.add(playerDkId);
-          }
-        } catch (error) {
-          console.error(`Error checking comments for player ${playerDkId}:`, error);
-        }
-      });
-      
-      await Promise.all(commentPromises);
-      setPlayersWithComments(playersWithRecentComments);
+      // Temporarily disable comment loading to prevent CORS errors
+      // TODO: Re-enable once backend CORS issues are resolved
+      console.log('Comment loading temporarily disabled due to CORS issues');
+      setPlayersWithComments(new Set());
       setCommentsLoading(false);
     };
 

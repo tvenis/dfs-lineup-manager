@@ -31,10 +31,11 @@ app.add_middleware(
         "http://localhost:3005",
         "https://dfs-lineup-manager.vercel.app",  # Correct production domain
         "https://dfs-lineup-manager-tvenis-troys-projects-26f617b4.vercel.app",  # Alternative domain
-        "https://*.vercel.app",  # All Vercel preview deployments
+        "https://dfs-lineup-manager-git-main-tvenis-troys-projects-26f617b4.vercel.app",  # Git branch deployments
+        "https://dfs-lineup-manager-git-develop-tvenis-troys-projects-26f617b4.vercel.app",  # Git branch deployments
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

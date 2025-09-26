@@ -16,10 +16,6 @@
       "dest": "backend/main.py"
     },
     {
-      "src": "/profile/(.*)",
-      "dest": "web/profile/$1"
-    },
-    {
       "src": "/(.*)",
       "dest": "web/$1"
     }
