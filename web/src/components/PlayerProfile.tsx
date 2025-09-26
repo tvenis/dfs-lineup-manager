@@ -103,6 +103,54 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     }
   }, [playerId]);
 
+  // Handle anchor scrolling when component mounts
+  useEffect(() => {
+    const handleAnchorScroll = () => {
+      if (window.location.hash === '#comments') {
+        console.log('Hash detected: #comments');
+        // Try multiple times with increasing delays
+        const tryScroll = (attempt = 1) => {
+          const commentsElement = document.getElementById('comments');
+          console.log(`Attempt ${attempt}: Comments element found:`, commentsElement);
+          
+          if (commentsElement) {
+            console.log('Scrolling to comments section');
+            // Try different scroll methods
+            commentsElement.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'start'
+            });
+            
+            // Also try scrolling the window
+            const elementTop = commentsElement.offsetTop;
+            window.scrollTo({
+              top: elementTop - 80, // Account for any fixed headers
+              behavior: 'smooth'
+            });
+          } else if (attempt < 5) {
+            // Retry after a longer delay
+            setTimeout(() => tryScroll(attempt + 1), 200 * attempt);
+          } else {
+            console.log('Comments element not found after 5 attempts');
+          }
+        };
+        
+        // Start trying after a short delay
+        setTimeout(() => tryScroll(), 100);
+      }
+    };
+
+    // Check on mount
+    handleAnchorScroll();
+
+    // Also listen for hash changes
+    window.addEventListener('hashchange', handleAnchorScroll);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleAnchorScroll);
+    };
+  }, [playerData]); // Run when playerData is loaded
+
   // Comment handling functions
   const handleAddComment = async () => {
     if (newComment.trim() && playerData) {
@@ -340,7 +388,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
           <PlayerProps playerId={playerData.playerDkId} />
 
           {/* Comments Section */}
-          <Card id="comments" className="scroll-mt-4">
+          <Card id="comments" className="scroll-mt-20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5" />
