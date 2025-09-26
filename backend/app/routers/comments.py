@@ -149,13 +149,10 @@ def add_quick_comment(q: QuickNote, db: Session = Depends(get_db)):
         # For now, create comment without player resolution
         # TODO: Add player resolution back once basic functionality is working
         
-        # Create the comment
+        # Create the comment (without new fields for now)
         db_comment = Comment(
             playerDkId=None,  # No player resolution for now
-            content=q.note,
-            url=q.url,
-            title=q.title,
-            source=q.source or "web"
+            content=q.note
         )
         
         db.add(db_comment)

@@ -300,9 +300,6 @@ class Comment(Base):
     playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=True)
     week_id = Column(Integer, ForeignKey("weeks.id"), nullable=True)
     content = Column(Text, nullable=False)  # rich text, HTML/Markdown
-    url = Column(Text, nullable=True)  # URL where comment was created (for bookmarklet)
-    title = Column(Text, nullable=True)  # Page title where comment was created
-    source = Column(String(50), nullable=True)  # Source of comment (web, bookmarklet, etc.)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
