@@ -340,7 +340,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
           <PlayerProps playerId={playerData.playerDkId} />
 
           {/* Comments Section */}
-          <Card>
+          <Card id="comments" className="scroll-mt-4">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5" />
