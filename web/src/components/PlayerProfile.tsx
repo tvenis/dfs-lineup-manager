@@ -46,8 +46,6 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const [editText, setEditText] = useState('');
   const [isHiding, setIsHiding] = useState(false);
 
-  // Simple test to see if component is working
-  console.log("PlayerProfile component rendered with playerId:", playerId);
 
   const loadComments = async (playerDkId: number) => {
     try {
@@ -107,14 +105,11 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   useEffect(() => {
     const handleAnchorScroll = () => {
       if (window.location.hash === '#comments') {
-        console.log('Hash detected: #comments');
         // Try multiple times with increasing delays
         const tryScroll = (attempt = 1) => {
           const commentsElement = document.getElementById('comments');
-          console.log(`Attempt ${attempt}: Comments element found:`, commentsElement);
           
           if (commentsElement) {
-            console.log('Scrolling to comments section');
             // Try different scroll methods
             commentsElement.scrollIntoView({ 
               behavior: 'smooth',
@@ -130,8 +125,6 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
           } else if (attempt < 5) {
             // Retry after a longer delay
             setTimeout(() => tryScroll(attempt + 1), 200 * attempt);
-          } else {
-            console.log('Comments element not found after 5 attempts');
           }
         };
         
@@ -155,15 +148,11 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const handleAddComment = async () => {
     if (newComment.trim() && playerData) {
       try {
-        console.log("Attempting to create comment for player:", playerData.playerDkId);
-        console.log("Comment content:", newComment);
-        
         const newCommentData = await CommentService.createComment({
           content: newComment,
           playerDkId: playerData.playerDkId
         });
         
-        console.log("Comment created successfully:", newCommentData);
         setComments([newCommentData, ...comments]);
         setNewComment('');
       } catch (err) {

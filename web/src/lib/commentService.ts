@@ -33,11 +33,6 @@ export interface CommentUpdate {
 export class CommentService {
   private static baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.COMMENTS);
   
-  static {
-    console.log('CommentService initialized with baseUrl:', this.baseUrl);
-    console.log('API_CONFIG.BASE_URL:', API_CONFIG.BASE_URL);
-    console.log('API_CONFIG.ENDPOINTS.COMMENTS:', API_CONFIG.ENDPOINTS.COMMENTS);
-  }
 
   static async getPlayerComments(playerDkId: number): Promise<Comment[]> {
     const response = await fetch(`${this.baseUrl}/player/${playerDkId}`);
@@ -48,9 +43,6 @@ export class CommentService {
   }
 
   static async createComment(comment: CommentCreate): Promise<Comment> {
-    console.log('Creating comment:', comment);
-    console.log('API URL:', this.baseUrl);
-    
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: {
@@ -59,12 +51,8 @@ export class CommentService {
       body: JSON.stringify(comment),
     });
     
-    console.log('Response status:', response.status);
-    console.log('Response ok:', response.ok);
-    
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Error response:', errorText);
       throw new Error(`Failed to create comment: ${response.status} ${errorText}`);
     }
     return response.json();
