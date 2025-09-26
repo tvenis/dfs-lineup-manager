@@ -7,7 +7,7 @@ from datetime import datetime
 from app.database import get_db
 from app.models import Comment, Player, Week
 from app.schemas import Comment as CommentSchema, CommentCreate, CommentUpdate, QuickNote
-from app.services.player_resolution import PlayerResolutionService
+# from app.services.player_resolution import PlayerResolutionService
 
 router = APIRouter()
 
@@ -146,12 +146,12 @@ def get_player_comments(
 def add_quick_comment(q: QuickNote, db: Session = Depends(get_db)):
     """Create a quick comment from bookmarklet or external source"""
     try:
-        # Try to detect player from the note text
-        player, confidence, possible_matches = PlayerResolutionService.resolve_player_from_text(db, q.note)
+        # For now, create comment without player resolution
+        # TODO: Add player resolution back once basic functionality is working
         
         # Create the comment
         db_comment = Comment(
-            playerDkId=player.playerDkId if player else None,
+            playerDkId=None,  # No player resolution for now
             content=q.note,
             url=q.url,
             title=q.title,
@@ -165,10 +165,10 @@ def add_quick_comment(q: QuickNote, db: Session = Depends(get_db)):
         return {
             "ok": True, 
             "comment_id": db_comment.id, 
-            "player_id": player.playerDkId if player else None,
-            "player_name": player.displayName if player else None,
-            "confidence": confidence,
-            "possible_matches": possible_matches if confidence.startswith('ambiguous') else []
+            "player_id": None,
+            "player_name": None,
+            "confidence": "none",
+            "possible_matches": []
         }
         
     except Exception as e:

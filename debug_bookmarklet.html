@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bookmarklet Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .error { background-color: #ffebee; border-color: #f44336; }
+        .success { background-color: #e8f5e8; border-color: #4caf50; }
+        .info { background-color: #e3f2fd; border-color: #2196f3; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Bookmarklet Debug Tool</h1>
+    
+    <div class="debug-section info">
+        <h3>1. Test API Endpoint</h3>
+        <p>First, let's test if the API endpoint is working:</p>
+        <button onclick="testApiEndpoint()">Test /api/comments/quick</button>
+        <div id="api-result"></div>
+    </div>
+    
+    <div class="debug-section info">
+        <h3>2. Test Bookmarklet Function</h3>
+        <p>Test the bookmarklet function directly:</p>
+        <button onclick="testBookmarklet()">Test Bookmarklet</button>
+        <div id="bookmarklet-result"></div>
+    </div>
+    
+    <div class="debug-section info">
+        <h3>3. Browser Console</h3>
+        <p>Open your browser's developer console (F12) to see detailed error messages.</p>
+    </div>
+    
+    <div class="debug-section info">
+        <h3>4. Current Bookmarklet Code</h3>
+        <p>Here's the bookmarklet code you should use:</p>
+        <pre id="bookmarklet-code"></pre>
+        <button onclick="copyBookmarklet()">Copy Bookmarklet Code</button>
+    </div>
+
+    <script>
+        // Display the bookmarklet code
+        const bookmarkletCode = `javascript:(async()=>{ 
+  const sel = window.getSelection().toString() || '';
+  const note = prompt('Add comment for player:', sel);
+  if(!note) return;
+  const payload = { note, url: location.href, title: document.title, source: 'bookmarklet' };
+  try {
+    const response = await fetch('https://dfs-lineup-manager.vercel.app/api/comments/quick', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (response.ok) {
+      alert('Saved! Comment ID: ' + result.comment_id + (result.player_name ? ' (Player: ' + result.player_name + ')' : ''));
+    } else {
+      alert('Error: ' + (result.detail || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Network Error: ' + error.message);
+  }
+})();`;
+        
+        document.getElementById('bookmarklet-code').textContent = bookmarkletCode;
+        
+        async function testApiEndpoint() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<p>Testing API endpoint...</p>';
+            
+            try {
+                const response = await fetch('https://dfs-lineup-manager.vercel.app/api/comments/quick', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        note: 'Test comment from debug tool',
+                        url: window.location.href,
+                        title: document.title,
+                        source: 'debug-tool'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ API Test Successful!</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ API Test Failed</h4>
+                            <p>Status: ${response.status}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function testBookmarklet() {
+            const resultDiv = document.getElementById('bookmarklet-result');
+            resultDiv.innerHTML = '<p>Testing bookmarklet function...</p>';
+            
+            // Simulate the bookmarklet
+            const sel = window.getSelection().toString() || '';
+            const note = prompt('Add comment for player (test):', sel || 'Test player comment');
+            if (!note) {
+                resultDiv.innerHTML = '<p>Test cancelled by user</p>';
+                return;
+            }
+            
+            const payload = { 
+                note, 
+                url: location.href, 
+                title: document.title, 
+                source: 'debug-bookmarklet' 
+            };
+            
+            resultDiv.innerHTML = `
+                <div class="info">
+                    <h4>Bookmarklet Payload:</h4>
+                    <pre>${JSON.stringify(payload, null, 2)}</pre>
+                </div>
+            `;
+            
+            // Now test the actual API call
+            testApiEndpoint();
+        }
+        
+        function copyBookmarklet() {
+            navigator.clipboard.writeText(bookmarkletCode).then(() => {
+                alert('Bookmarklet code copied to clipboard!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = bookmarkletCode;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Bookmarklet code copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>
