@@ -14,6 +14,8 @@ export default function PlayerProfilePage() {
     // Debug logging for Vercel
     console.log("PlayerProfilePage - params:", params);
     console.log("PlayerProfilePage - playerId:", playerId);
+    console.log("PlayerProfilePage - window.location:", window.location.href);
+    console.log("PlayerProfilePage - userAgent:", navigator.userAgent);
   }, [params, playerId]);
 
   // Show loading state until client-side hydration is complete
