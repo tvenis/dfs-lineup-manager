@@ -52,6 +52,15 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const loadComments = async (playerDkId: number) => {
     try {
       setCommentsLoading(true);
+      
+      // Test connection first
+      const isConnected = await CommentService.testConnection();
+      console.log("Backend connection test:", isConnected);
+      
+      if (!isConnected) {
+        throw new Error("Cannot connect to backend server");
+      }
+      
       const commentsData = await CommentService.getPlayerComments(playerDkId);
       setComments(commentsData);
     } catch (err) {
@@ -98,10 +107,15 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const handleAddComment = async () => {
     if (newComment.trim() && playerData) {
       try {
+        console.log("Attempting to create comment for player:", playerData.playerDkId);
+        console.log("Comment content:", newComment);
+        
         const newCommentData = await CommentService.createComment({
           content: newComment,
           playerDkId: playerData.playerDkId
         });
+        
+        console.log("Comment created successfully:", newCommentData);
         setComments([newCommentData, ...comments]);
         setNewComment('');
       } catch (err) {
