@@ -6,7 +6,8 @@ from datetime import datetime
 
 from app.database import get_db
 from app.models import Comment, Player, Week
-from app.schemas import Comment as CommentSchema, CommentCreate, CommentUpdate
+from app.schemas import Comment as CommentSchema, CommentCreate, CommentUpdate, QuickNote
+from app.services.player_resolution import PlayerResolutionService
 
 router = APIRouter()
 
@@ -61,7 +62,10 @@ def create_comment(comment: CommentCreate, db: Session = Depends(get_db)):
     db_comment = Comment(
         playerDkId=comment.playerDkId,
         week_id=comment.week_id,
-        content=comment.content
+        content=comment.content,
+        url=comment.url,
+        title=comment.title,
+        source=comment.source
     )
     
     db.add(db_comment)
@@ -95,6 +99,12 @@ def update_comment(comment_id: int, comment: CommentUpdate, db: Session = Depend
         db_comment.playerDkId = comment.playerDkId
     if comment.week_id is not None:
         db_comment.week_id = comment.week_id
+    if comment.url is not None:
+        db_comment.url = comment.url
+    if comment.title is not None:
+        db_comment.title = comment.title
+    if comment.source is not None:
+        db_comment.source = comment.source
     
     db_comment.updated_at = datetime.utcnow()
     db.commit()
@@ -130,4 +140,37 @@ def get_player_comments(
         return comments
     except Exception as e:
         print(f"Error in get_player_comments: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@router.post("/quick")
+def add_quick_comment(q: QuickNote, db: Session = Depends(get_db)):
+    """Create a quick comment from bookmarklet or external source"""
+    try:
+        # Try to detect player from the note text
+        player, confidence, possible_matches = PlayerResolutionService.resolve_player_from_text(db, q.note)
+        
+        # Create the comment
+        db_comment = Comment(
+            playerDkId=player.playerDkId if player else None,
+            content=q.note,
+            url=q.url,
+            title=q.title,
+            source=q.source or "web"
+        )
+        
+        db.add(db_comment)
+        db.commit()
+        db.refresh(db_comment)
+        
+        return {
+            "ok": True, 
+            "comment_id": db_comment.id, 
+            "player_id": player.playerDkId if player else None,
+            "player_name": player.displayName if player else None,
+            "confidence": confidence,
+            "possible_matches": possible_matches if confidence.startswith('ambiguous') else []
+        }
+        
+    except Exception as e:
+        print(f"Error in add_quick_comment: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

@@ -254,16 +254,25 @@ class CommentBase(BaseModel):
 class CommentCreate(CommentBase):
     playerDkId: Optional[int] = None
     week_id: Optional[int] = None
+    url: Optional[str] = None
+    title: Optional[str] = None
+    source: Optional[str] = None
 
 class CommentUpdate(BaseModel):
     content: str = Field(..., min_length=1)
     playerDkId: Optional[int] = None
     week_id: Optional[int] = None
+    url: Optional[str] = None
+    title: Optional[str] = None
+    source: Optional[str] = None
 
 class Comment(CommentBase):
     id: int
     playerDkId: Optional[int] = None
     week_id: Optional[int] = None
+    url: Optional[str] = None
+    title: Optional[str] = None
+    source: Optional[str] = None
     player: Optional[Player] = None
     week: Optional[Week] = None
     created_at: datetime
@@ -271,6 +280,13 @@ class Comment(CommentBase):
     
     class Config:
         from_attributes = True
+
+# Quick note schema for bookmarklet
+class QuickNote(BaseModel):
+    note: str = Field(..., min_length=1)
+    url: Optional[str] = None
+    title: Optional[str] = None
+    source: Optional[str] = "web"
 
 # DraftKings Import schemas
 class DraftKingsImportRequest(BaseModel):
