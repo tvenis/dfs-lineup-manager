@@ -11,7 +11,7 @@ const getApiBaseUrl = () => {
   }
   
   // Local development fallback
-  return 'http://localhost:8001';
+  return 'http://localhost:8000';
 };
 
 export const API_CONFIG = {
@@ -24,7 +24,8 @@ export const API_CONFIG = {
     LINEUPS: '/api/lineups',
     CSV_IMPORT: '/api/csv',
     CONTESTS: '/api/contests',
-    DRAFTGROUPS: '/api/draftgroups'
+    DRAFTGROUPS: '/api/draftgroups',
+    COMMENTS: '/api/comments'
   }
 };
 

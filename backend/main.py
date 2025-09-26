@@ -9,7 +9,7 @@ load_env_file()
 
 from app.database import engine
 from app.models import Base
-from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster
+from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -54,7 +54,8 @@ app.include_router(draftgroups.router, tags=["draftgroups"])
 app.include_router(players_batch.router, prefix="", tags=["players-batch"])
 app.include_router(tips.router, prefix="", tags=["tips"])
 app.include_router(firecrawl.router, prefix="/api", tags=["firecrawl"])
-app.include_router(import_opponent_roster.router, tags=["import-opponent-roster"]) 
+app.include_router(import_opponent_roster.router, tags=["import-opponent-roster"])
+app.include_router(comments.router, prefix="/api/comments", tags=["comments"]) 
 
 @app.get("/")
 async def root():

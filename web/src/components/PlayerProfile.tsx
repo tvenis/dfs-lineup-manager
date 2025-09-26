@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2, Edit, Trash2, MessageSquare, Save, X } from "lucide
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Separator } from "./ui/separator";
 import { PlayerService } from "@/lib/playerService";
+import { CommentService, Comment } from "@/lib/commentService";
 import { Player } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
 import PlayerProps from "./PlayerProps";
@@ -16,20 +17,7 @@ interface PlayerProfileProps {
   playerId: string;
 }
 
-// Mock data for comments and stats
-const mockComments = [
-  {
-    id: 1,
-    text: "Excellent value play this week. Facing a weak secondary and has been consistent all season.",
-    timestamp: new Date('2024-01-15T10:30:00')
-  },
-  {
-    id: 2,
-    text: "Weather conditions look favorable for passing. High ceiling game.",
-    timestamp: new Date('2024-01-14T15:45:00')
-  }
-];
-
+// Mock data for stats (keeping for now until we have real stats API)
 const mockStats = {
   season: {
     games: 16,
@@ -51,7 +39,8 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [comments, setComments] = useState(mockComments);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [editingComment, setEditingComment] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
@@ -59,6 +48,19 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
 
   // Simple test to see if component is working
   console.log("PlayerProfile component rendered with playerId:", playerId);
+
+  const loadComments = async (playerDkId: number) => {
+    try {
+      setCommentsLoading(true);
+      const commentsData = await CommentService.getPlayerComments(playerDkId);
+      setComments(commentsData);
+    } catch (err) {
+      console.error("Error loading comments:", err);
+      // Don't show error to user for comments, just log it
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchPlayerData = async () => {
@@ -74,6 +76,8 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
         
         if (player) {
           setPlayerData(player);
+          // Load comments for this player
+          await loadComments(player.playerDkId);
         } else {
           setError("Player not found");
         }
@@ -91,15 +95,19 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   }, [playerId]);
 
   // Comment handling functions
-  const handleAddComment = () => {
-    if (newComment.trim()) {
-      const comment = {
-        id: Date.now(),
-        text: newComment,
-        timestamp: new Date()
-      };
-      setComments([comment, ...comments]);
-      setNewComment('');
+  const handleAddComment = async () => {
+    if (newComment.trim() && playerData) {
+      try {
+        const newCommentData = await CommentService.createComment({
+          content: newComment,
+          playerDkId: playerData.playerDkId
+        });
+        setComments([newCommentData, ...comments]);
+        setNewComment('');
+      } catch (err) {
+        console.error("Error adding comment:", err);
+        // You could add a toast notification here
+      }
     }
   };
 
@@ -107,24 +115,36 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     const comment = comments.find(c => c.id === id);
     if (comment) {
       setEditingComment(id);
-      setEditText(comment.text);
+      setEditText(comment.content);
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingComment && editText.trim()) {
-      setComments(comments.map(comment =>
-        comment.id === editingComment
-          ? { ...comment, text: editText }
-          : comment
-      ));
-      setEditingComment(null);
-      setEditText('');
+      try {
+        const updatedComment = await CommentService.updateComment(editingComment, {
+          content: editText
+        });
+        setComments(comments.map(comment =>
+          comment.id === editingComment ? updatedComment : comment
+        ));
+        setEditingComment(null);
+        setEditText('');
+      } catch (err) {
+        console.error("Error updating comment:", err);
+        // You could add a toast notification here
+      }
     }
   };
 
-  const handleDeleteComment = (id: number) => {
-    setComments(comments.filter(comment => comment.id !== id));
+  const handleDeleteComment = async (id: number) => {
+    try {
+      await CommentService.deleteComment(id);
+      setComments(comments.filter(comment => comment.id !== id));
+    } catch (err) {
+      console.error("Error deleting comment:", err);
+      // You could add a toast notification here
+    }
   };
 
   const handleToggleHide = async () => {
@@ -337,14 +357,19 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
 
               {/* Comments List */}
               <div className="space-y-4">
-                {comments.length > 0 ? (
+                {commentsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                    Loading comments...
+                  </div>
+                ) : comments.length > 0 ? (
                   comments.map((comment) => (
                     <div key={comment.id} className="space-y-2 p-4 border rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">
-                            {comment.timestamp.toLocaleDateString()} at{' '}
-                            {comment.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(comment.created_at).toLocaleDateString()} at{' '}
+                            {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                         <div className="flex gap-1">
@@ -392,7 +417,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm">{comment.text}</p>
+                        <p className="text-sm">{comment.content}</p>
                       )}
                     </div>
                   ))
