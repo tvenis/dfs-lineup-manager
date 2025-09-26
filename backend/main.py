@@ -4,8 +4,11 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 # Load environment variables from .env file
-from load_env import load_env_file
-load_env_file()
+try:
+    from load_env import load_env_file
+    load_env_file()
+except ImportError:
+    print("⚠️ load_env module not available, skipping .env file loading")
 
 # Import database conditionally to avoid errors in production
 try:
