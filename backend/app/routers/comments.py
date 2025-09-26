@@ -10,7 +10,7 @@ from app.schemas import Comment as CommentSchema, CommentCreate, CommentUpdate
 
 router = APIRouter()
 
-@router.get("/", response_model=List[CommentSchema])
+@router.get("", response_model=List[CommentSchema])
 def get_comments(
     playerDkId: Optional[int] = Query(None, description="Filter by player DK ID"),
     week_id: Optional[int] = Query(None, description="Filter by week ID"),
@@ -38,7 +38,7 @@ def get_comment(comment_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Comment not found")
     return comment
 
-@router.post("/", response_model=CommentSchema)
+@router.post("", response_model=CommentSchema)
 def create_comment(comment: CommentCreate, db: Session = Depends(get_db)):
     """Create a new comment"""
     # Validate player exists if playerDkId is provided
