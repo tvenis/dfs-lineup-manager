@@ -102,4 +102,20 @@ export class CommentService {
       return false;
     }
   }
+
+  static async hasRecentComments(playerDkId: number, days: number = 7): Promise<boolean> {
+    try {
+      const comments = await this.getPlayerComments(playerDkId);
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      
+      return comments.some(comment => {
+        const commentDate = new Date(comment.created_at);
+        return commentDate >= cutoffDate;
+      });
+    } catch (error) {
+      console.error('Error checking recent comments:', error);
+      return false;
+    }
+  }
 }

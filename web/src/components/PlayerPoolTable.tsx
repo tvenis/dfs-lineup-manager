@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { PlayerPoolProps } from '@/components/PlayerPoolProps';
+import { CommentIcon } from '@/components/CommentIcon';
+import { CommentService } from '@/lib/commentService';
 import type { PlayerPoolEntry } from '@/types/prd';
 import type { PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 
@@ -40,7 +42,41 @@ export function PlayerPoolTable({
   getTierConfig,
   getTierStats
 }: PlayerPoolTableProps) {
-  
+  const [playersWithComments, setPlayersWithComments] = useState<Set<number>>(new Set());
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
+  // Load comment data for all players
+  useEffect(() => {
+    const loadCommentData = async () => {
+      if (players.length === 0) return;
+      
+      setCommentsLoading(true);
+      const playersWithRecentComments = new Set<number>();
+      
+      // Check comments for each player
+      const commentPromises = players.map(async (player) => {
+        const entry = getEntry(player);
+        const playerDkId = entry.player?.playerDkId;
+        if (!playerDkId) return;
+        
+        try {
+          const hasComments = await CommentService.hasRecentComments(playerDkId, 7);
+          if (hasComments) {
+            playersWithRecentComments.add(playerDkId);
+          }
+        } catch (error) {
+          console.error(`Error checking comments for player ${playerDkId}:`, error);
+        }
+      });
+      
+      await Promise.all(commentPromises);
+      setPlayersWithComments(playersWithRecentComments);
+      setCommentsLoading(false);
+    };
+
+    loadCommentData();
+  }, [players]);
+
   // Get status color
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -435,8 +471,15 @@ export function PlayerPoolTable({
                       >
                         {entry.player?.displayName}
                       </Link>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-muted-foreground flex items-center">
                         {entry.player?.position} • {entry.player?.team}
+                        {entry.player?.playerDkId && (
+                          <CommentIcon 
+                            playerDkId={entry.player.playerDkId}
+                            hasRecentComments={playersWithComments.has(entry.player.playerDkId)}
+                            size="sm"
+                          />
+                        )}
                       </div>
                     </div>
                   </TableCell>
