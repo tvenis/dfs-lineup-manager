@@ -16,6 +16,11 @@ def comments_health_check():
     """Health check for comments API"""
     return {"status": "healthy", "service": "comments"}
 
+@router.get("/test")
+def test_endpoint():
+    """Simple test endpoint"""
+    return {"message": "Comments API is working", "timestamp": "2024-01-01"}
+
 @router.get("", response_model=List[CommentSchema])
 def get_comments(
     playerDkId: Optional[int] = Query(None, description="Filter by player DK ID"),
@@ -142,32 +147,33 @@ def get_player_comments(
         print(f"Error in get_player_comments: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@router.post("/quick")
-def add_quick_comment(q: QuickNote, db: Session = Depends(get_db)):
-    """Create a quick comment from bookmarklet or external source"""
-    try:
-        # For now, create comment without player resolution
-        # TODO: Add player resolution back once basic functionality is working
-        
-        # Create the comment (without new fields for now)
-        db_comment = Comment(
-            playerDkId=None,  # No player resolution for now
-            content=q.note
-        )
-        
-        db.add(db_comment)
-        db.commit()
-        db.refresh(db_comment)
-        
-        return {
-            "ok": True, 
-            "comment_id": db_comment.id, 
-            "player_id": None,
-            "player_name": None,
-            "confidence": "none",
-            "possible_matches": []
-        }
-        
-    except Exception as e:
-        print(f"Error in add_quick_comment: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+# Temporarily commented out to debug API issues
+# @router.post("/quick")
+# def add_quick_comment(q: QuickNote, db: Session = Depends(get_db)):
+#     """Create a quick comment from bookmarklet or external source"""
+#     try:
+#         # For now, create comment without player resolution
+#         # TODO: Add player resolution back once basic functionality is working
+#         
+#         # Create the comment (without new fields for now)
+#         db_comment = Comment(
+#             playerDkId=None,  # No player resolution for now
+#             content=q.note
+#         )
+#         
+#         db.add(db_comment)
+#         db.commit()
+#         db.refresh(db_comment)
+#         
+#         return {
+#             "ok": True, 
+#             "comment_id": db_comment.id, 
+#             "player_id": None,
+#             "player_name": None,
+#             "confidence": "none",
+#             "possible_matches": []
+#         }
+#         
+#     except Exception as e:
+#         print(f"Error in add_quick_comment: {e}")
+#         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
