@@ -21,7 +21,18 @@ except Exception as e:
     engine = None
     Base = None
 
-from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments
+# Import routers conditionally to avoid database import errors
+try:
+    from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments
+    ROUTERS_AVAILABLE = True
+except Exception as e:
+    print(f"⚠️ Router imports failed: {e}")
+    ROUTERS_AVAILABLE = False
+    # Create empty router objects to avoid errors
+    players = lineups = csv_import = teams = weeks = None
+    draftkings_import = projections = odds_api = games = contests = None
+    actuals = draftgroups = players_batch = tips = firecrawl = None
+    import_opponent_roster = comments = None
 
 # Create database tables - moved to startup event
 
@@ -50,24 +61,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(players.router, prefix="/api/players", tags=["players"])
-app.include_router(lineups.router, prefix="/api/lineups", tags=["lineups"])
-app.include_router(csv_import.router, prefix="/api/csv", tags=["csv"])
-app.include_router(teams.router, prefix="/api/teams", tags=["teams"])
-app.include_router(weeks.router, prefix="/api/weeks", tags=["weeks"])
-app.include_router(draftkings_import.router, prefix="", tags=["draftkings-import"])
-app.include_router(projections.router, prefix="", tags=["projections"])
-app.include_router(odds_api.router, prefix="", tags=["odds-api"])
-app.include_router(games.router, prefix="/api/games", tags=["games"]) 
-app.include_router(contests.router, prefix="/api/contests", tags=["contests"])
-app.include_router(actuals.router, prefix="", tags=["actuals"])
-app.include_router(draftgroups.router, tags=["draftgroups"])
-app.include_router(players_batch.router, prefix="", tags=["players-batch"])
-app.include_router(tips.router, prefix="", tags=["tips"])
-app.include_router(firecrawl.router, prefix="/api", tags=["firecrawl"])
-app.include_router(import_opponent_roster.router, tags=["import-opponent-roster"])
-app.include_router(comments.router, prefix="/api/comments", tags=["comments"]) 
+# Include routers conditionally
+if ROUTERS_AVAILABLE:
+    if players: app.include_router(players.router, prefix="/api/players", tags=["players"])
+    if lineups: app.include_router(lineups.router, prefix="/api/lineups", tags=["lineups"])
+    if csv_import: app.include_router(csv_import.router, prefix="/api/csv", tags=["csv"])
+    if teams: app.include_router(teams.router, prefix="/api/teams", tags=["teams"])
+    if weeks: app.include_router(weeks.router, prefix="/api/weeks", tags=["weeks"])
+    if draftkings_import: app.include_router(draftkings_import.router, prefix="", tags=["draftkings-import"])
+    if projections: app.include_router(projections.router, prefix="", tags=["projections"])
+    if odds_api: app.include_router(odds_api.router, prefix="", tags=["odds-api"])
+    if games: app.include_router(games.router, prefix="/api/games", tags=["games"])
+    if contests: app.include_router(contests.router, prefix="/api/contests", tags=["contests"])
+    if actuals: app.include_router(actuals.router, prefix="", tags=["actuals"])
+    if draftgroups: app.include_router(draftgroups.router, tags=["draftgroups"])
+    if players_batch: app.include_router(players_batch.router, prefix="", tags=["players-batch"])
+    if tips: app.include_router(tips.router, prefix="", tags=["tips"])
+    if firecrawl: app.include_router(firecrawl.router, prefix="/api", tags=["firecrawl"])
+    if import_opponent_roster: app.include_router(import_opponent_roster.router, tags=["import-opponent-roster"])
+    if comments: app.include_router(comments.router, prefix="/api/comments", tags=["comments"])
+else:
+    print("⚠️ Skipping router registration due to import failures") 
 
 @app.on_event("startup")
 async def startup_event():
