@@ -296,14 +296,16 @@ class Game(Base):
 class Comment(Base):
     __tablename__ = "comments"
     
-    id = Column(String(50), primary_key=True)
-    player_id = Column(Integer, ForeignKey("players.playerDkId"), nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)  # PostgreSQL serial
+    playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=True)
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=True)
     content = Column(Text, nullable=False)  # rich text, HTML/Markdown
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
     player = relationship("Player")
+    week = relationship("Week")
 
 class PlayerPropBet(Base):
     __tablename__ = "player_prop_bets"

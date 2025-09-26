@@ -249,18 +249,23 @@ class LineupSimple(BaseModel):
         from_attributes = True
 
 class CommentBase(BaseModel):
-    id: str = Field(..., min_length=1, max_length=50)
-    player_id: str = Field(..., min_length=1, max_length=50)
     content: str = Field(..., min_length=1)  # rich text, HTML/Markdown
 
 class CommentCreate(CommentBase):
-    pass
+    playerDkId: Optional[int] = None
+    week_id: Optional[int] = None
 
 class CommentUpdate(BaseModel):
     content: str = Field(..., min_length=1)
+    playerDkId: Optional[int] = None
+    week_id: Optional[int] = None
 
 class Comment(CommentBase):
-    player: Player
+    id: int
+    playerDkId: Optional[int] = None
+    week_id: Optional[int] = None
+    player: Optional[Player] = None
+    week: Optional[Week] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     
