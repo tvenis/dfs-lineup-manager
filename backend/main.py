@@ -86,5 +86,9 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+@app.get("/test")
+async def test_endpoint():
+    return {"message": "Test endpoint working", "database": DATABASE_AVAILABLE}
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
