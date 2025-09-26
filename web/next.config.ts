@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Ensure dynamic routes work properly on Vercel
+  trailingSlash: false,
 };
 
 export default nextConfig;

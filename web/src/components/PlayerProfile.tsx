@@ -75,22 +75,31 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
         setLoading(true);
         setError(null);
         
+        console.log("PlayerProfile - Fetching data for playerId:", playerId);
+        console.log("PlayerProfile - API base URL:", process.env.NEXT_PUBLIC_API_URL || "using default");
+        
         // Get player from the profiles endpoint
         const response = await PlayerService.getPlayerProfiles({ limit: 1000 });
+        console.log("PlayerProfile - API response:", response);
+        
         const player = response.players?.find(p => 
           p.playerDkId.toString() === playerId
         );
+        
+        console.log("PlayerProfile - Found player:", player);
         
         if (player) {
           setPlayerData(player);
           // Load comments for this player
           await loadComments(player.playerDkId);
         } else {
-          setError("Player not found");
+          console.log("PlayerProfile - Player not found in response");
+          console.log("PlayerProfile - Available players:", response.players?.map(p => ({ id: p.playerDkId, name: p.displayName })));
+          setError(`Player with ID ${playerId} not found`);
         }
       } catch (err) {
-        setError("Failed to load player data");
-        console.error("Error fetching player data:", err);
+        console.error("PlayerProfile - Error fetching player data:", err);
+        setError(`Failed to load player data: ${err instanceof Error ? err.message : 'Unknown error'}`);
       } finally {
         setLoading(false);
       }
