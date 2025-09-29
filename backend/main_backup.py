@@ -4,16 +4,26 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 # Load environment variables from .env file
-from load_env import load_env_file
-load_env_file()
+try:
+    from load_env import load_env_file
+    load_env_file()
+except ImportError:
+    print("⚠️ load_env module not available, skipping .env file loading")
 
-from app.database import engine
-from app.models import Base
-from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster
-# from app.routers import comments  # Temporarily disabled to debug API issues
+# Import database conditionally to avoid errors in production
+try:
+    from app.database import engine
+    from app.models import Base
+    DATABASE_AVAILABLE = True
+except Exception as e:
+    print(f"Database not available: {e}")
+    DATABASE_AVAILABLE = False
+    engine = None
+    Base = None
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments
+
+# Create database tables - moved to startup event
 
 app = FastAPI(
     title="DFS Lineup Manager API",
@@ -57,7 +67,19 @@ app.include_router(players_batch.router, prefix="", tags=["players-batch"])
 app.include_router(tips.router, prefix="", tags=["tips"])
 app.include_router(firecrawl.router, prefix="/api", tags=["firecrawl"])
 app.include_router(import_opponent_roster.router, tags=["import-opponent-roster"])
-# app.include_router(comments.router, prefix="/api/comments", tags=["comments"])  # Temporarily disabled 
+app.include_router(comments.router, prefix="/api/comments", tags=["comments"]) 
+
+@app.on_event("startup")
+async def startup_event():
+    """Create database tables on startup"""
+    if DATABASE_AVAILABLE and engine and Base:
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("✅ Database tables created successfully")
+        except Exception as e:
+            print(f"❌ Error creating database tables: {e}")
+    else:
+        print("⚠️ Database not available, skipping table creation")
 
 @app.get("/")
 async def root():
@@ -66,6 +88,10 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/test")
+async def test_endpoint():
+    return {"message": "Test endpoint working", "database": DATABASE_AVAILABLE}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

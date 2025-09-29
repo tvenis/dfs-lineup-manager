@@ -34,3 +34,4 @@ def add_quick_comment(data: dict):
 
 # Export for Vercel
 handler = app
+
