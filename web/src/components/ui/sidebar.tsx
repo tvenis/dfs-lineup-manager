@@ -29,7 +29,7 @@ export function useSidebar() {
 
 const Sidebar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, children, ...props }, ref) => {
-    const { isOpen } = useSidebar();
+    const { isOpen, setIsOpen } = useSidebar();
     
     return (
       <>
@@ -37,10 +37,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEle
         {isOpen && (
           <div 
             className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-            onClick={() => {
-              const { setIsOpen } = useSidebar();
-              setIsOpen(false);
-            }}
+            onClick={() => setIsOpen(false)}
           />
         )}
         

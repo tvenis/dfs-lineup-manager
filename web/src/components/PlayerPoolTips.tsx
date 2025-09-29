@@ -114,20 +114,19 @@ function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
 
-  // More reliable data loading approach
+  // Optimized data loading with proper dependency management
   useEffect(() => {
     let isMounted = true
+    let requestInFlight = false
 
     const loadConfig = async () => {
+      // Prevent concurrent requests
+      if (requestInFlight || !isMounted) return
+      
       try {
+        requestInFlight = true
         console.log('PlayerPoolTips: Starting data load...')
         
-        // Add a small delay to ensure component is fully mounted
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        if (!isMounted) return
-
-        console.log('PlayerPoolTips: Calling API...')
         const activeConfig = await tipsService.getActiveConfiguration()
         console.log('PlayerPoolTips: API response received:', activeConfig)
         
@@ -149,25 +148,18 @@ function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
           setIsLoading(false)
           setHasError(true)
         }
+      } finally {
+        requestInFlight = false
       }
     }
 
-    // Try to load immediately
+    // Load configuration immediately
     loadConfig()
-
-    // Also try again after a short delay as a fallback
-    const fallbackTimer = setTimeout(() => {
-      if (isMounted && isLoading) {
-        console.log('PlayerPoolTips: Fallback timer triggered, retrying...')
-        loadConfig()
-      }
-    }, 1000)
 
     return () => {
       isMounted = false
-      clearTimeout(fallbackTimer)
     }
-  }, [])
+  }, []) // Empty dependency array ensures this only runs once on mount
 
   // Icon mapping
   const iconMap = {
