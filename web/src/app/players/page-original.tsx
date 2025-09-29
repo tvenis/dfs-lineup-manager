@@ -1784,7 +1784,7 @@ export default function PlayerPoolPage() {
       </div>
 
       {/* Player Evaluation Tips & Strategy Section */}
-      <PlayerPoolTips selectedWeek={weeks.find(w => w.id === selectedWeek)?.week_number || 1} />
+      <PlayerPoolTips />
 
       {/* Week Selection and Filters */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">

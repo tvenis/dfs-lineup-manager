@@ -105,26 +105,21 @@ const defaultTipsConfig = {
 }
 
 interface PlayerPoolTipsProps {
-  selectedWeek: number
+  // No props needed - tips are static and not week-dependent
 }
 
-function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
+function PlayerPoolTips({}: PlayerPoolTipsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [config, setConfig] = useState<TipsConfigData>(defaultTipsConfig)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
 
-  // Optimized data loading with proper dependency management
+  // Load tips configuration once on mount - no dependencies needed
   useEffect(() => {
     let isMounted = true
-    let requestInFlight = false
 
     const loadConfig = async () => {
-      // Prevent concurrent requests
-      if (requestInFlight || !isMounted) return
-      
       try {
-        requestInFlight = true
         console.log('PlayerPoolTips: Starting data load...')
         
         const activeConfig = await tipsService.getActiveConfiguration()
@@ -148,8 +143,6 @@ function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
           setIsLoading(false)
           setHasError(true)
         }
-      } finally {
-        requestInFlight = false
       }
     }
 
@@ -159,7 +152,7 @@ function PlayerPoolTips({ selectedWeek }: PlayerPoolTipsProps) {
     return () => {
       isMounted = false
     }
-  }, []) // Empty dependency array ensures this only runs once on mount
+  }, []) // No dependencies - tips are static
 
   // Icon mapping
   const iconMap = {
