@@ -304,3 +304,5 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
     </Dialog>
   );
 };
+
+export default ActivityDetailsModal;

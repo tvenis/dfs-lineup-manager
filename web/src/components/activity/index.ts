@@ -6,6 +6,7 @@
 
 export { RecentActivityCard } from './RecentActivityCard';
 export { ActivityList } from './ActivityList';
+export { ActivityDetailsModal } from './ActivityDetailsModal';
 export { default as RecentActivityCardDefault } from './RecentActivityCard';
 export { default as ActivityListDefault } from './ActivityList';
 

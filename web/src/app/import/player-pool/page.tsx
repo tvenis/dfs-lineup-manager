@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, CheckCircle, Database, Globe } from 'lucide-react';
+import { Upload, Database, Globe } from 'lucide-react';
 import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
 import { ActivityList } from '@/components/activity';
@@ -36,7 +35,6 @@ export default function PlayerPoolImportPage() {
     updated_at: string;
   }>>([]);
   const [isImporting, setIsImporting] = useState(false);
-  const [lastImportResult, setLastImportResult] = useState<DraftKingsImportResponse | null>(null);
 
   // Use the legacy activity hook for player pool activities
   const {
@@ -123,7 +121,6 @@ export default function PlayerPoolImportPage() {
     }
 
     setIsImporting(true);
-    setLastImportResult(null);
 
     try {
       const response = await fetch(buildApiUrl('/api/draftkings/import'), {
@@ -151,7 +148,6 @@ export default function PlayerPoolImportPage() {
       }
 
       const result: DraftKingsImportResponse = await response.json();
-      setLastImportResult(result);
 
       // Refresh the activity list to show the new import
       await refreshActivity();
@@ -342,38 +338,6 @@ export default function PlayerPoolImportPage() {
         }}
       />
 
-      {/* Success/Error Messages */}
-      {lastImportResult && (
-        <Alert className={lastImportResult.errors.length > 0 ? "border-destructive" : "border-green-500"}>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            <div className="space-y-2">
-              <p className="font-medium">
-                Import {lastImportResult.errors.length > 0 ? 'completed with errors' : 'completed successfully'}!
-              </p>
-              <div className="text-sm space-y-1">
-                <p>Players added: {lastImportResult.players_added}</p>
-                <p>Players updated: {lastImportResult.players_updated}</p>
-                <p>Entries added: {lastImportResult.entries_added}</p>
-                <p>Entries updated: {lastImportResult.entries_updated}</p>
-                {lastImportResult.entries_skipped > 0 && (
-                  <p>Entries skipped: {lastImportResult.entries_skipped}</p>
-                )}
-                {lastImportResult.errors.length > 0 && (
-                  <div>
-                    <p className="font-medium text-destructive">Errors:</p>
-                    <ul className="list-disc list-inside">
-                      {lastImportResult.errors.map((error, index) => (
-                        <li key={index} className="text-destructive">{error}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }

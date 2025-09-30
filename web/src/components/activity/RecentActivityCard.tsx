@@ -299,9 +299,10 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-gray-100"
+                  title="View Details"
                 >
-                  <Eye className="w-4 h-4" />
+                  <Eye className="w-4 h-4 text-gray-600 hover:text-gray-800" />
                 </Button>
               }
             />
@@ -310,9 +311,10 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => onRetry(id)}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 hover:bg-gray-100"
+                title="Retry"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4 text-gray-600 hover:text-gray-800" />
               </Button>
             )}
           </div>
