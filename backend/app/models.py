@@ -190,28 +190,120 @@ class PlayerPoolEntry(Base):
 class RecentActivity(Base):
     __tablename__ = "recent_activity"
     
+    # Primary key
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    action = Column(String(20), nullable=False)  # 'import' | 'export'
-    fileType = Column(String(20), nullable=False)  # 'API' | 'CSV'
-    fileName = Column(String(200))  # nullable, filename if applicable
-    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)  # Foreign key to weeks table
-    draftGroup = Column(String(30), nullable=False)  # draft group ID
-    recordsAdded = Column(Integer, default=0)  # count of records added
-    recordsUpdated = Column(Integer, default=0)  # count of records updated
-    recordsSkipped = Column(Integer, default=0)  # count of records skipped
-    errors = Column(JSON)  # error details as JSON
-    user_name = Column(String(100))  # optional user identifier (renamed from 'user' to avoid PostgreSQL reserved keyword)
-    details = Column(JSON)  # additional details as JSON
+    
+    # Core activity information
+    timestamp = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    action = Column(String(50), nullable=False)  # 'player-pool-import', 'projections-export', etc.
+    category = Column(String(30), nullable=False)  # 'data-import', 'data-export', 'system-maintenance', 'user-action'
+    
+    # File and source information
+    file_type = Column(String(20), nullable=False)  # 'API', 'CSV', 'JSON', 'XML'
+    file_name = Column(String(200))  # nullable, filename if applicable
+    file_size_bytes = Column(Integer)  # file size in bytes
+    import_source = Column(String(50))  # 'draftkings', 'csv', 'odds-api', 'firecrawl', 'manual'
+    
+    # Context information
+    week_id = Column(Integer, ForeignKey("weeks.id", ondelete="CASCADE"), nullable=False)
+    draft_group = Column(String(50))  # draft group ID (increased from 30)
+    
+    # Operation results
+    records_added = Column(Integer, nullable=False, default=0)
+    records_updated = Column(Integer, nullable=False, default=0)
+    records_skipped = Column(Integer, nullable=False, default=0)
+    records_failed = Column(Integer, nullable=False, default=0)
+    
+    # Operation status and performance
+    operation_status = Column(String(20), nullable=False, default='completed')  # 'completed', 'failed', 'partial', 'cancelled'
+    duration_ms = Column(Integer)  # operation duration in milliseconds
+    
+    # Error handling (structured JSONB)
+    errors = Column(JSON)  # structured error information
+    error_count = Column(Integer, default=0)
+    
+    # Audit trail
+    created_by = Column(String(100))  # user who initiated the action
+    ip_address = Column(String(45))  # IP address for security auditing (IPv6 max length)
+    session_id = Column(String(100))  # session ID for tracking
+    user_agent = Column(Text)  # user agent for debugging
+    
+    # Relationship tracking
+    parent_activity_id = Column(Integer, ForeignKey("recent_activity.id", ondelete="SET NULL"))
+    
+    # Additional metadata
+    details = Column(JSON)  # structured metadata
+    user_name = Column(String(100))  # legacy field for backward compatibility
+    
+    # Data retention
+    retention_until = Column(DateTime(timezone=True))
+    is_archived = Column(Boolean, nullable=False, default=False)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     # Relationships
     week = relationship("Week")
+    parent_activity = relationship("RecentActivity", remote_side=[id])
     
     def __init__(self, **kwargs):
-        # Handle legacy 'user' parameter by mapping it to 'user_name'
+        # Handle legacy field mappings for backward compatibility
+        if 'fileType' in kwargs:
+            kwargs['file_type'] = kwargs.pop('fileType')
+        if 'fileName' in kwargs:
+            kwargs['file_name'] = kwargs.pop('fileName')
+        if 'draftGroup' in kwargs:
+            kwargs['draft_group'] = kwargs.pop('draftGroup')
+        if 'recordsAdded' in kwargs:
+            kwargs['records_added'] = kwargs.pop('recordsAdded')
+        if 'recordsUpdated' in kwargs:
+            kwargs['records_updated'] = kwargs.pop('recordsUpdated')
+        if 'recordsSkipped' in kwargs:
+            kwargs['records_skipped'] = kwargs.pop('recordsSkipped')
         if 'user' in kwargs:
             kwargs['user_name'] = kwargs.pop('user')
+        
         super().__init__(**kwargs)
+    
+    def to_legacy_dict(self):
+        """Convert to legacy format for backward compatibility"""
+        return {
+            'id': self.id,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'action': self.action,
+            'fileType': self.file_type,
+            'fileName': self.file_name,
+            'week_id': self.week_id,
+            'draftGroup': self.draft_group,
+            'recordsAdded': self.records_added,
+            'recordsUpdated': self.records_updated,
+            'recordsSkipped': self.records_skipped,
+            'errors': self.errors or [],
+            'user_name': self.user_name,
+            'details': self.details,
+            'importType': self._get_import_type()
+        }
+    
+    def _get_import_type(self):
+        """Extract import type from action for backward compatibility"""
+        if not self.action:
+            return None
+        
+        if 'player-pool' in self.action:
+            return 'player-pool'
+        elif 'projections' in self.action:
+            return 'projections'
+        elif 'odds-api' in self.action:
+            return 'odds-api'
+        elif 'contests' in self.action:
+            return 'contests'
+        elif 'actuals' in self.action:
+            return 'actuals'
+        elif 'ownership' in self.action:
+            return 'ownership'
+        else:
+            return 'unknown'
 
 class Lineup(Base):
     __tablename__ = "lineups"

@@ -606,15 +606,19 @@ class DraftKingsImportService:
         """Log the import activity"""
         try:
             activity = RecentActivity(
-                action="import",
-                fileType="API",
-                fileName=None,
+                action="player-pool-import",
+                category="data-import",
+                file_type="API",
+                file_name=None,
                 week_id=week_id,
-                draftGroup=draft_group,
-                recordsAdded=result.players_added + result.entries_added,
-                recordsUpdated=result.players_updated + result.entries_updated,
-                recordsSkipped=result.entries_skipped,
+                draft_group=draft_group,
+                records_added=result.players_added + result.entries_added,
+                records_updated=result.players_updated + result.entries_updated,
+                records_skipped=result.entries_skipped,
+                records_failed=0,
+                operation_status="completed",
                 errors=result.errors,
+                error_count=len(result.errors) if result.errors else 0,
                 user_name=None,
                 details={
                     "players_added": result.players_added,

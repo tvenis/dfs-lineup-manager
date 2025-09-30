@@ -181,22 +181,90 @@ class PlayerPoolEntry(PlayerPoolEntryBase):
         from_attributes = True
 
 class RecentActivityBase(BaseModel):
+    # Core activity information
     timestamp: datetime
-    action: str = Field(..., pattern="^(import|export)$")
-    fileType: str = Field(..., pattern="^(API|CSV)$")
-    fileName: Optional[str] = Field(None, max_length=200)
+    action: str = Field(..., pattern="^[a-z-]+-(import|export)$", description="Action type like 'player-pool-import', 'projections-export'")
+    category: str = Field(..., pattern="^(data-import|data-export|system-maintenance|user-action)$")
+    
+    # File and source information
+    file_type: str = Field(..., pattern="^(API|CSV|JSON|XML)$")
+    file_name: Optional[str] = Field(None, max_length=200)
+    file_size_bytes: Optional[int] = Field(None, ge=0)
+    import_source: Optional[str] = Field(None, max_length=50)
+    
+    # Context information
     week_id: int = Field(..., description="Week ID from weeks table")
-    draftGroup: str = Field(..., max_length=30)
-    recordsAdded: int = Field(default=0, ge=0)
-    recordsUpdated: int = Field(default=0, ge=0)
-    recordsSkipped: int = Field(default=0, ge=0)
-    errors: List[str] = Field(default_factory=list)
-    user_name: Optional[str] = Field(None, max_length=100)
-    details: Optional[Dict[str, Any]] = None
+    draft_group: Optional[str] = Field(None, max_length=50)
+    
+    # Operation results
+    records_added: int = Field(default=0, ge=0)
+    records_updated: int = Field(default=0, ge=0)
+    records_skipped: int = Field(default=0, ge=0)
+    records_failed: int = Field(default=0, ge=0)
+    
+    # Operation status and performance
+    operation_status: str = Field(default="completed", pattern="^(completed|failed|partial|cancelled)$")
+    duration_ms: Optional[int] = Field(None, ge=0)
+    
+    # Error handling
+    errors: Optional[Dict[str, Any]] = Field(None, description="Structured error information")
+    error_count: int = Field(default=0, ge=0)
+    
+    # Audit trail
+    created_by: Optional[str] = Field(None, max_length=100)
+    ip_address: Optional[str] = Field(None, max_length=45)
+    session_id: Optional[str] = Field(None, max_length=100)
+    user_agent: Optional[str] = None
+    
+    # Relationship tracking
+    parent_activity_id: Optional[int] = Field(None, description="Parent activity ID for chained operations")
+    
+    # Additional metadata
+    details: Optional[Dict[str, Any]] = Field(None, description="Structured metadata")
+    user_name: Optional[str] = Field(None, max_length=100)  # Legacy field for backward compatibility
+    
+    # Data retention
+    retention_until: Optional[datetime] = None
+    is_archived: bool = Field(default=False)
 
 class RecentActivity(RecentActivityBase):
     id: int
     week: Week
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class RecentActivityCreate(RecentActivityBase):
+    """Schema for creating new activity records"""
+    pass
+
+class RecentActivityUpdate(BaseModel):
+    """Schema for updating activity records"""
+    operation_status: Optional[str] = Field(None, pattern="^(completed|failed|partial|cancelled)$")
+    duration_ms: Optional[int] = Field(None, ge=0)
+    errors: Optional[Dict[str, Any]] = None
+    error_count: Optional[int] = Field(None, ge=0)
+    details: Optional[Dict[str, Any]] = None
+    is_archived: Optional[bool] = None
+
+class RecentActivityLegacy(BaseModel):
+    """Legacy schema for backward compatibility with frontend"""
+    id: int
+    timestamp: str
+    action: str
+    fileType: str
+    fileName: Optional[str]
+    week_id: int
+    draftGroup: Optional[str]
+    recordsAdded: int
+    recordsUpdated: int
+    recordsSkipped: int
+    errors: List[str]
+    user_name: Optional[str]
+    details: Optional[Dict[str, Any]]
+    importType: Optional[str]
     
     class Config:
         from_attributes = True

@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Upload, CheckCircle, Database, Globe } from 'lucide-react';
 import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
+import { ActivityList } from '@/components/activity';
+import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy';
 
 interface DraftKingsImportResponse {
   players_added: number;
@@ -20,25 +22,7 @@ interface DraftKingsImportResponse {
   total_processed: number;
 }
 
-interface RecentActivity {
-  id: number;
-  timestamp: string;
-  action: 'import' | 'export';
-  fileType: 'API' | 'CSV';
-  fileName: string | null;
-  week_id: number;
-  draftGroup: string;
-  recordsAdded: number;
-  recordsUpdated: number;
-  recordsSkipped: number;
-  errors: string[];
-  user_name: string | null;
-  details: unknown;
-  importType?: 'player-pool' | 'projections' | 'odds-api' | 'actuals';
-}
-
 export default function PlayerPoolImportPage() {
-  const [history, setHistory] = useState<RecentActivity[]>([]);
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
   const [draftGroup, setDraftGroup] = useState<string>('');
@@ -53,6 +37,19 @@ export default function PlayerPoolImportPage() {
   }>>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [lastImportResult, setLastImportResult] = useState<DraftKingsImportResponse | null>(null);
+
+  // Use the legacy activity hook for player pool activities
+  const {
+    activities: history,
+    loading: activityLoading,
+    error: activityError,
+    refresh: refreshActivity,
+    retry: retryActivity
+  } = useRecentActivityLegacy({
+    importType: 'player-pool',
+    limit: 10,
+    weekId: selectedWeekId || undefined
+  });
 
   const fetchDraftGroups = async (weekId: number) => {
     console.log('🔍 fetchDraftGroups called with weekId:', weekId);
@@ -107,7 +104,6 @@ export default function PlayerPoolImportPage() {
     };
 
     fetchWeeks();
-    fetchRecentActivity();
   }, []);
 
   // Fetch draft groups when week changes
@@ -119,18 +115,6 @@ export default function PlayerPoolImportPage() {
       fetchDraftGroups(selectedWeekId);
     }
   }, [selectedWeekId]);
-
-  const fetchRecentActivity = async () => {
-    try {
-      const response = await fetch(buildApiUrl('/recent-activity?import_type=player-pool&limit=10'));
-      if (response.ok) {
-        const data = await response.json();
-        setHistory(data);
-      }
-    } catch (error) {
-      console.error('Error fetching recent activity:', error);
-    }
-  };
 
   const handleImportPlayerData = async () => {
     if (!selectedWeekId || !draftGroup) {
@@ -169,27 +153,8 @@ export default function PlayerPoolImportPage() {
       const result: DraftKingsImportResponse = await response.json();
       setLastImportResult(result);
 
-      await fetchRecentActivity();
-      
-      // Add a local activity item for immediate feedback
-      const newHistoryItem: RecentActivity = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        action: 'import',
-        fileType: 'API',
-        fileName: `Draft Group ${draftGroup}`,
-        week_id: selectedWeekId,
-        draftGroup: draftGroup,
-        recordsAdded: result.players_added + result.entries_added,
-        recordsUpdated: result.players_updated + result.entries_updated,
-        recordsSkipped: result.entries_skipped,
-        errors: result.errors,
-        user_name: null,
-        details: null,
-        importType: 'player-pool'
-      };
-      
-      setHistory(prev => [newHistoryItem, ...prev]);
+      // Refresh the activity list to show the new import
+      await refreshActivity();
 
     } catch (error) {
       console.error('Error importing player data:', error);
@@ -329,48 +294,53 @@ export default function PlayerPoolImportPage() {
         </Card>
       </div>
 
-      {/* Recent Import Activity */}
+      {/* Activity Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Import Activity</CardTitle>
-          <CardDescription>Your recent player pool imports.</CardDescription>
+          <CardTitle>Activity Statistics</CardTitle>
+          <CardDescription>Overview of your recent import activity</CardDescription>
         </CardHeader>
         <CardContent>
-          {history.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No recent player pool import activity found.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {history.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Database className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">
-                        {activity.fileName || `Draft Group ${activity.draftGroup}`}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(activity.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      +{activity.recordsAdded} added, {activity.recordsUpdated} updated
-                    </p>
-                    {activity.recordsSkipped > 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        {activity.recordsSkipped} skipped
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{history.length}</div>
+              <div className="text-sm text-blue-800">Total Activities</div>
             </div>
-          )}
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {history.filter(a => a.operation_status === 'completed').length}
+              </div>
+              <div className="text-sm text-green-800">Successful</div>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">
+                {history.reduce((sum, a) => sum + (a.records_added || 0), 0)}
+              </div>
+              <div className="text-sm text-orange-800">Records Added</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">
+                {history.reduce((sum, a) => sum + (a.records_updated || 0), 0)}
+              </div>
+              <div className="text-sm text-purple-800">Records Updated</div>
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Recent Import Activity */}
+      <ActivityList
+        activities={history}
+        loading={activityLoading}
+        error={activityError}
+        emptyMessage="No recent player pool import activity found."
+        showFilters={false}
+        onRetry={retryActivity}
+        onViewDetails={(activityId) => {
+          console.log('View details for activity:', activityId);
+          // You can implement a modal or navigation here
+        }}
+      />
 
       {/* Success/Error Messages */}
       {lastImportResult && (
