@@ -248,23 +248,15 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="space-y-1">
-        <h2 className="flex items-center gap-2 text-2xl font-bold">
-          <FileText className="h-6 w-6" />
-          Import Ownership Projections
-        </h2>
-        <p className="text-muted-foreground">
-          Import weekly ownership projections from CSV file with automatic player matching.
-        </p>
-      </div>
-
       {/* Import Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Import Ownership Projections</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Import Ownership Projections
+          </CardTitle>
           <CardDescription>
-            Upload a CSV file containing player ownership data for the selected week.
+            Import weekly ownership projections from CSV file with automatic player matching.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
