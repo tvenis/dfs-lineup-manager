@@ -292,15 +292,16 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-1 ml-2">
+          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
             <ActivityDetailsModal 
               activity={activity}
               trigger={
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 hover:bg-gray-100"
+                  className="h-8 w-8 p-0 hover:bg-gray-100 flex-shrink-0"
                   title="View Details"
+                  type="button"
                 >
                   <Eye className="w-4 h-4 text-gray-600 hover:text-gray-800" />
                 </Button>
@@ -311,8 +312,9 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => onRetry(id)}
-                className="h-8 w-8 p-0 hover:bg-gray-100"
+                className="h-8 w-8 p-0 hover:bg-gray-100 flex-shrink-0"
                 title="Retry"
+                type="button"
               >
                 <RotateCcw className="w-4 h-4 text-gray-600 hover:text-gray-800" />
               </Button>
