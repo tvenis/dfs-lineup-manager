@@ -293,7 +293,20 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-            <ActivityDetailsModal activity={activity} />
+            {/* Direct Eye Icon Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                console.log('Eye icon clicked for activity:', id);
+                // We'll add modal functionality here
+              }}
+              className="h-8 w-8 p-0 hover:bg-gray-100 flex-shrink-0"
+              title="View Details"
+              type="button"
+            >
+              <Eye className="w-4 h-4 text-gray-600 hover:text-gray-800" />
+            </Button>
             {onRetry && operation_status === 'failed' && (
               <Button
                 variant="ghost"
