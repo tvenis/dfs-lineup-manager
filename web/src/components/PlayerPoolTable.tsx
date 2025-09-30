@@ -152,6 +152,10 @@ export function PlayerPoolTable({
           aValue = aEntry.projectedPoints || 0;
           bValue = bEntry.projectedPoints || 0;
           break;
+        case 'ownership':
+          aValue = aEntry.ownership || 0;
+          bValue = bEntry.ownership || 0;
+          break;
         case 'salary':
           aValue = aEntry.salary || 0;
           bValue = bEntry.salary || 0;
@@ -416,6 +420,15 @@ export function PlayerPoolTable({
                   {getSortIcon('projection')}
                 </div>
               </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('ownership')}
+              >
+                <div className="flex items-center gap-2">
+                  Ownership
+                  {getSortIcon('ownership')}
+                </div>
+              </TableHead>
           <TableHead
             className="cursor-pointer hover:bg-muted/50"
             onClick={() => handleSort('salary')}
@@ -599,6 +612,11 @@ export function PlayerPoolTable({
                   <TableCell>
                     <div className="font-mono text-sm">
                       {entry.projectedPoints?.toFixed(2) || 'N/A'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-mono text-sm">
+                      {entry.ownership ? `${entry.ownership.toFixed(1)}%` : 'N/A'}
                     </div>
                   </TableCell>
                   <TableCell>

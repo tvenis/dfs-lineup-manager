@@ -116,6 +116,7 @@ export interface PlayerPoolEntry {
   playerDkId: number;
   draftableId?: string;  // DraftKings draftable ID for this player pool entry
   projectedPoints?: number;  // Extracted projection value from draftStatAttributes
+  ownership?: number;  // Ownership percentage from CSV imports (0.00-100.00)
   salary: number;
   status: string;
   isDisabled: boolean;
