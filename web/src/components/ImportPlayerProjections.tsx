@@ -100,7 +100,7 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
   const [, setMatchedPlayers] = useState<MatchedPlayer[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
-  const [projectionSource, setProjectionSource] = useState<string>('')
+  const [projectionSource, setProjectionSource] = useState<string>('WinWithOdds')
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
   
   // Import result dialog state
