@@ -5,7 +5,7 @@
  * with consistent styling and functionality across the application.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -115,6 +115,8 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
   onViewDetails,
   className
 }) => {
+  const [showModal, setShowModal] = useState(false);
+  
   const {
     id,
     timestamp,
@@ -293,14 +295,11 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-            {/* Direct Eye Icon Button */}
+            {/* Eye Icon Button */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                console.log('Eye icon clicked for activity:', id);
-                // We'll add modal functionality here
-              }}
+              onClick={() => setShowModal(true)}
               className="h-8 w-8 p-0 hover:bg-gray-100 flex-shrink-0"
               title="View Details"
               type="button"
@@ -322,6 +321,15 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
           </div>
         </div>
       </CardContent>
+      
+      {/* Activity Details Modal */}
+      {showModal && (
+        <ActivityDetailsModal 
+          activity={activity}
+          open={showModal}
+          onOpenChange={setShowModal}
+        />
+      )}
     </Card>
   );
 };

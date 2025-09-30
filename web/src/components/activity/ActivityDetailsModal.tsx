@@ -23,12 +23,15 @@ import {
 
 interface ActivityDetailsModalProps {
   activity: RecentActivity;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({ 
-  activity
+  activity,
+  open,
+  onOpenChange
 }) => {
-  const [open, setOpen] = React.useState(false);
   const {
     id,
     timestamp,
@@ -106,28 +109,18 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="h-8 w-8 p-0 hover:bg-gray-100"
-          title="View Details"
-        >
-          <Eye className="h-4 w-4 text-gray-600" />
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <DialogTitle className="flex items-center gap-2">
             {getStatusIcon()}
             Activity Details
           </DialogTitle>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-8 w-8 p-0"
-            onClick={() => setOpen(false)}
+            onClick={() => onOpenChange(false)}
           >
             <X className="h-4 w-4" />
           </Button>
