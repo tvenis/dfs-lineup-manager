@@ -32,6 +32,7 @@ import {
   Shield,
   Calendar,
   Lightbulb,
+  FileText,
 } from "lucide-react";
 import { Toaster } from "sonner";
 
@@ -39,6 +40,7 @@ import { Toaster } from "sonner";
 export default function App({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   
   console.log('🎯 App component rendering, pathname:', pathname);
   console.log('🎯 App children:', children);
@@ -126,6 +128,23 @@ export default function App({ children }: { children: React.ReactNode }) {
     },
   ];
 
+  const importSubItems = [
+    {
+      id: "player-projections",
+      label: "Player Projections",
+      description: "Import weekly player projections",
+      icon: FileText,
+      href: "/import?section=projections",
+    },
+    {
+      id: "ownership-projections",
+      label: "Ownership Projections",
+      description: "Import ownership percentage data",
+      icon: FileText,
+      href: "/import?section=ownership",
+    },
+  ];
+
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
@@ -144,6 +163,11 @@ export default function App({ children }: { children: React.ReactNode }) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {navigationItems.map((item) => {
+                    // Skip import and settings as they have special handling
+                    if (item.id === 'import' || item.id === 'settings') {
+                      return null;
+                    }
+                    
                     const Icon = item.icon;
                     const isActive = pathname === item.href;
                     
@@ -166,6 +190,57 @@ export default function App({ children }: { children: React.ReactNode }) {
                       </SidebarMenuItem>
                     );
                   })}
+                  
+                  {/* Import with submenu */}
+                  <SidebarMenuItem>
+                    <button
+                      onClick={() => setIsImportOpen(!isImportOpen)}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
+                        pathname.startsWith('/import')
+                          ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
+                          : "text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      <Upload className="h-4 w-4" />
+                      Import
+                      {isImportOpen ? (
+                        <ChevronDown className="h-4 w-4 ml-auto" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 ml-auto" />
+                      )}
+                    </button>
+                  </SidebarMenuItem>
+                  
+                  {/* Import submenu */}
+                  {isImportOpen && (
+                    <div className="ml-4 space-y-1">
+                      {importSubItems.map((subItem) => {
+                        const SubIcon = subItem.icon;
+                        const isSubActive = pathname === subItem.href || 
+                          (pathname.startsWith('/import') && new URLSearchParams(window.location.search).get('section') === subItem.id);
+                        
+                        return (
+                          <SidebarMenuItem key={subItem.id}>
+                            <Link 
+                              href={subItem.href} 
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
+                                isSubActive 
+                                  ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
+                                  : "text-[var(--color-text-secondary)]"
+                              }`}
+                              onClick={() => console.log(`🎯 Clicked import sub-item: ${subItem.label} -> ${subItem.href}`)}
+                            >
+                              <SubIcon className="h-4 w-4" />
+                              <div className="flex flex-col">
+                                <span>{subItem.label}</span>
+                                <span className="text-xs opacity-75">{subItem.description}</span>
+                              </div>
+                            </Link>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </div>
+                  )}
                   
                   {/* Settings with submenu */}
                   <SidebarMenuItem>

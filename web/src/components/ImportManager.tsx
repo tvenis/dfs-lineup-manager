@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
@@ -15,6 +16,7 @@ import { Badge } from './ui/badge'
 import { ImportPlayerProjections } from './ImportPlayerProjections'
 import { ImportPlayerActuals } from './ImportPlayerActuals'
 import { ImportContests } from './ImportContests'
+import { ImportOwnershipProjections } from './ImportOwnershipProjections'
 import { Week } from '@/types/prd'
 import { API_CONFIG, buildApiUrl } from '@/config/api'
 
@@ -62,6 +64,9 @@ interface RecentActivity {
 }
 
 export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string }) {
+  const searchParams = useSearchParams()
+  const section = searchParams.get('section')
+  
   const [history, setHistory] = useState<RecentActivity[]>([])
   const [weeks, setWeeks] = useState<Week[]>([])
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null)
@@ -678,6 +683,15 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       month: 'short', 
       day: 'numeric' 
     })
+  }
+
+  // Handle specific sections
+  if (section === 'ownership') {
+    return <ImportOwnershipProjections onImportComplete={handleProjectionImportComplete} />
+  }
+
+  if (section === 'projections') {
+    return <ImportPlayerProjections onImportComplete={handleProjectionImportComplete} />
   }
 
   return (
