@@ -23,12 +23,10 @@ import {
 
 interface ActivityDetailsModalProps {
   activity: RecentActivity;
-  trigger?: React.ReactNode;
 }
 
 export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({ 
-  activity, 
-  trigger 
+  activity
 }) => {
   const [open, setOpen] = React.useState(false);
   const {
@@ -110,11 +108,14 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="ghost" size="sm">
-            <Eye className="h-4 w-4" />
-          </Button>
-        )}
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className="h-8 w-8 p-0 hover:bg-gray-100"
+          title="View Details"
+        >
+          <Eye className="h-4 w-4 text-gray-600" />
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
