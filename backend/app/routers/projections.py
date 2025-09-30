@@ -94,8 +94,8 @@ async def import_projections(
     try:
         result = process_projections(db, week_id, projection_source, csv_data)
         
-        # Log activity - temporarily disabled to test core functionality
-        # log_import_activity(db, week_id, file.filename, result)
+        # Log activity
+        log_import_activity(db, week_id, file.filename, result, projection_source)
         
         return result
     except Exception as e:
@@ -141,7 +141,7 @@ async def import_ownership_projections(
         result = process_ownership_projections(db, week_id, projection_source, csv_data)
         
         # Log activity
-        log_import_activity(db, week_id, file.filename, result, "OWNERSHIP_IMPORT")
+        log_import_activity(db, week_id, file.filename, result, projection_source)
         
         return result
     except Exception as e:
@@ -681,10 +681,39 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
         unmatched_players=unmatched_players
     )
 
-def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse):
+def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, projection_source: str = "Custom Projections"):
     """Log import activity to recent_activity table"""
-    # Temporarily disabled due to user parameter issues - TODO: Fix this
-    pass
+    try:
+        activity = RecentActivity(
+            action="projections-import",
+            category="data-import",
+            file_type="CSV",
+            file_name=filename,
+            week_id=week_id,
+            draft_group=None,
+            import_source=projection_source,
+            records_added=result.projections_created,
+            records_updated=result.projections_updated,
+            records_skipped=result.failed_matches,
+            records_failed=0,
+            operation_status="completed",
+            errors=result.errors if result.errors else None,
+            error_count=len(result.errors) if result.errors else 0,
+            user_name=None,
+            details={
+                "successful_matches": result.successful_matches,
+                "failed_matches": result.failed_matches,
+                "total_processed": result.total_processed,
+                "player_pool_updated": result.player_pool_updated
+            }
+        )
+        db.add(activity)
+        db.commit()
+        print(f"✅ Successfully logged projection import activity: {filename}")
+    except Exception as e:
+        print(f"❌ Failed to log import activity: {str(e)}")
+        db.rollback()
+        # Don't raise - logging failure shouldn't break the import
 
 @router.post("/import-matched", response_model=ProjectionImportResponse)
 async def import_matched_projections(
@@ -708,7 +737,7 @@ async def import_matched_projections(
         result = process_matched_players(db, week_id, projection_source, matched_players)
         
         # Log activity
-        log_import_activity(db, week_id, f"matched_players_{len(matched_players)}", result)
+        log_import_activity(db, week_id, f"matched_players_{len(matched_players)}", result, projection_source)
         
         return result
     except Exception as e:
@@ -892,29 +921,3 @@ def process_ownership_projections(db: Session, week_id: int, projection_source: 
         unmatched_players=unmatched_players
     )
 
-def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, import_type: str = "PROJECTION_IMPORT"):
-    """Log import activity to recent_activity table"""
-    try:
-        activity = RecentActivity(
-            timestamp=datetime.utcnow(),
-            action='import',
-            fileType='CSV',
-            fileName=filename,
-            week=str(week_id),
-            draftGroup=import_type,
-            recordsAdded=result.projections_created,
-            recordsUpdated=result.projections_updated,
-            recordsSkipped=result.failed_matches,
-            errors=json.dumps(result.errors) if result.errors else None,
-            user='system',
-            details=json.dumps({
-                'successful_matches': result.successful_matches,
-                'failed_matches': result.failed_matches,
-                'total_processed': result.total_processed
-            })
-        )
-        db.add(activity)
-        db.commit()
-    except Exception as e:
-        print(f"DEBUG: Failed to log activity: {e}")
-        # Don't raise - logging failure shouldn't break the import
