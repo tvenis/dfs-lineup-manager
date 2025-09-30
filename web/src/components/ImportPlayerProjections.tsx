@@ -475,12 +475,12 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
               <br />
               <strong>Download CSV files:</strong> Visit{' '}
               <a 
-                href="https://winwithodds.com/" 
+                href="https://winwithodds.com/weekly_full_stats" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-primary hover:underline font-medium"
               >
-                winwithodds.com
+                https://winwithodds.com/weekly_full_stats
               </a>
               {' '}to download projection CSV files.
             </AlertDescription>
