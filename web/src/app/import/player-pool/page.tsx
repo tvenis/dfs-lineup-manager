@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Database, Globe } from 'lucide-react';
+import { Upload, CheckCircle, Database, Globe } from 'lucide-react';
 import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
 import { ActivityList } from '@/components/activity';
