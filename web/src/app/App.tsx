@@ -219,14 +219,16 @@ export default function App({ children }: { children: React.ReactNode }) {
                         const isSubActive = pathname === subItem.href || 
                           (pathname.startsWith('/import') && new URLSearchParams(window.location.search).get('section') === subItem.id);
                         
+                        console.log(`🎯 Import sub-item ${subItem.label}: isSubActive=${isSubActive}, pathname=${pathname}, href=${subItem.href}`);
+                        
                         return (
                           <SidebarMenuItem key={subItem.id}>
                             <Link 
                               href={subItem.href} 
-                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 ${
                                 isSubActive 
-                                  ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
-                                  : "text-[var(--color-text-secondary)]"
+                                  ? "bg-gray-200 text-gray-900 font-semibold" 
+                                  : "text-gray-600"
                               }`}
                               onClick={() => console.log(`🎯 Clicked import sub-item: ${subItem.label} -> ${subItem.href}`)}
                             >
@@ -270,14 +272,16 @@ export default function App({ children }: { children: React.ReactNode }) {
                         const isSubActive = pathname === subItem.href || 
                           (pathname.startsWith('/settings') && new URLSearchParams(window.location.search).get('section') === subItem.id);
                         
+                        console.log(`🎯 Settings sub-item ${subItem.label}: isSubActive=${isSubActive}, pathname=${pathname}, href=${subItem.href}`);
+                        
                         return (
                           <SidebarMenuItem key={subItem.id}>
                             <Link 
                               href={subItem.href} 
-                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 ${
                                 isSubActive 
-                                  ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
-                                  : "text-[var(--color-text-secondary)]"
+                                  ? "bg-gray-200 text-gray-900 font-semibold" 
+                                  : "text-gray-600"
                               }`}
                               onClick={() => console.log(`🎯 Clicked settings sub-item: ${subItem.label} -> ${subItem.href}`)}
                             >
