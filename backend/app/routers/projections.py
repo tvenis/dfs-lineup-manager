@@ -101,6 +101,52 @@ async def import_projections(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing projections: {str(e)}")
 
+@router.post("/import-ownership", response_model=ProjectionImportResponse)
+async def import_ownership_projections(
+    file: UploadFile = File(...),
+    week_id: int = Form(...),
+    projection_source: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Import ownership projections from CSV file with automatic player matching"""
+    
+    print(f"DEBUG: Ownership import request received - File: {file.filename}, Week: {week_id}, Source: {projection_source}")
+    
+    # Validate file type
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+    
+    # Check if week exists
+    week = db.query(Week).filter(Week.id == week_id).first()
+    if not week:
+        raise HTTPException(status_code=404, detail=f"Week {week_id} not found")
+    
+    # Read CSV content
+    try:
+        content = await file.read()
+        csv_text = content.decode('utf-8-sig')  # Handle BOM
+        print(f"DEBUG: CSV file read successfully, size: {len(csv_text)} characters")
+        print(f"DEBUG: First 200 characters: {csv_text[:200]}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error reading file: {str(e)}")
+    
+    # Parse CSV
+    try:
+        csv_data = parse_ownership_csv_data(csv_text, projection_source)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error parsing CSV: {str(e)}")
+    
+    # Process ownership projections
+    try:
+        result = process_ownership_projections(db, week_id, projection_source, csv_data)
+        
+        # Log activity
+        log_import_activity(db, week_id, file.filename, result, "OWNERSHIP_IMPORT")
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing ownership projections: {str(e)}")
+
 def parse_csv_data(csv_text: str, projection_source: str) -> List[Dict[str, Any]]:
     """Parse CSV using DictReader and map only the required columns robustly."""
     reader = csv.DictReader(io.StringIO(csv_text))
@@ -679,3 +725,196 @@ async def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
         return activities
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+def parse_ownership_csv_data(csv_text: str, projection_source: str) -> List[Dict[str, Any]]:
+    """Parse ownership CSV data, extracting only PLAYER and RST% columns"""
+    reader = csv.DictReader(io.StringIO(csv_text))
+    if not reader.fieldnames:
+        raise ValueError("CSV has no header row")
+
+    # Clean headers to remove BOM and extra whitespace
+    cleaned_headers = [(h or '').strip().lstrip('\ufeff') for h in reader.fieldnames]
+    header_map = { h.lower(): h for h in cleaned_headers }
+    print(f"DEBUG: Ownership CSV Headers found: {reader.fieldnames}")
+    print(f"DEBUG: Cleaned headers: {cleaned_headers}")
+    print(f"DEBUG: Header map: {header_map}")
+    _logger.debug(f"Ownership CSV Headers found: {reader.fieldnames}")
+    _logger.debug(f"Cleaned headers: {cleaned_headers}")
+    _logger.debug(f"Header map: {header_map}")
+
+    def get_val(row: dict, key_variants: list[str]) -> str:
+        for k in key_variants:
+            # Try exact match first
+            real = header_map.get(k)
+            if real is not None:
+                return (row.get(real) or '').strip()
+            
+            # Try case-insensitive match
+            for header_key, original_header in header_map.items():
+                if k.lower() == header_key.lower():
+                    return (row.get(original_header) or '').strip()
+        return ''
+
+    players: List[Dict[str, Any]] = []
+    for i, row in enumerate(reader, start=1):
+        name = get_val(row, ['player', 'PLAYER'])
+        position = get_val(row, ['pos', 'POS', 'position', 'POSITION'])
+        ownership_raw = get_val(row, ['rst%', 'rst', 'ownership', 'RST%'])
+        
+        if i <= 3:  # Debug first few rows
+            print(f"DEBUG: Row {i+1} - name='{name}', position='{position}', ownership_raw='{ownership_raw}'")
+            print(f"DEBUG: Row {i+1} - full row keys: {list(row.keys())}")
+        
+        if not name:
+            print(f"DEBUG: Skipping row {i+1} - no player name")
+            continue
+            
+        # Skip Defense positions (D, DST, DEF)
+        if position.upper() in ['D', 'DST', 'DEF', 'DEFENSE']:
+            print(f"DEBUG: Skipping row {i+1} - Defense position: {name} ({position})")
+            continue
+            
+        if not ownership_raw:
+            print(f"DEBUG: Skipping row {i+1} - no ownership data for {name}")
+            continue
+
+        try:
+            ownership = float(ownership_raw)
+            if ownership < 0 or ownership > 100:
+                print(f"DEBUG: Skipping row {i+1} - ownership {ownership} out of range for {name}")
+                continue
+        except ValueError:
+            print(f"DEBUG: Skipping row {i+1} - invalid ownership value '{ownership_raw}' for {name}")
+            continue
+
+        players.append({
+            'name': name,
+            'ownership': ownership,
+            'source': projection_source
+        })
+
+    print(f"DEBUG: Parsed {len(players)} ownership records")
+    return players
+
+def process_ownership_projections(db: Session, week_id: int, projection_source: str, csv_data: List[Dict[str, Any]]) -> ProjectionImportResponse:
+    """Process ownership projections and update player_pool_entries table"""
+    
+    total_processed = len(csv_data)
+    successful_matches = 0
+    failed_matches = 0
+    ownership_updated = 0
+    ownership_created = 0
+    errors = []
+    unmatched_players = []
+
+    print(f"DEBUG: Processing {total_processed} ownership records for week {week_id}")
+
+    for i, player_data in enumerate(csv_data):
+        try:
+            # Use existing player matching service
+            matched_player, confidence, possible_matches = find_player_match(
+                db, player_data['name'], '', ''
+            )
+            
+            if matched_player:
+                successful_matches += 1
+                
+                # Find or create player pool entry for this week
+                pool_entry = db.query(PlayerPoolEntry).filter(
+                    and_(
+                        PlayerPoolEntry.week_id == week_id,
+                        PlayerPoolEntry.playerDkId == matched_player.playerDkId
+                    )
+                ).first()
+                
+                if pool_entry:
+                    # Update existing entry
+                    pool_entry.ownership = player_data['ownership']
+                    pool_entry.updated_at = datetime.utcnow()
+                    ownership_updated += 1
+                    
+                    if i < 3:
+                        print(f"DEBUG: Updated ownership for {matched_player.displayName}: {player_data['ownership']}%")
+                else:
+                    # Create new pool entry (this shouldn't happen in normal flow)
+                    # but we'll handle it gracefully
+                    new_entry = PlayerPoolEntry(
+                        week_id=week_id,
+                        draftGroup='OWNERSHIP_IMPORT',
+                        playerDkId=matched_player.playerDkId,
+                        salary=0,  # Default salary
+                        ownership=player_data['ownership']
+                    )
+                    db.add(new_entry)
+                    ownership_created += 1
+                    
+                    if i < 3:
+                        print(f"DEBUG: Created new pool entry for {matched_player.displayName}: {player_data['ownership']}%")
+            else:
+                failed_matches += 1
+                unmatched_players.append({
+                    'csv_data': {
+                        'name': player_data['name'],
+                        'ownership': player_data['ownership']
+                    },
+                    'match_confidence': confidence,
+                    'possible_matches': possible_matches
+                })
+                
+                if i < 3:
+                    print(f"DEBUG: No match found for {player_data['name']} (confidence: {confidence})")
+                    
+        except Exception as e:
+            failed_matches += 1
+            error_msg = f"Error processing {player_data['name']}: {str(e)}"
+            errors.append(error_msg)
+            print(f"DEBUG: {error_msg}")
+
+    # Commit all changes
+    try:
+        db.commit()
+        print(f"DEBUG: Successfully committed ownership updates")
+    except Exception as e:
+        db.rollback()
+        error_msg = f"Database commit failed: {str(e)}"
+        errors.append(error_msg)
+        print(f"DEBUG: {error_msg}")
+        raise
+
+    return ProjectionImportResponse(
+        total_processed=total_processed,
+        successful_matches=successful_matches,
+        failed_matches=failed_matches,
+        projections_created=ownership_created,
+        projections_updated=ownership_updated,
+        player_pool_updated=ownership_updated + ownership_created,
+        errors=errors,
+        unmatched_players=unmatched_players
+    )
+
+def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, import_type: str = "PROJECTION_IMPORT"):
+    """Log import activity to recent_activity table"""
+    try:
+        activity = RecentActivity(
+            timestamp=datetime.utcnow(),
+            action='import',
+            fileType='CSV',
+            fileName=filename,
+            week=str(week_id),
+            draftGroup=import_type,
+            recordsAdded=result.projections_created,
+            recordsUpdated=result.projections_updated,
+            recordsSkipped=result.failed_matches,
+            errors=json.dumps(result.errors) if result.errors else None,
+            user='system',
+            details=json.dumps({
+                'successful_matches': result.successful_matches,
+                'failed_matches': result.failed_matches,
+                'total_processed': result.total_processed
+            })
+        )
+        db.add(activity)
+        db.commit()
+    except Exception as e:
+        print(f"DEBUG: Failed to log activity: {e}")
+        # Don't raise - logging failure shouldn't break the import

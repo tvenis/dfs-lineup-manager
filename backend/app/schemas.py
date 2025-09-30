@@ -132,7 +132,9 @@ class PlayerPoolEntryBase(BaseModel):
     playerDkId: int = Field(..., description="DraftKings player ID")
     draftableId: Optional[str] = Field(None, max_length=50, description="DraftKings draftable ID for this player pool entry")
     projectedPoints: Optional[float] = Field(None, description="Extracted projection value from draftStatAttributes")
-    salary: int = Field(..., gt=0, description="Player salary from DraftKings")
+    actuals: Optional[float] = Field(None, description="Actual points scored")
+    ownership: Optional[float] = Field(None, ge=0, le=100, description="Ownership percentage from CSV imports (0.00-100.00)")
+    salary: int = Field(..., ge=0, description="Player salary from DraftKings")
     status: str = Field(default="Available", max_length=20)
     isDisabled: bool = Field(default=False)
     excluded: bool = Field(default=False, description="Whether player is excluded from this week")
@@ -154,7 +156,7 @@ class PlayerPoolEntryCreate(PlayerPoolEntryBase):
 class PlayerPoolEntryUpdate(BaseModel):
     draftableId: Optional[str] = Field(None, max_length=50)
     projectedPoints: Optional[float] = Field(None)
-    salary: Optional[int] = Field(None, gt=0)
+    salary: Optional[int] = Field(None, ge=0)
     status: Optional[str] = Field(None, max_length=20)
     isDisabled: Optional[bool] = None
     excluded: Optional[bool] = None

@@ -158,6 +158,7 @@ class PlayerPoolEntry(Base):
     draftableId = Column(String(50))  # DraftKings draftable ID for this player pool entry
     projectedPoints = Column(Float)  # Extracted projection value from draftStatAttributes
     actuals = Column(Float)
+    ownership = Column(Numeric(5, 2))  # Ownership percentage from CSV imports (0.00-100.00)
     salary = Column(Integer, nullable=False)  # from DraftKings API
     status = Column(String(20), default="Available")  # player status
     isDisabled = Column(Boolean, default=False)  # if player is disabled
