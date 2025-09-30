@@ -10,6 +10,8 @@ import { Badge } from './ui/badge'
 import { Upload, FileText, RefreshCw } from 'lucide-react'
 import { buildApiUrl } from '@/config/api'
 import { ImportResultDialog } from './ImportResultDialog'
+import { ActivityList } from './activity'
+import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy'
 
 interface ProjectionImportResponse {
   total_processed: number
@@ -108,6 +110,19 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
     error?: string
   } | null>(null)
   const [showResultDialog, setShowResultDialog] = useState(false)
+
+  // Use the legacy activity hook for projection activities
+  const {
+    activities: history,
+    loading: activityLoading,
+    error: activityError,
+    refresh: refreshActivity,
+    retry: retryActivity
+  } = useRecentActivityLegacy({
+    importType: 'projections',
+    limit: 10,
+    weekId: selectedWeek ? parseInt(selectedWeek) : undefined
+  })
 
   // Fetch weeks and players on component mount
   useEffect(() => {
@@ -375,6 +390,9 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
         week: parseInt(selectedWeek)
       })
       
+      // Refresh the activity list to show the new import
+      await refreshActivity()
+      
     } catch (error) {
       console.error('Error during processing:', error)
       // Show error dialog instead of alert
@@ -559,6 +577,53 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
         filename={csvFile?.name || 'Unknown'}
         week={weeks.find(w => w.id.toString() === selectedWeek)?.label || 'Unknown'}
         source={projectionSource || 'Custom Projections'}
+      />
+
+      {/* Activity Statistics */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Activity Statistics</CardTitle>
+          <CardDescription>Overview of your recent projection import activity</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{history.length}</div>
+              <div className="text-sm text-blue-800">Total Activities</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {history.filter(a => a.operation_status === 'completed').length}
+              </div>
+              <div className="text-sm text-green-800">Successful</div>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">
+                {history.reduce((sum, a) => sum + (a.records_added || 0), 0)}
+              </div>
+              <div className="text-sm text-orange-800">Records Added</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">
+                {history.reduce((sum, a) => sum + (a.records_updated || 0), 0)}
+              </div>
+              <div className="text-sm text-purple-800">Records Updated</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Import Activity */}
+      <ActivityList
+        activities={history}
+        loading={activityLoading}
+        error={activityError}
+        emptyMessage="No recent projection import activity found."
+        showFilters={false}
+        onRetry={retryActivity}
+        onViewDetails={(activityId) => {
+          console.log('View details for activity:', activityId);
+        }}
       />
 
     </div>
