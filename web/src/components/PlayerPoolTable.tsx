@@ -616,7 +616,7 @@ export function PlayerPoolTable({
                   </TableCell>
                   <TableCell>
                     <div className="font-mono text-sm">
-                      {entry.ownership ? `${entry.ownership.toFixed(1)}%` : 'N/A'}
+                      {entry.ownership ? `${entry.ownership.toFixed(2)}%` : 'N/A'}
                     </div>
                   </TableCell>
                   <TableCell>
