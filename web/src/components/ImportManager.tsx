@@ -70,8 +70,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   const [history, setHistory] = useState<RecentActivity[]>([])
   const [weeks, setWeeks] = useState<Week[]>([])
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null)
-  const [draftGroup, setDraftGroup] = useState<string>('')
-  const [draftGroups, setDraftGroups] = useState<Array<{draftGroup: number, draftGroup_description: string}>>([])
   const [isImporting, setIsImporting] = useState(false)
   const [, setLastImportResult] = useState<DraftKingsImportResponse | null>(null)
   
@@ -86,7 +84,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   const [oddsBookmakers, setOddsBookmakers] = useState<string>('draftkings')
   const [oddsGame, setOddsGame] = useState<string>('All')
   const [isImportingOdds, setIsImportingOdds] = useState(false)
-  const [activeTab, setActiveTab] = useState<string>('import-pool')
+  const [activeTab, setActiveTab] = useState<string>('import-projections')
   const [gameOptions, setGameOptions] = useState<GameOption[]>([])
   // Player Prop market (single-select for now; expand to multi later)
   const [playerPropMarkets, setPlayerPropMarkets] = useState<string[]>(['player_pass_tds'])
@@ -140,30 +138,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
     fetchGamesForWeek()
   }, [selectedWeekId])
 
-  // When week changes, fetch draft groups for the week
-  useEffect(() => {
-    const fetchDraftGroups = async () => {
-      if (!selectedWeekId) {
-        setDraftGroups([])
-        return
-      }
-      try {
-        const response = await fetch(buildApiUrl(`/api/draftgroups/?week_id=${selectedWeekId}`))
-        if (response.ok) {
-          const data = await response.json()
-          setDraftGroups(Array.isArray(data) ? data : [])
-        } else {
-          console.error('Failed to fetch draft groups:', response.statusText)
-          setDraftGroups([])
-        }
-      } catch (error) {
-        console.error('Error loading draft groups:', error)
-        setDraftGroups([])
-      }
-    }
-    
-    fetchDraftGroups()
-  }, [selectedWeekId])
 
   const fetchWeeks = async () => {
     try {
@@ -270,98 +244,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
     }
   }
 
-  const handleImportPlayerData = async () => {
-    if (!selectedWeekId || !draftGroup) {
-      alert('Please select a week and draft group')
-      return
-    }
-
-    setIsImporting(true)
-    setLastImportResult(null) // Clear previous result
-
-    try {
-      const response = await fetch('http://localhost:8000/api/draftkings/import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          week_id: selectedWeekId,
-          draft_group: draftGroup
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        // Handle both string and object error details
-        let errorMessage = `API request failed: ${response.status}`
-        if (errorData.detail) {
-          if (typeof errorData.detail === 'string') {
-            errorMessage = errorData.detail
-          } else if (typeof errorData.detail === 'object') {
-            // Handle structured error objects from backend
-            errorMessage = errorData.detail.message || errorData.detail.error || JSON.stringify(errorData.detail)
-          }
-        }
-        throw new Error(errorMessage)
-      }
-
-      const result: DraftKingsImportResponse = await response.json()
-      setLastImportResult(result)
-
-      await fetchRecentActivity() // Refresh history
-      
-      // Add a local activity item for immediate feedback
-      const newHistoryItem: RecentActivity = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        action: 'import',
-        fileType: 'API',
-        fileName: `Draft Group ${draftGroup}`,
-        week_id: selectedWeekId,
-        draftGroup: draftGroup,
-        recordsAdded: result.players_added + result.entries_added,
-        recordsUpdated: result.players_updated + result.entries_updated,
-        recordsSkipped: result.entries_skipped,
-        errors: result.errors,
-        user_name: null,
-        details: null,
-        importType: 'player-pool'
-      }
-      
-      setHistory(prev => [newHistoryItem, ...prev])
-
-    } catch (error) {
-      console.error('Import failed:', error)
-      setLastImportResult({ // Set error result for display
-        players_added: 0, players_updated: 0, entries_added: 0, entries_updated: 0, entries_skipped: 0,
-        errors: [error instanceof Error ? error.message : 'Unknown error occurred'],
-        total_processed: 0
-      })
-      
-      // Add error activity item
-      const errorHistoryItem: RecentActivity = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        action: 'import',
-        fileType: 'API',
-        fileName: `Draft Group ${draftGroup}`,
-        week_id: selectedWeekId || 0,
-        draftGroup: draftGroup,
-        recordsAdded: 0,
-        recordsUpdated: 0,
-        recordsSkipped: 0,
-        errors: [error instanceof Error ? error.message : 'Unknown error occurred'],
-        user_name: null,
-        details: null,
-        importType: 'player-pool'
-      }
-      
-      setHistory(prev => [errorHistoryItem, ...prev])
-    } finally {
-      setIsImporting(false)
-    }
-  }
 
 
   const getImportTypeLabel = (activity: RecentActivity) => {
@@ -705,12 +587,8 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       </div>
 
       {/* Import Tabs */}
-      <Tabs defaultValue="import-pool" className="space-y-6" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="import-pool" className="gap-2">
-            <Database className="w-4 h-4" />
-            Import Player Pool
-          </TabsTrigger>
+      <Tabs defaultValue="import-projections" className="space-y-6" onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="import-projections" className="gap-2">
             <FileText className="w-4 h-4" />
             Import Projections
@@ -729,127 +607,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="import-pool">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Import Player Pool Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="w-5 h-5" />
-                  Import Player Pool Data
-                </CardTitle>
-                <CardDescription>
-                  Fetch player pool data from DraftKings API using Draft Group numbers
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Week Selection Dropdown */}
-                <div className="space-y-2 w-auto min-w-[200px] max-w-[400px]">
-                  <Label>Import Week</Label>
-                  <Select 
-                    value={selectedWeekId?.toString()} 
-                    onValueChange={(value) => setSelectedWeekId(parseInt(value))}
-                  >
-                    <SelectTrigger className="w-auto min-w-[200px]">
-                      <SelectValue placeholder="Select week for import" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableWeeks.map((week) => (
-                        <SelectItem key={week.id} value={week.id.toString()}>
-                          {getWeekLabel(week)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-muted-foreground">
-                    Data will be imported for the selected week
-                  </p>
-                </div>
-
-                {/* Draft Group Dropdown */}
-                <div className="space-y-2 w-auto min-w-[200px] max-w-[400px]">
-                  <Label htmlFor="draft-group">Draft Group</Label>
-                  <Select 
-                    value={draftGroup} 
-                    onValueChange={setDraftGroup}
-                  >
-                    <SelectTrigger id="draft-group" className="w-auto min-w-[200px]">
-                      <SelectValue placeholder="Select draft group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {draftGroups.map((group) => (
-                        <SelectItem key={group.draftGroup} value={group.draftGroup.toString()}>
-                          {group.draftGroup_description ? `${group.draftGroup_description} (${group.draftGroup})` : `Group ${group.draftGroup}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-muted-foreground">
-                    Select from available draft groups for the selected week
-                  </p>
-                </div>
-
-                {/* Import Button */}
-                <Button 
-                  onClick={handleImportPlayerData}
-                  disabled={isImporting || !draftGroup || draftGroups.length === 0}
-                  className="w-full gap-2"
-                >
-                  {isImporting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Importing Player Data...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4" />
-                      Import Player Pool Data
-                    </>
-                  )}
-                </Button>
-
-                <Alert>
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Player data will be fetched from DraftKings API using the Draft Group number for the selected week.
-                  </AlertDescription>
-                </Alert>
-
-                {/* Draft Group ID Help */}
-                <div className="p-3 border rounded-lg bg-muted/30 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary"></div>
-                    <span className="text-sm font-medium">How to find Draft Group ID</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    You can find the Draft Group ID by using the contest API with your contest ID:
-                    <br />
-                    <code className="text-xs bg-muted px-1 py-0.5 rounded font-mono">
-                      https://api.draftkings.com/contests/v1/contests/[CONTEST_ID]?format=json
-                    </code>
-                    <br />
-                    Look for the <code className="text-xs bg-muted px-1 py-0.5 rounded font-mono">draftGroupId</code> field in the response.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Help Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>API Import Help</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Alert>
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Player data will be fetched from DraftKings API using the Draft Group number for the selected week.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
 
         <TabsContent value="import-projections">
           <ImportPlayerProjections onImportComplete={handleProjectionImportComplete} />
@@ -1420,7 +1177,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         <CardHeader>
           <CardTitle>Recent Import Activity</CardTitle>
           <CardDescription>
-            {activeTab === 'import-pool' && 'Your recent player pool imports'}
             {activeTab === 'import-projections' && 'Your recent projection imports'}
             {activeTab === 'odds-api' && 'Your recent Odds-API imports'}
             {activeTab === 'import-contests' && 'Your recent contest imports'}
@@ -1434,8 +1190,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                 if (item.action !== 'import') return false
                 
                 switch (activeTab) {
-                  case 'import-pool':
-                    return item.importType === 'player-pool' || (!item.importType && item.fileType === 'API' && item.draftGroup !== 'Odds-API')
                   case 'import-projections':
                     return item.importType === 'projections' || (!item.importType && item.fileType === 'CSV')
                   case 'odds-api':
@@ -1450,7 +1204,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
               if (filteredHistory.length === 0) {
                 return (
                   <div className="text-center text-gray-500 py-8">
-                    No recent {activeTab === 'import-pool' ? 'player pool' : activeTab === 'import-projections' ? 'projection' : 'Odds-API'} import activity found
+                    No recent {activeTab === 'import-projections' ? 'projection' : activeTab === 'import-actuals' ? 'actuals' : activeTab === 'import-contests' ? 'contest' : 'Odds-API'} import activity found
                   </div>
                 )
               }

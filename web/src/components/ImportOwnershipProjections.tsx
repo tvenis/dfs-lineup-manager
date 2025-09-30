@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from './ui/alert'
 import { Badge } from './ui/badge'
 import { Upload, FileText, RefreshCw, CheckCircle, XCircle, Eye, Calendar, Tag } from 'lucide-react'
 import { buildApiUrl } from '@/config/api'
-import { ImportResultDialog } from './ImportResultDialog'
+import { OwnershipImportResultDialog } from './OwnershipImportResultDialog'
 
 interface OwnershipImportResponse {
   total_processed: number
@@ -410,7 +410,7 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
 
       {/* Import Result Dialog */}
       {importResult && (
-        <ImportResultDialog
+        <OwnershipImportResultDialog
           isOpen={showResultDialog}
           onClose={() => setShowResultDialog(false)}
           result={importResult.data}

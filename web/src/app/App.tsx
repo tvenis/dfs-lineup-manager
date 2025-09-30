@@ -33,6 +33,8 @@ import {
   Calendar,
   Lightbulb,
   FileText,
+  Database,
+  Globe,
 } from "lucide-react";
 import { Toaster } from "sonner";
 
@@ -130,6 +132,13 @@ export default function App({ children }: { children: React.ReactNode }) {
 
   const importSubItems = [
     {
+      id: "player-pool",
+      label: "Player Pool",
+      description: "Import player pool data from DraftKings API",
+      icon: Database,
+      href: "/import/player-pool",
+    },
+    {
       id: "player-projections",
       label: "Player Projections",
       description: "Import weekly player projections",
@@ -142,6 +151,20 @@ export default function App({ children }: { children: React.ReactNode }) {
       description: "Import ownership percentage data",
       icon: FileText,
       href: "/import?section=ownership",
+    },
+    {
+      id: "odds",
+      label: "Odds",
+      description: "Import odds data from Odds-API",
+      icon: Globe,
+      href: "/import/odds",
+    },
+    {
+      id: "contests",
+      label: "Contests",
+      description: "Import contest results and opponent rosters",
+      icon: Trophy,
+      href: "/import/contests",
     },
   ];
 
