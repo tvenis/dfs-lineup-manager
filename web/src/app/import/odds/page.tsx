@@ -254,7 +254,7 @@ export default function OddsImportPage() {
       };
       
       await refreshActivity();
-      alert(`Successfully imported ${description}!`);
+      // Success - the activity will show in the Recent Activity section below
       
     } catch (error) {
       console.error(`Error importing ${endpoint}:`, error);
