@@ -12,23 +12,8 @@ import { Upload, FileText, Users, RefreshCw, Trophy } from 'lucide-react';
 import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
 import { ContestImportResultDialog } from '@/components/ContestImportResultDialog';
-
-interface RecentActivity {
-  id: number;
-  timestamp: string;
-  action: 'import' | 'export';
-  fileType: 'API' | 'CSV';
-  fileName: string | null;
-  week_id: number;
-  draftGroup: string;
-  recordsAdded: number;
-  recordsUpdated: number;
-  recordsSkipped: number;
-  errors: string[];
-  user_name: string | null;
-  details: unknown;
-  importType?: 'contests' | 'opponent-rosters';
-}
+import { ActivityList } from '@/components/activity';
+import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy';
 
 interface Lineup {
   id: string;
@@ -38,7 +23,6 @@ interface Lineup {
 }
 
 export default function ContestsImportPage() {
-  const [history, setHistory] = useState<RecentActivity[]>([]);
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
   const [lineups, setLineups] = useState<Lineup[]>([]);
@@ -54,6 +38,18 @@ export default function ContestsImportPage() {
   // Result dialog state
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [importResult, setImportResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
+  
+  // Use the legacy activity hook for contest activities
+  const {
+    activities: history,
+    loading: activityLoading,
+    error: activityError,
+    refresh: refreshActivity,
+    retry: retryActivity
+  } = useRecentActivityLegacy({
+    importType: 'contests',
+    limit: 10
+  });
 
   // Fetch weeks on component mount
   useEffect(() => {
@@ -84,7 +80,6 @@ export default function ContestsImportPage() {
     };
 
     fetchWeeks();
-    fetchRecentActivity();
   }, []);
 
   // Fetch H2H contests when week changes
@@ -139,17 +134,6 @@ export default function ContestsImportPage() {
     }
   };
 
-  const fetchRecentActivity = async () => {
-    try {
-      const response = await fetch(buildApiUrl('/recent-activity?import_type=contests&limit=10'));
-      if (response.ok) {
-        const data = await response.json();
-        setHistory(data);
-      }
-    } catch (error) {
-      console.error('Error fetching recent activity:', error);
-    }
-  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -185,7 +169,7 @@ export default function ContestsImportPage() {
       }
 
       const result = await response.json();
-      await fetchRecentActivity();
+      await refreshActivity();
       
       // Show success dialog
       setImportResult({
@@ -252,27 +236,7 @@ export default function ContestsImportPage() {
       }
 
       const result = await response.json();
-      await fetchRecentActivity();
-      
-      // Add success activity item
-      const newHistoryItem: RecentActivity = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        action: 'import',
-        fileType: 'API',
-        fileName: `H2H Rosters - Week ${selectedWeekId}`,
-        week_id: selectedWeekId,
-        draftGroup: 'OPPONENT_ROSTERS',
-        recordsAdded: result.records_added || 0,
-        recordsUpdated: result.records_updated || 0,
-        recordsSkipped: result.records_skipped || 0,
-        errors: result.errors || [],
-        user_name: null,
-        details: null,
-        importType: 'opponent-rosters'
-      };
-      
-      setHistory(prev => [newHistoryItem, ...prev]);
+      await refreshActivity();
       alert('Opponent rosters import started! This process runs in the background.');
 
     } catch (error) {
@@ -526,52 +490,52 @@ export default function ContestsImportPage() {
         </Card>
       </div>
 
-      {/* Recent Import Activity */}
+      {/* Activity Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Import Activity</CardTitle>
-          <CardDescription>Your recent contest imports.</CardDescription>
+          <CardTitle>Activity Statistics</CardTitle>
+          <CardDescription>Overview of your recent contest import activity</CardDescription>
         </CardHeader>
         <CardContent>
-          {history.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No recent contest import activity found.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {history.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {activity.importType === 'contests' ? (
-                      <FileText className="w-5 h-5 text-muted-foreground" />
-                    ) : (
-                      <Users className="w-5 h-5 text-muted-foreground" />
-                    )}
-                    <div>
-                      <p className="font-medium">
-                        {activity.fileName || `Contest Import`}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(activity.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      +{activity.recordsAdded} added, {activity.recordsUpdated} updated
-                    </p>
-                    {activity.recordsSkipped > 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        {activity.recordsSkipped} skipped
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{history.length}</div>
+              <div className="text-sm text-blue-800">Total Activities</div>
             </div>
-          )}
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {history.filter(a => a.operation_status === 'completed').length}
+              </div>
+              <div className="text-sm text-green-800">Successful</div>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">
+                {history.reduce((sum, a) => sum + (a.records_added || 0), 0)}
+              </div>
+              <div className="text-sm text-orange-800">Records Added</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">
+                {history.reduce((sum, a) => sum + (a.records_updated || 0), 0)}
+              </div>
+              <div className="text-sm text-purple-800">Records Updated</div>
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Recent Import Activity */}
+      <ActivityList
+        activities={history}
+        loading={activityLoading}
+        error={activityError}
+        emptyMessage="No recent contest import activity found."
+        showFilters={false}
+        onRetry={retryActivity}
+        onViewDetails={(activityId) => {
+          console.log('View details for activity:', activityId);
+        }}
+      />
 
       {/* Import Result Dialog */}
       <ContestImportResultDialog

@@ -547,21 +547,23 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
         # Log activity
         activity = RecentActivity(
             timestamp=datetime.now(),
-            action='import',
-            fileType='CSV',
-            fileName=filename,
+            action='contests-import',
+            category='data-import',
+            file_type='CSV',
+            file_name=filename,
             week_id=week_id,
-            draftGroup='CONTEST_IMPORT',
-            recordsAdded=created,
-            recordsUpdated=updated,
-            recordsSkipped=len(errors),
-            errors=errors,
-            user_name=None,
+            draft_group='CONTEST_IMPORT',
+            records_added=created,
+            records_updated=updated,
+            records_skipped=len(errors),
+            records_failed=0,
+            operation_status='completed' if len(errors) == 0 else 'partial',
+            errors={'messages': errors, 'count': len(errors)} if errors else None,
+            error_count=len(errors),
             details={
                 'total_processed': len(rows),
                 'created': created,
                 'updated': updated,
-                'errors': errors,
             }
         )
         db.add(activity)
