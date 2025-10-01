@@ -198,7 +198,6 @@ export default function PlayerActualsImportPage() {
                     <li>Automatically fetches real player stats from nflverse.com</li>
                     <li>Matches players with your DraftKings player database</li>
                     <li>Calculates DraftKings fantasy points automatically</li>
-                    <li>Takes you to review page before importing</li>
                   </ul>
                 </div>
               </AlertDescription>
