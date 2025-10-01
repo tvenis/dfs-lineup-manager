@@ -124,7 +124,7 @@ class NFLVerseService:
             "_original_position": raw_position,  # Keep for reference
         }
         
-        # Map standard stats
+        # Map standard stats, defaulting missing values to 0 for proper sorting/UI
         for nflverse_field, actuals_field in NFLVerseService.FIELD_MAPPING.items():
             value = nflverse_row.get(nflverse_field)
             
@@ -134,13 +134,13 @@ class NFLVerseService:
                 new_value = float(value) if value is not None else 0
                 actuals_data[actuals_field] = current_value + new_value
             else:
-                actuals_data[actuals_field] = float(value) if value is not None else None
+                actuals_data[actuals_field] = float(value) if value is not None else 0
         
         # Calculate total TDs (sum of rushing, receiving, special teams TDs)
         rush_tds = actuals_data.get("rush_tds") or 0
         rec_tds = actuals_data.get("rec_tds") or 0
         special_teams_tds = actuals_data.get("special_teams_tds") or 0
-        actuals_data["total_tds"] = float(rush_tds + rec_tds + special_teams_tds) if (rush_tds or rec_tds or special_teams_tds) else None
+        actuals_data["total_tds"] = float(rush_tds + rec_tds + special_teams_tds)
         
         # Store raw NFLVerse data for reference
         actuals_data["_nflverse_player_id"] = nflverse_row.get("player_id")
