@@ -4,8 +4,9 @@ from typing import List, Dict, Any
 import httpx
 import os
 from app.database import get_db
-from app.models import Team, Game, Player, PlayerPropBet, RecentActivity
+from app.models import Team, Game, Player, PlayerPropBet
 from app.schemas import TeamCreate, TeamUpdate
+from app.services.activity_logging import ActivityLoggingService
 from datetime import datetime
 from urllib.parse import urlencode
 from sqlalchemy import and_, or_, func
@@ -424,24 +425,22 @@ async def import_events(
         # Commit all changes
         db.commit()
         
-        # Log activity
+        # Log activity using ActivityLoggingService
         try:
-            activity = RecentActivity(
-                action="odds-api-import",
-                category="data-import",
+            service = ActivityLoggingService(db)
+            service.log_import_activity(
+                import_type="odds-api",
                 file_type="API",
-                file_name=f"events:{sport}",
                 week_id=week_id,
-                draft_group=None,
-                import_source="odds-api",
                 records_added=games_created,
                 records_updated=games_updated,
                 records_skipped=0,
                 records_failed=len(errors),
+                file_name=f"events:{sport}",
+                import_source="odds-api",
+                draft_group=None,
                 operation_status="completed" if len(errors) == 0 else "partial",
-                errors=errors if errors else None,
-                error_count=len(errors),
-                user_name="system",
+                errors=errors,
                 details={
                     "total_events": len(events),
                     "regions": regions,
@@ -449,12 +448,9 @@ async def import_events(
                     "bookmakers": bookmakers
                 }
             )
-            db.add(activity)
-            db.commit()
             print(f"✅ Successfully logged odds-api events import activity")
         except Exception as e:
             print(f"❌ Failed to log import activity: {str(e)}")
-            db.rollback()
         
         return {
             "success": True,
@@ -632,24 +628,22 @@ async def import_odds(
         # Commit all changes
         db.commit()
         
-        # Log activity
+        # Log activity using ActivityLoggingService
         try:
-            activity = RecentActivity(
-                action="odds-api-import",
-                category="data-import",
+            service = ActivityLoggingService(db)
+            service.log_import_activity(
+                import_type="odds-api",
                 file_type="API",
-                file_name=f"odds:{sport}",
                 week_id=week_id,
-                draft_group=markets,
-                import_source="odds-api",
                 records_added=0,
                 records_updated=games_updated,
                 records_skipped=0,
                 records_failed=len(errors),
+                file_name=f"odds:{sport}",
+                import_source="odds-api",
+                draft_group=markets,
                 operation_status="completed" if len(errors) == 0 else "partial",
-                errors=errors if errors else None,
-                error_count=len(errors),
-                user_name="system",
+                errors=errors,
                 details={
                     "total_events": len(odds_data),
                     "regions": regions,
@@ -657,12 +651,9 @@ async def import_odds(
                     "bookmakers": bookmakers
                 }
             )
-            db.add(activity)
-            db.commit()
             print(f"✅ Successfully logged odds-api odds import activity")
         except Exception as e:
             print(f"❌ Failed to log import activity: {str(e)}")
-            db.rollback()
         
         return {
             "success": True,
@@ -931,25 +922,23 @@ async def import_player_props(
         # Commit all changes
         db.commit()
 
-        # Log activity with new schema
+        # Log activity using ActivityLoggingService
         markets_param = ",".join(market_list)
         try:
-            activity = RecentActivity(
-                action="odds-api-import",
-                category="data-import",
+            service = ActivityLoggingService(db)
+            service.log_import_activity(
+                import_type="odds-api",
                 file_type="API",
-                file_name=f"player-props:{markets_param}",
                 week_id=week_id,
-                draft_group=markets_param,
-                import_source="odds-api",
                 records_added=total_created,
                 records_updated=total_updated,
                 records_skipped=len(unmatched_players),
                 records_failed=0,
+                file_name=f"player-props:{markets_param}",
+                import_source="odds-api",
+                draft_group=markets_param,
                 operation_status="completed",
-                errors=errors if errors else None,
-                error_count=len(errors) if errors else 0,
-                user_name="system",
+                errors=errors,
                 details={
                     "unmatched_players": unmatched_players,
                     "api_requests": api_requests,
@@ -958,12 +947,9 @@ async def import_player_props(
                     "markets": market_list,
                 }
             )
-            db.add(activity)
-            db.commit()
             print(f"✅ Successfully logged odds-api player-props import activity")
         except Exception as e:
             print(f"❌ Failed to log import activity: {str(e)}")
-            db.rollback()
 
         return {
             "success": True,

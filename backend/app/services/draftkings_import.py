@@ -17,8 +17,9 @@ from sqlalchemy import func
 import requests
 from datetime import datetime
 
-from app.models import Player, Team, PlayerPoolEntry, RecentActivity
+from app.models import Player, Team, PlayerPoolEntry
 from app.schemas import DraftKingsImportRequest, DraftKingsImportResponse
+from app.services.activity_logging import ActivityLoggingService
 
 logger = logging.getLogger(__name__)
 
@@ -603,23 +604,22 @@ class DraftKingsImportService:
             raise e
     
     async def _log_import_activity(self, week_id: int, draft_group: str, result: DraftKingsImportResponse) -> None:
-        """Log the import activity"""
+        """Log the import activity using ActivityLoggingService"""
         try:
-            activity = RecentActivity(
-                action="player-pool-import",
-                category="data-import",
+            service = ActivityLoggingService(self.db)
+            service.log_import_activity(
+                import_type="player-pool",
                 file_type="API",
-                file_name=None,
                 week_id=week_id,
-                draft_group=draft_group,
                 records_added=result.players_added + result.entries_added,
                 records_updated=result.players_updated + result.entries_updated,
                 records_skipped=result.entries_skipped,
                 records_failed=0,
+                file_name=None,
+                import_source="draftkings",
+                draft_group=draft_group,
                 operation_status="completed",
                 errors=result.errors,
-                error_count=len(result.errors) if result.errors else 0,
-                user_name=None,
                 details={
                     "players_added": result.players_added,
                     "players_updated": result.players_updated,
@@ -628,11 +628,8 @@ class DraftKingsImportService:
                     "total_processed": result.total_processed
                 }
             )
-            self.db.add(activity)
-            self.db.commit()
         except Exception as e:
             print(f"Failed to log import activity: {str(e)}")
-            self.db.rollback()
 
     def _upsert_player_individually(self, player_data: Dict) -> str:
         """

@@ -15,8 +15,9 @@ import logging
 from pathlib import Path
 
 from app.database import get_db
-from app.models import Player, Team, PlayerPoolEntry, Week, Projection, RecentActivity
+from app.models import Player, Team, PlayerPoolEntry, Week, Projection
 from app.schemas import ProjectionImportRequest, ProjectionImportResponse, ProjectionCreate
+from app.services.activity_logging import ActivityLoggingService
 
 router = APIRouter(prefix="/api/projections", tags=["projections"])
 
@@ -682,27 +683,26 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
     )
 
 def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, projection_source: str = "Custom Projections", is_ownership: bool = False):
-    """Log import activity to recent_activity table"""
+    """Log import activity to recent_activity table using ActivityLoggingService"""
     try:
-        # Determine action based on import type
-        action = "ownership-import" if is_ownership else "projections-import"
+        # Determine import type based on ownership flag
+        import_type = "ownership" if is_ownership else "projections"
         
-        activity = RecentActivity(
-            action=action,
-            category="data-import",
+        # Use ActivityLoggingService for centralized logging
+        service = ActivityLoggingService(db)
+        service.log_import_activity(
+            import_type=import_type,
             file_type="CSV",
-            file_name=filename,
             week_id=week_id,
-            draft_group=None,
-            import_source=projection_source,
             records_added=result.projections_created,
             records_updated=result.projections_updated,
             records_skipped=result.failed_matches,
             records_failed=0,
+            file_name=filename,
+            import_source=projection_source,
+            draft_group=None,
             operation_status="completed",
             errors=result.errors if result.errors else None,
-            error_count=len(result.errors) if result.errors else 0,
-            user_name=None,
             details={
                 "successful_matches": result.successful_matches,
                 "failed_matches": result.failed_matches,
@@ -710,12 +710,9 @@ def log_import_activity(db: Session, week_id: int, filename: str, result: Projec
                 "player_pool_updated": result.player_pool_updated
             }
         )
-        db.add(activity)
-        db.commit()
-        print(f"✅ Successfully logged {action} activity: {filename}")
+        print(f"✅ Successfully logged {import_type}-import activity: {filename}")
     except Exception as e:
         print(f"❌ Failed to log import activity: {str(e)}")
-        db.rollback()
         # Don't raise - logging failure shouldn't break the import
 
 @router.post("/import-matched", response_model=ProjectionImportResponse)

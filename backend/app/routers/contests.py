@@ -14,7 +14,8 @@ import re
 from datetime import datetime as _dt
 
 from app.database import get_db
-from app.models import Week, Sport, GameType, Contest, RecentActivity, Lineup, ContestType, DKContestDetail
+from app.models import Week, Sport, GameType, Contest, Lineup, ContestType, DKContestDetail
+from app.services.activity_logging import ActivityLoggingService
 import httpx
 
 router = APIRouter(tags=["contests"])
@@ -510,30 +511,27 @@ async def parse_contests_csv(
     
     db.commit()
     
-    # Log activity
-    activity = RecentActivity(
-        timestamp=datetime.now(),
-        action='contests-import',
-        category='data-import',
+    # Log activity using ActivityLoggingService
+    service = ActivityLoggingService(db)
+    service.log_import_activity(
+        import_type='contests',
         file_type='CSV',
-        file_name=file.filename,
         week_id=week_id,
-        draft_group='CONTEST_IMPORT',
         records_added=created,
         records_updated=updated,
         records_skipped=len(errors),
         records_failed=0,
+        file_name=file.filename,
+        import_source='csv',
+        draft_group='CONTEST_IMPORT',
         operation_status='completed' if len(errors) == 0 else 'partial',
-        errors={'messages': errors, 'count': len(errors)} if errors else None,
-        error_count=len(errors),
+        errors=errors,
         details={
             'total_processed': len(staged),
             'created': created,
             'updated': updated,
         }
     )
-    db.add(activity)
-    db.commit()
     
     return {
         'total_processed': len(staged),
@@ -682,30 +680,27 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
 
         db.commit()
 
-        # Log activity
-        activity = RecentActivity(
-            timestamp=datetime.now(),
-            action='contests-import',
-            category='data-import',
+        # Log activity using ActivityLoggingService
+        service = ActivityLoggingService(db)
+        service.log_import_activity(
+            import_type='contests',
             file_type='CSV',
-            file_name=filename,
             week_id=week_id,
-            draft_group='CONTEST_IMPORT',
             records_added=created,
             records_updated=updated,
             records_skipped=len(errors),
             records_failed=0,
+            file_name=filename,
+            import_source='csv',
+            draft_group='CONTEST_IMPORT',
             operation_status='completed' if len(errors) == 0 else 'partial',
-            errors={'messages': errors, 'count': len(errors)} if errors else None,
-            error_count=len(errors),
+            errors=errors,
             details={
                 'total_processed': len(rows),
                 'created': created,
                 'updated': updated,
             }
         )
-        db.add(activity)
-        db.commit()
 
         return {
             'total_processed': len(rows),
