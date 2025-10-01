@@ -438,6 +438,27 @@ class PlayerActuals(Base):
     total_tds = Column(Float)
     two_pt_md = Column(Float)
     two_pt_pass = Column(Float)
+
+    # Advanced statistics (NFLVerse)
+    sacks_suffered = Column(Float, default=0)
+    sack_yards_lost = Column(Float, default=0)
+    sack_fumbles_lost = Column(Float, default=0)
+    passing_air_yards = Column(Float, default=0)
+    passing_yards_after_catch = Column(Float, default=0)
+    passing_first_downs = Column(Float, default=0)
+    passing_epa = Column(Float, default=0)
+    passing_cpoe = Column(Float, default=0)
+    pacr = Column(Float, default=0)
+    rushing_first_downs = Column(Float, default=0)
+    rushing_epa = Column(Float, default=0)
+    receiving_air_yards = Column(Float, default=0)
+    receiving_yards_after_catch = Column(Float, default=0)
+    receiving_first_downs = Column(Float, default=0)
+    receiving_epa = Column(Float, default=0)
+    racr = Column(Float, default=0)
+    target_share = Column(Float, default=0)
+    air_yards_share = Column(Float, default=0)
+    wopr = Column(Float, default=0)
     
     # Fantasy scoring and rankings
     dk_actuals = Column(Float)  # DraftKings actual points

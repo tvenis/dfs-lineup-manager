@@ -707,6 +707,27 @@ class PlayerActualsBase(BaseModel):
     total_tds: Optional[float] = Field(None, description="Total TDs")
     two_pt_md: Optional[float] = Field(None, description="2-Point Conversions Made")
     two_pt_pass: Optional[float] = Field(None, description="2-Point Conversion Passes")
+
+    # Advanced statistics
+    sacks_suffered: Optional[float] = Field(None)
+    sack_yards_lost: Optional[float] = Field(None)
+    sack_fumbles_lost: Optional[float] = Field(None)
+    passing_air_yards: Optional[float] = Field(None)
+    passing_yards_after_catch: Optional[float] = Field(None)
+    passing_first_downs: Optional[float] = Field(None)
+    passing_epa: Optional[float] = Field(None)
+    passing_cpoe: Optional[float] = Field(None)
+    pacr: Optional[float] = Field(None)
+    rushing_first_downs: Optional[float] = Field(None)
+    rushing_epa: Optional[float] = Field(None)
+    receiving_air_yards: Optional[float] = Field(None)
+    receiving_yards_after_catch: Optional[float] = Field(None)
+    receiving_first_downs: Optional[float] = Field(None)
+    receiving_epa: Optional[float] = Field(None)
+    racr: Optional[float] = Field(None)
+    target_share: Optional[float] = Field(None)
+    air_yards_share: Optional[float] = Field(None)
+    wopr: Optional[float] = Field(None)
     
     # Fantasy scoring and rankings
     dk_actuals: Optional[float] = Field(None, description="DraftKings actual points")

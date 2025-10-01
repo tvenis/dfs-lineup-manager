@@ -129,6 +129,16 @@ async def import_matched_actuals(
                 "pos_rank": int(player_data.get('pos_rank', 0)) if player_data.get('pos_rank') else None,
                 "ov_rank": int(player_data.get('ov_rank', 0)) if player_data.get('ov_rank') else None
             }
+            # Advanced fields default to 0
+            advanced_fields = [
+                'sacks_suffered','sack_yards_lost','sack_fumbles_lost','passing_air_yards',
+                'passing_yards_after_catch','passing_first_downs','passing_epa','passing_cpoe',
+                'pacr','rushing_first_downs','rushing_epa','receiving_air_yards',
+                'receiving_yards_after_catch','receiving_first_downs','receiving_epa','racr',
+                'target_share','air_yards_share','wopr'
+            ]
+            for f in advanced_fields:
+                actuals_data[f] = float(player_data.get(f, 0)) if player_data.get(f) is not None else 0.0
             
             if existing_actuals:
                 # Update existing actuals
