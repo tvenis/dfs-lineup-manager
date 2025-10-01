@@ -41,6 +41,9 @@ class NFLVerseService:
         "receptions": "receptions",
         "receiving_yards": "rec_yds",
         "receiving_tds": "rec_tds",
+            
+            # Special teams
+            "special_teams_tds": "special_teams_tds",
         
         # Other stats
         "rushing_fumbles_lost": "fumbles_lost",
@@ -133,11 +136,11 @@ class NFLVerseService:
             else:
                 actuals_data[actuals_field] = float(value) if value is not None else None
         
-        # Calculate total TDs (sum of passing, rushing, receiving TDs)
-        pass_tds = actuals_data.get("pass_tds") or 0
+        # Calculate total TDs (sum of rushing, receiving, special teams TDs)
         rush_tds = actuals_data.get("rush_tds") or 0
         rec_tds = actuals_data.get("rec_tds") or 0
-        actuals_data["total_tds"] = float(pass_tds + rush_tds + rec_tds) if (pass_tds or rush_tds or rec_tds) else None
+        special_teams_tds = actuals_data.get("special_teams_tds") or 0
+        actuals_data["total_tds"] = float(rush_tds + rec_tds + special_teams_tds) if (rush_tds or rec_tds or special_teams_tds) else None
         
         # Store raw NFLVerse data for reference
         actuals_data["_nflverse_player_id"] = nflverse_row.get("player_id")
@@ -313,7 +316,7 @@ class NFLVerseService:
                 unmatched_players.append({
                     "name": player_name,
                     "team": team,
-                    "position": position,
+                    "position": normalized_position,
                     "stats": actuals_data,
                     "match_confidence": confidence
                 })
