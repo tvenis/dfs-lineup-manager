@@ -98,7 +98,7 @@ export default function ContestsImportPage() {
 
   const fetchH2hContests = async (weekId: number) => {
     try {
-      const response = await fetch(buildApiUrl(`/contests/h2h?week_id=${weekId}`));
+      const response = await fetch(buildApiUrl(`/api/contests/h2h?week_id=${weekId}`));
       if (response.ok) {
         const data = await response.json();
         setH2hContests(data);
@@ -169,7 +169,7 @@ export default function ContestsImportPage() {
         formData.append('default_lineup', defaultLineup);
       }
 
-      const response = await fetch(buildApiUrl('/contests/import'), {
+      const response = await fetch(buildApiUrl('/api/contests/parse'), {
         method: 'POST',
         body: formData
       });
@@ -231,7 +231,7 @@ export default function ContestsImportPage() {
     setIsImportingRosters(true);
 
     try {
-      const response = await fetch(buildApiUrl('/contests/import-opponent-rosters'), {
+      const response = await fetch(buildApiUrl('/api/contests/import-opponent-rosters'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
