@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from app.database import get_db
-from app.models import PlayerActuals, Player, Week
+from app.models import PlayerActuals, Player, Week, PlayerPoolEntry
 from app.schemas import (
     PlayerActualsImportRequest, 
     PlayerActualsImportResponse,
@@ -151,6 +151,17 @@ async def import_matched_actuals(
                 new_actuals = PlayerActuals(**actuals_data)
                 db.add(new_actuals)
                 actuals_created += 1
+            
+            # Update player_pool_entries.actuals if player exists in pool for this week
+            pool_entries = db.query(PlayerPoolEntry).filter(
+                and_(
+                    PlayerPoolEntry.week_id == week_id,
+                    PlayerPoolEntry.playerDkId == player.playerDkId
+                )
+            ).all()
+            
+            for pool_entry in pool_entries:
+                pool_entry.actuals = actuals_data.get('dk_actuals', 0)
                 
         except Exception as e:
             failed_matches += 1
