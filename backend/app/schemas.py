@@ -249,25 +249,6 @@ class RecentActivityUpdate(BaseModel):
     details: Optional[Dict[str, Any]] = None
     is_archived: Optional[bool] = None
 
-class RecentActivityLegacy(BaseModel):
-    """Legacy schema for backward compatibility with frontend"""
-    id: int
-    timestamp: str
-    action: str
-    fileType: str
-    fileName: Optional[str]
-    week_id: int
-    draftGroup: Optional[str]
-    recordsAdded: int
-    recordsUpdated: int
-    recordsSkipped: int
-    errors: List[str]
-    user_name: Optional[str]
-    details: Optional[Dict[str, Any]]
-    importType: Optional[str]
-    
-    class Config:
-        from_attributes = True
 
 class LineupBase(BaseModel):
     week_id: int = Field(..., gt=0)  # Updated to Integer

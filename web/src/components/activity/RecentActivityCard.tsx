@@ -137,19 +137,11 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
     error_count,
     errors,
     created_by,
-    details,
-    // Legacy fields
-    fileType,
-    fileName,
-    draftGroup,
-    recordsAdded,
-    recordsUpdated,
-    recordsSkipped,
-    importType
+    details
   } = activity;
 
   const displayName = ACTION_DISPLAY_MAPPINGS[action as keyof typeof ACTION_DISPLAY_MAPPINGS] || action;
-  const activityImportType = importType || getImportTypeFromAction(action);
+  const importType = getImportTypeFromAction(action);
   const statusColor = STATUS_COLOR_MAPPINGS[operation_status as keyof typeof STATUS_COLOR_MAPPINGS] || 'text-gray-600 bg-gray-50';
   const hasErrors = error_count > 0 || (errors && errors.length > 0);
   const hasRecords = records_added > 0 || records_updated > 0 || records_skipped > 0 || records_failed > 0;
@@ -199,7 +191,7 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h4 className="font-medium text-sm truncate">
-                  {file_name || fileName || displayName}
+                  {file_name || displayName}
                 </h4>
                 <Badge 
                   variant="secondary" 
@@ -231,19 +223,19 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
               {/* Records Summary */}
               {hasRecords && (
                 <div className="flex items-center gap-2 mb-2">
-                  {(records_added || recordsAdded || 0) > 0 && (
+                  {records_added > 0 && (
                     <Badge variant="secondary" className="text-xs">
-                      +{records_added || recordsAdded || 0} added
+                      +{records_added} added
                     </Badge>
                   )}
-                  {(records_updated || recordsUpdated || 0) > 0 && (
+                  {records_updated > 0 && (
                     <Badge variant="secondary" className="text-xs">
-                      {records_updated || recordsUpdated || 0} updated
+                      {records_updated} updated
                     </Badge>
                   )}
-                  {(records_skipped || recordsSkipped || 0) > 0 && (
+                  {records_skipped > 0 && (
                     <Badge variant="outline" className="text-xs">
-                      {records_skipped || recordsSkipped || 0} skipped
+                      {records_skipped} skipped
                     </Badge>
                   )}
                   {records_failed > 0 && (
@@ -259,8 +251,8 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
                 {import_source && (
                   <div>Source: {import_source}</div>
                 )}
-                {(draft_group || draftGroup) && (
-                  <div>Draft Group: {draft_group || draftGroup}</div>
+                {draft_group && (
+                  <div>Draft Group: {draft_group}</div>
                 )}
                 {created_by && (
                   <div>Created by: {created_by}</div>

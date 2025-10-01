@@ -30,20 +30,16 @@ export interface RecentActivity {
   user_agent: string | null;
   parent_activity_id: number | null;
   details: Record<string, any> | null;
-  user_name: string | null;
   retention_until: string | null;
   is_archived: boolean;
   created_at: string;
   updated_at: string;
-  // Legacy fields for backward compatibility
-  fileType?: string;
-  fileName?: string | null;
-  draftGroup?: string | null;
-  recordsAdded?: number;
-  recordsUpdated?: number;
-  recordsSkipped?: number;
-  legacyErrors?: string[];
-  importType?: string;
+  week?: {
+    id: number;
+    week_number: number;
+    year: number;
+    status: string;
+  };
 }
 
 export interface ActivityError {

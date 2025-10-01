@@ -52,25 +52,16 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
     errors,
     error_count,
     created_by,
-    details,
-    // Legacy fields
-    fileType,
-    fileName,
-    draftGroup,
-    recordsAdded,
-    recordsUpdated,
-    recordsSkipped,
-    legacyErrors,
-    importType
+    details
   } = activity;
 
-  const displayName = file_name || fileName || action;
-  const displayFileType = file_type || fileType || 'Unknown';
-  const displayDraftGroup = draft_group || draftGroup;
-  const displayRecordsAdded = records_added || recordsAdded || 0;
-  const displayRecordsUpdated = records_updated || recordsUpdated || 0;
-  const displayRecordsSkipped = records_skipped || recordsSkipped || 0;
-  const hasErrors = error_count > 0 || (errors && errors.length > 0) || (legacyErrors && legacyErrors.length > 0);
+  const displayName = file_name || action;
+  const displayFileType = file_type || 'Unknown';
+  const displayDraftGroup = draft_group;
+  const displayRecordsAdded = records_added || 0;
+  const displayRecordsUpdated = records_updated || 0;
+  const displayRecordsSkipped = records_skipped || 0;
+  const hasErrors = error_count > 0 || (errors && errors.length > 0);
 
   const getStatusIcon = () => {
     switch (operation_status) {
@@ -233,11 +224,11 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
           {hasErrors && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base text-red-600">Errors ({error_count || (legacyErrors?.length || 0)})</CardTitle>
+                <CardTitle className="text-base text-red-600">Errors ({error_count || 0})</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {(errors || legacyErrors || []).slice(0, 5).map((error, index) => (
+                  {(errors || []).slice(0, 5).map((error, index) => (
                     <div key={index} className="p-2 bg-red-50 border border-red-200 rounded text-sm">
                       <div className="font-medium text-red-800 text-xs">
                         {typeof error === 'string' ? error : error.message}
@@ -251,9 +242,9 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
                       )}
                     </div>
                   ))}
-                  {(errors || legacyErrors || []).length > 5 && (
+                  {(errors || []).length > 5 && (
                     <div className="text-xs text-gray-500 text-center py-2">
-                      ... and {(errors || legacyErrors || []).length - 5} more errors
+                      ... and {(errors || []).length - 5} more errors
                     </div>
                   )}
                 </div>
@@ -287,8 +278,36 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
                   <p className="text-sm">{created_by || 'System'}</p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500">User Name</label>
-                  <p className="text-sm">{activity.user_name || 'N/A'}</p>
+                  <label className="text-xs font-medium text-gray-500">IP Address</label>
+                  <p className="text-sm">{ip_address || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Session ID</label>
+                  <p className="text-sm">{session_id || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">User Agent</label>
+                  <p className="text-sm truncate">{user_agent || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Parent Activity ID</label>
+                  <p className="text-sm">{parent_activity_id || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Created At</label>
+                  <p className="text-sm">{formatTimestamp(created_at)}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Updated At</label>
+                  <p className="text-sm">{formatTimestamp(updated_at)}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Retain Until</label>
+                  <p className="text-sm">{formatTimestamp(retention_until)}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Archived</label>
+                  <p className="text-sm">{is_archived ? 'Yes' : 'No'}</p>
                 </div>
               </div>
             </CardContent>
