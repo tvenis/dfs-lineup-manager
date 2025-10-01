@@ -32,6 +32,8 @@ async def get_recent_activity(
                 query = query.filter(RecentActivity.action.like("%player-pool%"))
             elif import_type == "projections":
                 query = query.filter(RecentActivity.action.like("%projections%"))
+            elif import_type == "ownership":
+                query = query.filter(RecentActivity.action.like("%ownership%"))
             elif import_type == "odds-api":
                 query = query.filter(RecentActivity.action.like("%odds-api%"))
             elif import_type == "contests":
