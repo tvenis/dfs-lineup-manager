@@ -550,7 +550,24 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
                     for p in suffix_agnostic_candidates
                 ]
 
-    # 8. Fallback: Single candidate with last name + first initial match (handles remaining cases)
+    # 8. Alias matching (prioritize explicit aliases over fallback logic)
+    alias_matches = db.query(Player).join(PlayerNameAlias).filter(
+        func.lower(PlayerNameAlias.alias_name) == name.lower()
+    ).all()
+    if len(alias_matches) == 1:
+        return alias_matches[0], 'alias', []
+    if len(alias_matches) > 1:
+        return None, 'ambiguous_alias', [
+            {
+                'playerDkId': p.playerDkId,
+                'name': p.displayName,
+                'position': p.position,
+                'team': p.team,
+            }
+            for p in alias_matches
+        ]
+
+    # 9. Fallback: Single candidate with last name + first initial match (handles remaining cases)
     if len(name_parts) >= 2:
         first_name = name_parts[0]
         last_name = ' '.join(name_parts[1:])
@@ -582,7 +599,7 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
             if len(fallback_normalized) == 1:
                 return fallback_normalized[0], 'fallback_normalized', []
 
-    # 9. Name only match (canonical)
+    # 10. Name only match (canonical)
     name_only_list = db.query(Player).filter(
         Player.displayName.ilike(f"%{name}%")
     ).all()
@@ -597,23 +614,6 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
                 'team': p.team,
             }
             for p in name_only_list
-        ]
-
-    # 10. Alias matching as final fallback
-    alias_matches = db.query(Player).join(PlayerNameAlias).filter(
-        func.lower(PlayerNameAlias.alias_name) == name.lower()
-    ).all()
-    if len(alias_matches) == 1:
-        return alias_matches[0], 'alias', []
-    if len(alias_matches) > 1:
-        return None, 'ambiguous_alias', [
-            {
-                'playerDkId': p.playerDkId,
-                'name': p.displayName,
-                'position': p.position,
-                'team': p.team,
-            }
-            for p in alias_matches
         ]
 
     return None, 'none', []
