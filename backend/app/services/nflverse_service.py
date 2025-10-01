@@ -8,13 +8,19 @@ import polars as pl
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from app.models import Player, Week
-from app.routers.projections import find_player_match  # Use shared player matching
 
 
 class NFLVerseService:
     """Service to fetch and process NFL player stats from nflverse"""
     
     OFFENSE_POSITIONS = ["QB", "RB", "WR", "TE", "FB", "HB"]
+    
+    # Position mapping: NFLVerse → DraftKings
+    # DraftKings doesn't have separate FB position, they're listed as RBs
+    POSITION_MAPPING = {
+        "FB": "RB",  # Fullbacks are RBs in DraftKings
+        "HB": "RB",  # Halfbacks are RBs in DraftKings
+    }
     
     # Field mapping: NFLVerse → PlayerActuals
     FIELD_MAPPING = {
@@ -82,6 +88,19 @@ class NFLVerseService:
         return wk_offense
     
     @staticmethod
+    def normalize_position(position: str) -> str:
+        """
+        Normalize NFLVerse position to DraftKings position.
+        
+        Args:
+            position: NFLVerse position code (QB, RB, WR, TE, FB, HB)
+        
+        Returns:
+            DraftKings position code (QB, RB, WR, TE)
+        """
+        return NFLVerseService.POSITION_MAPPING.get(position, position)
+    
+    @staticmethod
     def map_nflverse_to_actuals(nflverse_row: Dict[str, Any]) -> Dict[str, Any]:
         """
         Map NFLVerse stats to PlayerActuals schema
@@ -92,9 +111,14 @@ class NFLVerseService:
         Returns:
             Dictionary with PlayerActuals column names
         """
+        # Normalize position (FB/HB -> RB for DraftKings)
+        raw_position = nflverse_row.get("position", "")
+        normalized_position = NFLVerseService.normalize_position(raw_position)
+        
         actuals_data = {
             "team": nflverse_row.get("team", ""),
-            "position": nflverse_row.get("position", ""),
+            "position": normalized_position,
+            "_original_position": raw_position,  # Keep for reference
         }
         
         # Map standard stats
@@ -183,12 +207,15 @@ class NFLVerseService:
             db: Database session
             nflverse_name: Player name from nflverse (e.g., "Justin Herbert")
             team: Team abbreviation
-            position: Position code
+            position: Position code (should be normalized - FB->RB, HB->RB)
         
         Returns:
             Tuple of (matched_player, confidence, possible_matches)
             confidence: 'exact', 'high', 'medium', 'low', 'none'
         """
+        # Import here to avoid circular dependency
+        from app.routers.projections import find_player_match
+        
         # Use the shared player matching service from projections
         matched_player, confidence, candidates = find_player_match(
             db=db,
@@ -266,10 +293,12 @@ class NFLVerseService:
             # Try to match player
             player_name = nfl_player.get("player_display_name", "")
             team = nfl_player.get("team", "")
-            position = nfl_player.get("position", "")
+            raw_position = nfl_player.get("position", "")
+            # Normalize position for matching (FB -> RB)
+            normalized_position = NFLVerseService.normalize_position(raw_position)
             
             matched_player, confidence, possible_matches = NFLVerseService.match_player(
-                db, player_name, team, position
+                db, player_name, team, normalized_position
             )
             
             match_stats[confidence] += 1
