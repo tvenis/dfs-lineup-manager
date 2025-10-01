@@ -101,6 +101,10 @@ class Player(Base):
     playerImage50 = Column(String(500))  # URL to 50x50 player image
     playerImage160 = Column(String(500))  # URL to 160x160 player image
     hidden = Column(Boolean, default=False)  # Whether to hide player from Player Profile list
+    # Normalized name fields for improved matching
+    normalized_display_name = Column(String(100))  # Normalized displayName for matching
+    normalized_first_name = Column(String(100))  # Normalized firstName for matching
+    normalized_last_name = Column(String(100))  # Normalized lastName for matching
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

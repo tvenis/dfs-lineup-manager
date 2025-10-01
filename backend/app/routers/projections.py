@@ -19,6 +19,7 @@ from app.database import get_db
 from app.models import Player, Team, PlayerPoolEntry, Week, Projection
 from app.schemas import ProjectionImportRequest, ProjectionImportResponse, ProjectionCreate
 from app.services.activity_logging import ActivityLoggingService
+from app.utils.name_normalization import normalize_for_matching
 
 router = APIRouter(prefix="/api/projections", tags=["projections"])
 
@@ -380,28 +381,21 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
     position_upper = position.upper()
     team_upper = (team or '').upper()
 
-    # Helper to strip common suffixes in names for robust matching
-    def _strip_suffixes(text: str) -> str:
-        if not text:
-            return text
-        suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
-        parts = [p for p in text.replace(".", "").replace(",", "").split() if p.lower() not in suffixes]
-        return " ".join(parts)
+    # Normalize the incoming name for consistent matching
+    name_normalized = normalize_for_matching(name)
 
-    name_clean = _strip_suffixes(name)
-
+    # 1. Exact canonical match with team (preserves original behavior)
     if team_upper:
-        # Exact match with team (case-insensitive for PostgreSQL compatibility)
-        exact_with_team_list = db.query(Player).filter(
+        exact_canonical_with_team_list = db.query(Player).filter(
             and_(
-                func.lower(Player.displayName) == name_clean.lower(),
+                func.lower(Player.displayName) == name.lower(),
                 func.upper(Player.position) == position_upper,
                 func.upper(Player.team) == team_upper,
             )
         ).all()
-        if len(exact_with_team_list) == 1:
-            return exact_with_team_list[0], 'exact', []
-        if len(exact_with_team_list) > 1:
+        if len(exact_canonical_with_team_list) == 1:
+            return exact_canonical_with_team_list[0], 'exact', []
+        if len(exact_canonical_with_team_list) > 1:
             return None, 'ambiguous_exact_with_team', [
                 {
                     'playerDkId': p.playerDkId,
@@ -409,19 +403,19 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
                     'position': p.position,
                     'team': p.team,
                 }
-                for p in exact_with_team_list
+                for p in exact_canonical_with_team_list
             ]
 
-    # Exact match without team (name + position)
-    exact_no_team_list = db.query(Player).filter(
+    # 2. Exact canonical match without team
+    exact_canonical_no_team_list = db.query(Player).filter(
         and_(
-            func.lower(Player.displayName) == name_clean.lower(),
+            func.lower(Player.displayName) == name.lower(),
             func.upper(Player.position) == position_upper,
         )
     ).all()
-    if len(exact_no_team_list) == 1:
-        return exact_no_team_list[0], 'exact_no_team', []
-    if len(exact_no_team_list) > 1:
+    if len(exact_canonical_no_team_list) == 1:
+        return exact_canonical_no_team_list[0], 'exact_no_team', []
+    if len(exact_canonical_no_team_list) > 1:
         return None, 'ambiguous_exact_no_team', [
             {
                 'playerDkId': p.playerDkId,
@@ -429,19 +423,61 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
                 'position': p.position,
                 'team': p.team,
             }
-            for p in exact_no_team_list
+            for p in exact_canonical_no_team_list
         ]
 
-    # Partial match with name and position
-    partial_list = db.query(Player).filter(
+    # 3. Exact normalized match with team (handles punctuation/suffixes)
+    if team_upper:
+        exact_normalized_with_team_list = db.query(Player).filter(
+            and_(
+                Player.normalized_display_name == name_normalized,
+                func.upper(Player.position) == position_upper,
+                func.upper(Player.team) == team_upper,
+            )
+        ).all()
+        if len(exact_normalized_with_team_list) == 1:
+            return exact_normalized_with_team_list[0], 'exact_normalized', []
+        if len(exact_normalized_with_team_list) > 1:
+            return None, 'ambiguous_exact_normalized_with_team', [
+                {
+                    'playerDkId': p.playerDkId,
+                    'name': p.displayName,
+                    'position': p.position,
+                    'team': p.team,
+                }
+                for p in exact_normalized_with_team_list
+            ]
+
+    # 4. Exact normalized match without team
+    exact_normalized_no_team_list = db.query(Player).filter(
         and_(
-            Player.displayName.ilike(f"%{name_clean}%"),
+            Player.normalized_display_name == name_normalized,
             func.upper(Player.position) == position_upper,
         )
     ).all()
-    if len(partial_list) == 1:
-        return partial_list[0], 'partial', []
-    if len(partial_list) > 1:
+    if len(exact_normalized_no_team_list) == 1:
+        return exact_normalized_no_team_list[0], 'exact_normalized_no_team', []
+    if len(exact_normalized_no_team_list) > 1:
+        return None, 'ambiguous_exact_normalized_no_team', [
+            {
+                'playerDkId': p.playerDkId,
+                'name': p.displayName,
+                'position': p.position,
+                'team': p.team,
+            }
+            for p in exact_normalized_no_team_list
+        ]
+
+    # 5. Partial canonical match with name and position
+    partial_canonical_list = db.query(Player).filter(
+        and_(
+            Player.displayName.ilike(f"%{name}%"),
+            func.upper(Player.position) == position_upper,
+        )
+    ).all()
+    if len(partial_canonical_list) == 1:
+        return partial_canonical_list[0], 'partial', []
+    if len(partial_canonical_list) > 1:
         return None, 'ambiguous_partial', [
             {
                 'playerDkId': p.playerDkId,
@@ -449,12 +485,106 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
                 'position': p.position,
                 'team': p.team,
             }
-            for p in partial_list
+            for p in partial_canonical_list
         ]
 
-    # Name only match
+    # 6. Partial normalized match with name and position
+    partial_normalized_list = db.query(Player).filter(
+        and_(
+            Player.normalized_display_name.ilike(f"%{name_normalized}%"),
+            func.upper(Player.position) == position_upper,
+        )
+    ).all()
+    if len(partial_normalized_list) == 1:
+        return partial_normalized_list[0], 'partial_normalized', []
+    if len(partial_normalized_list) > 1:
+        return None, 'ambiguous_partial_normalized', [
+            {
+                'playerDkId': p.playerDkId,
+                'name': p.displayName,
+                'position': p.position,
+                'team': p.team,
+            }
+            for p in partial_normalized_list
+        ]
+
+    # 7. Suffix-agnostic matching: Compare base names ignoring suffixes on either side
+    name_parts = name.split()
+    if len(name_parts) >= 2:
+        first_name = name_parts[0]
+        last_name = ' '.join(name_parts[1:])
+        first_initial = first_name[0].lower() if first_name else None
+        
+        if first_initial and last_name:
+            # Normalize the incoming name parts (strips suffixes)
+            first_normalized = normalize_for_matching(first_name)
+            last_normalized = normalize_for_matching(last_name)
+            
+            # Find players where normalized first/last match, regardless of suffixes in DB
+            suffix_agnostic_candidates = db.query(Player).filter(
+                and_(
+                    Player.normalized_first_name == first_normalized,
+                    Player.normalized_last_name == last_normalized,
+                    func.upper(Player.position) == position_upper,
+                )
+            ).all()
+            
+            if len(suffix_agnostic_candidates) == 1:
+                return suffix_agnostic_candidates[0], 'suffix_agnostic', []
+            
+            # If team provided, try with team filter too
+            if team_upper and len(suffix_agnostic_candidates) > 1:
+                team_filtered = [p for p in suffix_agnostic_candidates if p.team.upper() == team_upper]
+                if len(team_filtered) == 1:
+                    return team_filtered[0], 'suffix_agnostic_with_team', []
+            
+            # If multiple candidates, return ambiguous
+            if len(suffix_agnostic_candidates) > 1:
+                return None, 'ambiguous_suffix_agnostic', [
+                    {
+                        'playerDkId': p.playerDkId,
+                        'name': p.displayName,
+                        'position': p.position,
+                        'team': p.team,
+                    }
+                    for p in suffix_agnostic_candidates
+                ]
+
+    # 8. Fallback: Single candidate with last name + first initial match (handles remaining cases)
+    if len(name_parts) >= 2:
+        first_name = name_parts[0]
+        last_name = ' '.join(name_parts[1:])
+        first_initial = first_name[0].lower() if first_name else None
+        
+        if first_initial and last_name:
+            # Try canonical first/last
+            fallback_candidates = db.query(Player).filter(
+                and_(
+                    func.lower(Player.firstName).like(f"{first_initial}%"),
+                    func.lower(Player.lastName).like(f"%{last_name}%"),
+                    func.upper(Player.position) == position_upper,
+                )
+            ).all()
+            
+            if len(fallback_candidates) == 1:
+                return fallback_candidates[0], 'fallback_first_last', []
+            
+            # Try normalized first/last
+            last_name_normalized = normalize_for_matching(last_name)
+            fallback_normalized = db.query(Player).filter(
+                and_(
+                    Player.normalized_first_name.like(f"{first_initial}%"),
+                    Player.normalized_last_name.like(f"%{last_name_normalized}%"),
+                    func.upper(Player.position) == position_upper,
+                )
+            ).all()
+            
+            if len(fallback_normalized) == 1:
+                return fallback_normalized[0], 'fallback_normalized', []
+
+    # 9. Name only match (canonical)
     name_only_list = db.query(Player).filter(
-        Player.displayName.ilike(f"%{name_clean}%")
+        Player.displayName.ilike(f"%{name}%")
     ).all()
     if len(name_only_list) == 1:
         return name_only_list[0], 'name_only', []

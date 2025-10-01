@@ -772,14 +772,12 @@ async def import_player_props(
         def normalize_token(token: str) -> str:
             return token.replace("'", "").replace("-", " ").strip()
 
-        def strip_suffixes(name: str) -> str:
-            suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
-            cleaned = name.replace('.', '').replace(',', ' ')
-            parts = [p for p in cleaned.split() if p.lower() not in suffixes]
-            return " ".join(parts)
+        def normalize_name(name: str) -> str:
+            from app.utils.name_normalization import normalize_for_matching
+            return normalize_for_matching(name)
 
         def parse_first_last(name: str) -> tuple[str, str]:
-            cleaned = strip_suffixes(normalize_token(name))
+            cleaned = normalize_name(name)
             tokens = [t for t in cleaned.split() if t]
             if len(tokens) == 0:
                 return "", ""
@@ -790,21 +788,50 @@ async def import_player_props(
         def find_player_by_name(name: str) -> Player | None:
             if not name:
                 return None
-            # Try exact displayName (case-insensitive)
-            player = db.query(Player).filter(func.lower(Player.displayName) == func.lower(func.trim(name))).first()
+            
+            # Normalize the incoming name
+            name_normalized = normalize_name(name)
+            
+            # 1. Try exact canonical displayName match
+            player = db.query(Player).filter(func.lower(Player.displayName) == name.strip().lower()).first()
+            if player:
+                return player
+            
+            # 2. Try exact normalized displayName match
+            player = db.query(Player).filter(Player.normalized_display_name == name_normalized).first()
             if player:
                 return player
 
             first, last = parse_first_last(name)
             if first and last:
-                # Try exact first/last (case-insensitive)
+                # 3. Try exact canonical first/last match
                 player = db.query(Player).filter(
                     and_(func.lower(Player.firstName) == first.lower(), func.lower(Player.lastName) == last.lower())
                 ).first()
                 if player:
                     return player
+                
+                # 4. Try exact normalized first/last match
+                first_normalized = normalize_name(first)
+                last_normalized = normalize_name(last)
+                player = db.query(Player).filter(
+                    and_(Player.normalized_first_name == first_normalized, Player.normalized_last_name == last_normalized)
+                ).first()
+                if player:
+                    return player
+                
+                # 5. Try suffix-agnostic matching
+                suffix_agnostic_candidates = db.query(Player).filter(
+                    and_(
+                        Player.normalized_first_name == first_normalized,
+                        Player.normalized_last_name == last_normalized,
+                    )
+                ).all()
+                
+                if len(suffix_agnostic_candidates) == 1:
+                    return suffix_agnostic_candidates[0]
 
-            # Try relaxed matching by last name contains and first name initial
+            # 6. Try relaxed matching by last name contains and first name initial
             if last:
                 first_initial = first[:1].lower() if first else None
                 query = db.query(Player).filter(func.lower(Player.lastName).like(f"%{last.lower()}%"))
@@ -814,13 +841,13 @@ async def import_player_props(
                 if player:
                     return player
 
-            # Try shortName match if available
-            player = db.query(Player).filter(Player.shortName.ilike(f"%{name}%")).first()
+            # 7. Try shortName match if available
+            player = db.query(Player).filter(Player.shortName.ilike(f"%{name_normalized}%")).first()
             if player:
                 return player
 
-            # Final fallback: contains on displayName
-            player = db.query(Player).filter(Player.displayName.ilike(f"%{name}%")).first()
+            # 8. Final fallback: contains on displayName
+            player = db.query(Player).filter(Player.displayName.ilike(f"%{name_normalized}%")).first()
             return player
 
         # Iterate over each event and request all selected markets in one API call (comma-delimited)
