@@ -302,6 +302,8 @@ export default function OddsImportPage() {
     });
   };
 
+  const selectedWeekData = weeks.find(w => w.id === selectedWeekId);
+
   const getWeekLabel = (week: Week) => {
     const weekLabel = week.week_number === 1 ? "Week 1" :
                      week.week_number === 2 ? "Week 2" :
