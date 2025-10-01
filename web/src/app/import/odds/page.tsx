@@ -13,27 +13,12 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, CheckCircle, RefreshCw, Globe, Calendar as CalendarIcon } from 'lucide-react';
 import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
+import { ActivityList } from '@/components/activity';
+import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy';
 
 interface GameOption {
   value: string;
   label: string;
-}
-
-interface RecentActivity {
-  id: number;
-  timestamp: string;
-  action: 'import' | 'export';
-  fileType: 'API' | 'CSV';
-  fileName: string | null;
-  week_id: number;
-  draftGroup: string;
-  recordsAdded: number;
-  recordsUpdated: number;
-  recordsSkipped: number;
-  errors: string[];
-  user_name: string | null;
-  details: unknown;
-  importType?: 'odds-api';
 }
 
 const marketOptions = [
@@ -43,7 +28,6 @@ const marketOptions = [
 ];
 
 export default function OddsImportPage() {
-  const [history, setHistory] = useState<RecentActivity[]>([]);
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
   const [isImportingOdds, setIsImportingOdds] = useState(false);
@@ -58,6 +42,19 @@ export default function OddsImportPage() {
   const [oddsGame, setOddsGame] = useState<string>('All');
   const [gameOptions, setGameOptions] = useState<GameOption[]>([]);
   const [playerPropMarkets, setPlayerPropMarkets] = useState<string[]>(['player_pass_tds']);
+
+  // Use the legacy activity hook for odds-api activities
+  const {
+    activities: history,
+    loading: activityLoading,
+    error: activityError,
+    refresh: refreshActivity,
+    retry: retryActivity
+  } = useRecentActivityLegacy({
+    importType: 'odds-api',
+    limit: 10
+    // No weekId filter - show all activities for this import type
+  });
 
   // Fetch weeks on component mount
   useEffect(() => {
@@ -87,7 +84,6 @@ export default function OddsImportPage() {
     };
 
     fetchWeeks();
-    fetchRecentActivity();
   }, []);
 
   // When week changes, fetch games for the week to populate the Game picker
@@ -120,17 +116,6 @@ export default function OddsImportPage() {
     fetchGamesForWeek();
   }, [selectedWeekId]);
 
-  const fetchRecentActivity = async () => {
-    try {
-      const response = await fetch(buildApiUrl('/recent-activity?import_type=odds-api&limit=10'));
-      if (response.ok) {
-        const data = await response.json();
-        setHistory(data);
-      }
-    } catch (error) {
-      console.error('Error fetching recent activity:', error);
-    }
-  };
 
   const handleOddsApiImport = async (endpoint: string) => {
     // Validate required parameters for Events endpoint
@@ -268,7 +253,7 @@ export default function OddsImportPage() {
         importType: 'odds-api'
       };
       
-      setHistory(prev => [newActivity, ...prev]);
+      await refreshActivity();
       alert(`Successfully imported ${description}!`);
       
     } catch (error) {
@@ -841,53 +826,52 @@ export default function OddsImportPage() {
         </Card>
       </div>
 
-      {/* Recent Import Activity */}
+      {/* Activity Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Import Activity</CardTitle>
-          <CardDescription>Your recent Odds-API imports</CardDescription>
+          <CardTitle>Activity Statistics</CardTitle>
+          <CardDescription>Overview of your recent Odds-API import activity</CardDescription>
         </CardHeader>
         <CardContent>
-          {history.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              No recent Odds-API import activity found.
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{history.length}</div>
+              <div className="text-sm text-blue-800">Total Activities</div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {history.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {activity.errors && activity.errors.length > 0 ? (
-                      <RefreshCw className="w-5 h-5 text-red-500" />
-                    ) : (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    )}
-                    <div>
-                      <p className="text-sm font-medium">
-                        {activity.fileName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(activity.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-sm">
-                    {activity.recordsAdded > 0 && (
-                      <Badge variant="secondary" className="mr-1">Added: {activity.recordsAdded}</Badge>
-                    )}
-                    {activity.recordsUpdated > 0 && (
-                      <Badge variant="secondary">Updated: {activity.recordsUpdated}</Badge>
-                    )}
-                    {activity.errors && activity.errors.length > 0 && (
-                      <Badge variant="destructive" className="ml-1">Errors: {activity.errors.length}</Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {history.filter(a => a.operation_status === 'completed').length}
+              </div>
+              <div className="text-sm text-green-800">Successful</div>
             </div>
-          )}
+            <div className="text-center p-4 bg-orange-50 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">
+                {history.reduce((sum, a) => sum + (a.records_added || 0), 0)}
+              </div>
+              <div className="text-sm text-orange-800">Records Added</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">
+                {history.reduce((sum, a) => sum + (a.records_updated || 0), 0)}
+              </div>
+              <div className="text-sm text-purple-800">Records Updated</div>
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Recent Import Activity */}
+      <ActivityList
+        activities={history}
+        loading={activityLoading}
+        error={activityError}
+        emptyMessage="No recent Odds-API import activity found."
+        showFilters={false}
+        onRetry={retryActivity}
+        onViewDetails={(activityId) => {
+          console.log('View details for activity:', activityId);
+        }}
+      />
     </div>
   );
 }
