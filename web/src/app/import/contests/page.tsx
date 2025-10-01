@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, FileText, Users, RefreshCw, Trophy } from 'lucide-react';
 import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
+import { ContestImportResultDialog } from '@/components/ContestImportResultDialog';
 
 interface RecentActivity {
   id: number;
@@ -49,6 +50,10 @@ export default function ContestsImportPage() {
   const [isProcessingContests, setIsProcessingContests] = useState(false);
   const [isImportingRosters, setIsImportingRosters] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Result dialog state
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [importResult, setImportResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
 
   // Fetch weeks on component mount
   useEffect(() => {
@@ -182,30 +187,28 @@ export default function ContestsImportPage() {
       const result = await response.json();
       await fetchRecentActivity();
       
-      // Add success activity item
-      const newHistoryItem: RecentActivity = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        action: 'import',
-        fileType: 'CSV',
-        fileName: csvFile.name,
-        week_id: selectedWeekId,
-        draftGroup: 'CONTEST_IMPORT',
-        recordsAdded: result.records_added || 0,
-        recordsUpdated: result.records_updated || 0,
-        recordsSkipped: result.records_skipped || 0,
-        errors: result.errors || [],
-        user_name: null,
-        details: null,
-        importType: 'contests'
-      };
-      
-      setHistory(prev => [newHistoryItem, ...prev]);
-      alert('Contests processed successfully!');
+      // Show success dialog
+      setImportResult({
+        success: true,
+        data: {
+          total_processed: result.total_processed || (result.created + result.updated) || 0,
+          created: result.created || 0,
+          updated: result.updated || 0,
+          errors: result.errors || []
+        }
+      });
+      setShowResultDialog(true);
 
     } catch (error) {
       console.error('Error processing contests:', error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Show error dialog
+      setImportResult({
+        success: false,
+        error: errorMessage
+      });
+      setShowResultDialog(true);
     } finally {
       setIsProcessingContests(false);
     }
@@ -569,6 +572,16 @@ export default function ContestsImportPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Import Result Dialog */}
+      <ContestImportResultDialog
+        isOpen={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        result={importResult?.success ? importResult.data : undefined}
+        error={importResult?.error}
+        filename={csvFile?.name || 'Unknown'}
+        week={weeks.find(w => w.id === selectedWeekId) ? `Week ${weeks.find(w => w.id === selectedWeekId)!.week_number} (${weeks.find(w => w.id === selectedWeekId)!.year})` : 'Unknown'}
+      />
     </div>
   );
 }
