@@ -101,33 +101,33 @@ async def import_matched_actuals(
                 )
             ).first()
             
-            # Prepare actuals data
+            # Prepare actuals data - all numeric fields default to 0 for consistent sorting
             actuals_data = {
                 "week_id": week_id,
                 "playerDkId": player.playerDkId,
                 "team": player_data.get('team', ''),
                 "position": player_data.get('position', ''),
-                "completions": float(player_data.get('completions', 0)) if player_data.get('completions') else None,
-                "attempts": float(player_data.get('attempts', 0)) if player_data.get('attempts') else None,
-                "pass_yds": float(player_data.get('pass_yds', 0)) if player_data.get('pass_yds') else None,
-                "pass_tds": float(player_data.get('pass_tds', 0)) if player_data.get('pass_tds') else None,
-                "interceptions": float(player_data.get('interceptions', 0)) if player_data.get('interceptions') else None,
-                "rush_att": float(player_data.get('rush_att', 0)) if player_data.get('rush_att') else None,
-                "rush_yds": float(player_data.get('rush_yds', 0)) if player_data.get('rush_yds') else None,
-                "rush_tds": float(player_data.get('rush_tds', 0)) if player_data.get('rush_tds') else None,
-                "rec_tgt": float(player_data.get('rec_tgt', 0)) if player_data.get('rec_tgt') else None,
-                "receptions": float(player_data.get('receptions', 0)) if player_data.get('receptions') else None,
-                "rec_yds": float(player_data.get('rec_yds', 0)) if player_data.get('rec_yds') else None,
-                "rec_tds": float(player_data.get('rec_tds', 0)) if player_data.get('rec_tds') else None,
-                "fumbles": float(player_data.get('fumbles', 0)) if player_data.get('fumbles') else None,
-                "fumbles_lost": float(player_data.get('fumbles_lost', 0)) if player_data.get('fumbles_lost') else None,
-                "total_tds": float(player_data.get('total_tds', 0)) if player_data.get('total_tds') else None,
-                "two_pt_md": float(player_data.get('two_pt_md', 0)) if player_data.get('two_pt_md') else None,
-                "two_pt_pass": float(player_data.get('two_pt_pass', 0)) if player_data.get('two_pt_pass') else None,
-                "dk_actuals": float(player_data.get('dk_actuals', 0)) if player_data.get('dk_actuals') else None,
-                "vbd": float(player_data.get('vbd', 0)) if player_data.get('vbd') else None,
-                "pos_rank": int(player_data.get('pos_rank', 0)) if player_data.get('pos_rank') else None,
-                "ov_rank": int(player_data.get('ov_rank', 0)) if player_data.get('ov_rank') else None
+                "completions": float(player_data.get('completions', 0)) if player_data.get('completions') is not None else 0,
+                "attempts": float(player_data.get('attempts', 0)) if player_data.get('attempts') is not None else 0,
+                "pass_yds": float(player_data.get('pass_yds', 0)) if player_data.get('pass_yds') is not None else 0,
+                "pass_tds": float(player_data.get('pass_tds', 0)) if player_data.get('pass_tds') is not None else 0,
+                "interceptions": float(player_data.get('interceptions', 0)) if player_data.get('interceptions') is not None else 0,
+                "rush_att": float(player_data.get('rush_att', 0)) if player_data.get('rush_att') is not None else 0,
+                "rush_yds": float(player_data.get('rush_yds', 0)) if player_data.get('rush_yds') is not None else 0,
+                "rush_tds": float(player_data.get('rush_tds', 0)) if player_data.get('rush_tds') is not None else 0,
+                "rec_tgt": float(player_data.get('rec_tgt', 0)) if player_data.get('rec_tgt') is not None else 0,
+                "receptions": float(player_data.get('receptions', 0)) if player_data.get('receptions') is not None else 0,
+                "rec_yds": float(player_data.get('rec_yds', 0)) if player_data.get('rec_yds') is not None else 0,
+                "rec_tds": float(player_data.get('rec_tds', 0)) if player_data.get('rec_tds') is not None else 0,
+                "fumbles": float(player_data.get('fumbles', 0)) if player_data.get('fumbles') is not None else 0,
+                "fumbles_lost": float(player_data.get('fumbles_lost', 0)) if player_data.get('fumbles_lost') is not None else 0,
+                "total_tds": float(player_data.get('total_tds', 0)) if player_data.get('total_tds') is not None else 0,
+                "two_pt_md": float(player_data.get('two_pt_md', 0)) if player_data.get('two_pt_md') is not None else 0,
+                "two_pt_pass": float(player_data.get('two_pt_pass', 0)) if player_data.get('two_pt_pass') is not None else 0,
+                "dk_actuals": float(player_data.get('dk_actuals', 0)) if player_data.get('dk_actuals') is not None else 0,
+                "vbd": float(player_data.get('vbd', 0)) if player_data.get('vbd') is not None else 0,
+                "pos_rank": int(player_data.get('pos_rank', 0)) if player_data.get('pos_rank') is not None else 0,
+                "ov_rank": int(player_data.get('ov_rank', 0)) if player_data.get('ov_rank') is not None else 0
             }
             # Advanced fields default to 0
             advanced_fields = [
