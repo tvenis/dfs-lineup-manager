@@ -42,21 +42,87 @@ async def get_active_upcoming_weeks(db: Session = Depends(get_db)):
 @router.post("/import")
 async def import_player_pool(request: DraftKingsImportRequest, db: Session = Depends(get_db)):
     """Import player pool from DraftKings API"""
+    import time
+    start_time = time.perf_counter()
+    
     try:
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"Received import request for week_id={request.week_id}, draft_group={request.draft_group}")
         
         service = DraftKingsImportService(db)
+        
         result = await service.import_player_pool(request.week_id, request.draft_group)
         
-        logger.info(f"Import completed successfully: {result.players_added} players added, {result.players_updated} updated")
+        # Calculate duration for logging
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        
+        # Log activity with duration
+        from app.services.activity_logging import ActivityLoggingService
+        try:
+            service_logger = ActivityLoggingService(db)
+            operation_status = "failed" if result.errors else "completed"
+            service_logger.log_import_activity(
+                import_type="player-pool",
+                file_type="API",
+                week_id=request.week_id,
+                records_added=result.players_added + result.entries_added,
+                records_updated=result.players_updated + result.entries_updated,
+                records_skipped=result.entries_skipped,
+                records_failed=0,
+                file_name=None,
+                import_source="draftkings",
+                draft_group=request.draft_group,
+                operation_status=operation_status,
+                duration_ms=duration_ms,
+                errors=result.errors,
+                details={
+                    "players_added": result.players_added,
+                    "players_updated": result.players_updated,
+                    "entries_added": result.entries_added,
+                    "entries_updated": result.entries_updated,
+                    "total_processed": result.total_processed
+                }
+            )
+            logger.info(f"✅ Import completed successfully in {duration_ms}ms: {result.players_added} players added, {result.players_updated} updated")
+        except Exception as log_error:
+            logger.error(f"Failed to log activity: {log_error}")
+        
         return result
         
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Import failed: {str(e)}")
+        
+        # Calculate duration even for failed imports
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        
+        # Log failed import
+        from app.services.activity_logging import ActivityLoggingService
+        try:
+            service_logger = ActivityLoggingService(db)
+            service_logger.log_import_activity(
+                import_type="player-pool",
+                file_type="API",
+                week_id=request.week_id,
+                records_added=0,
+                records_updated=0,
+                records_skipped=0,
+                records_failed=0,
+                file_name=None,
+                import_source="draftkings",
+                draft_group=request.draft_group,
+                operation_status="failed",
+                duration_ms=duration_ms,
+                errors=[str(e)],
+                details={"error_type": type(e).__name__, "stage": "api_fetch"}
+            )
+            logger.info(f"❌ Import failed after {duration_ms}ms")
+        except Exception as log_error:
+            logger.error(f"Failed to log error activity: {log_error}")
         
         # Provide more detailed error information
         error_detail = str(e)
@@ -70,7 +136,8 @@ async def import_player_pool(request: DraftKingsImportRequest, db: Session = Dep
             detail={
                 "error": "Import failed",
                 "message": error_detail,
-                "original_error": str(e)
+                "original_error": str(e),
+                "duration_ms": duration_ms
             }
         )
 

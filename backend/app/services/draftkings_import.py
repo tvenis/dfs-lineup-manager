@@ -32,7 +32,7 @@ class DraftKingsImportService:
         # Cache for team abbreviation -> id lookups to minimize DB hits
         self._team_abbrev_to_id_cache: Dict[str, Optional[int]] = {}
         
-    async def import_player_pool(self, week_id: int, draft_group: str) -> DraftKingsImportResponse:
+    async def import_player_pool(self, week_id: int, draft_group: str, duration_ms: int = None) -> DraftKingsImportResponse:
         """
         Import player pool from DraftKings API
         """
@@ -46,23 +46,11 @@ class DraftKingsImportService:
             # Process draftables and upsert into database
             result = await self._process_draftables(draftables_data, week_id, draft_group)
             
-            # Log the import activity
-            await self._log_import_activity(week_id, draft_group, result)
-            
             logger.info(f"Successfully completed DraftKings import: {result.players_added} players added, {result.players_updated} updated")
             return result
             
         except Exception as e:
             logger.error(f"DraftKings import failed: {str(e)}")
-            # Log error activity
-            error_result = DraftKingsImportResponse(
-                players_added=0, players_updated=0, entries_added=0, entries_updated=0,
-                entries_skipped=0, auto_excluded_count=0, status_updates=0, errors=[str(e)], total_processed=0
-            )
-            try:
-                await self._log_import_activity(week_id, draft_group, error_result)
-            except Exception as log_error:
-                logger.error(f"Failed to log import activity: {str(log_error)}")
             raise e
     
     async def _fetch_draftables(self, draft_group: str) -> Dict:
@@ -603,10 +591,11 @@ class DraftKingsImportService:
             logger.error(f"Error in _upsert_player_pool_entry_in_transaction: {str(e)}")
             raise e
     
-    async def _log_import_activity(self, week_id: int, draft_group: str, result: DraftKingsImportResponse) -> None:
+    async def _log_import_activity(self, week_id: int, draft_group: str, result: DraftKingsImportResponse, duration_ms: int = None) -> None:
         """Log the import activity using ActivityLoggingService"""
         try:
             service = ActivityLoggingService(self.db)
+            operation_status = "failed" if result.errors else "completed"
             service.log_import_activity(
                 import_type="player-pool",
                 file_type="API",
@@ -618,7 +607,8 @@ class DraftKingsImportService:
                 file_name=None,
                 import_source="draftkings",
                 draft_group=draft_group,
-                operation_status="completed",
+                operation_status=operation_status,
+                duration_ms=duration_ms,
                 errors=result.errors,
                 details={
                     "players_added": result.players_added,
@@ -628,6 +618,8 @@ class DraftKingsImportService:
                     "total_processed": result.total_processed
                 }
             )
+            duration_str = f" in {duration_ms}ms" if duration_ms else ""
+            print(f"✅ Successfully logged player-pool-import activity{duration_str}")
         except Exception as e:
             print(f"Failed to log import activity: {str(e)}")
 

@@ -297,6 +297,9 @@ async def import_events(
     Returns:
         Import results with counts and details
     """
+    import time
+    start_time = time.perf_counter()
+    
     week_id = request.get("week_id")
     
     if not week_id:
@@ -425,6 +428,10 @@ async def import_events(
         # Commit all changes
         db.commit()
         
+        # Calculate duration
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        
         # Log activity using ActivityLoggingService
         try:
             service = ActivityLoggingService(db)
@@ -440,6 +447,7 @@ async def import_events(
                 import_source="odds-api",
                 draft_group=None,
                 operation_status="completed" if len(errors) == 0 else "partial",
+                duration_ms=duration_ms,
                 errors=errors,
                 details={
                     "total_events": len(events),
@@ -448,7 +456,7 @@ async def import_events(
                     "bookmakers": bookmakers
                 }
             )
-            print(f"✅ Successfully logged odds-api events import activity")
+            print(f"✅ Successfully logged odds-api events import activity in {duration_ms}ms")
         except Exception as e:
             print(f"❌ Failed to log import activity: {str(e)}")
         
@@ -487,6 +495,9 @@ async def import_odds(
     Returns:
         Import results with counts and details
     """
+    import time
+    start_time = time.perf_counter()
+    
     week_id = request.get("week_id")
     
     if not week_id:
@@ -628,6 +639,10 @@ async def import_odds(
         # Commit all changes
         db.commit()
         
+        # Calculate duration
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        
         # Log activity using ActivityLoggingService
         try:
             service = ActivityLoggingService(db)
@@ -643,6 +658,7 @@ async def import_odds(
                 import_source="odds-api",
                 draft_group=markets,
                 operation_status="completed" if len(errors) == 0 else "partial",
+                duration_ms=duration_ms,
                 errors=errors,
                 details={
                     "total_events": len(odds_data),
@@ -651,7 +667,7 @@ async def import_odds(
                     "bookmakers": bookmakers
                 }
             )
-            print(f"✅ Successfully logged odds-api odds import activity")
+            print(f"✅ Successfully logged odds-api odds import activity in {duration_ms}ms")
         except Exception as e:
             print(f"❌ Failed to log import activity: {str(e)}")
         
@@ -700,6 +716,9 @@ async def import_player_props(
     - If bookmakers is 'all', fetch from all bookmakers (omit param).
     - Only imports Over bets; Under bets are automatically filtered out.
     """
+    import time
+    start_time = time.perf_counter()
+    
     week_id = request.get("week_id")
     # Accept single or multiple markets
     markets = request.get("markets")
@@ -922,6 +941,10 @@ async def import_player_props(
         # Commit all changes
         db.commit()
 
+        # Calculate duration
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+
         # Log activity using ActivityLoggingService
         markets_param = ",".join(market_list)
         try:
@@ -938,6 +961,7 @@ async def import_player_props(
                 import_source="odds-api",
                 draft_group=markets_param,
                 operation_status="completed",
+                duration_ms=duration_ms,
                 errors=errors,
                 details={
                     "unmatched_players": unmatched_players,
@@ -947,7 +971,7 @@ async def import_player_props(
                     "markets": market_list,
                 }
             )
-            print(f"✅ Successfully logged odds-api player-props import activity")
+            print(f"✅ Successfully logged odds-api player-props import activity in {duration_ms}ms")
         except Exception as e:
             print(f"❌ Failed to log import activity: {str(e)}")
 
