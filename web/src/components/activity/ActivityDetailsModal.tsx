@@ -311,7 +311,7 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500">Retain Until</label>
-                  <p className="text-sm">{formatTimestamp(retention_until)}</p>
+                  <p className="text-sm">{retention_until ? formatTimestamp(retention_until) : 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500">Archived</label>
