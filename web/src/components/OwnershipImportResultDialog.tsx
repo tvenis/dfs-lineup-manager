@@ -87,7 +87,7 @@ ${result.unmatched_players.length > 0 ? `Unmatched Players: ${result.unmatched_p
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md ml-auto mr-8">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isSuccess ? (
