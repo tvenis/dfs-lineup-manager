@@ -402,7 +402,145 @@ async def parse_contests_csv(
         # Log error but don't fail the parse
         print(f"Error extracting opponent names: {e}")
 
-    return {"staged": staged, "count": len(staged)}
+    # Now automatically commit the data (simpler flow for user)
+    # This mirrors the logic from /commit endpoint
+    code_to_sport: Dict[str, int] = {s.code.upper(): s.sport_id for s in db.query(Sport).all()}
+    code_to_game_type: Dict[str, int] = {g.code: g.game_type_id for g in db.query(GameType).all()}
+    code_to_contest_type = {c.code: c.contest_type_id for c in db.query(ContestTypeModel).all()}
+    
+    created = 0
+    updated = 0
+    errors: List[str] = []
+    cache: Dict[int, Contest] = {}
+    
+    for r in staged:
+        try:
+            entry_key = int(r.get("entry_key")) if r.get("entry_key") is not None else 0
+            contest_id = int(r.get("contest_id")) if r.get("contest_id") is not None else 0
+            if entry_key <= 0:
+                errors.append("Missing or invalid entry_key")
+                continue
+            sport_id = code_to_sport.get(str(r.get("sport_code", "")).upper())
+            game_type_id = code_to_game_type.get(str(r.get("game_type_code", "Classic")))
+            
+            # Get contest_type_id and opponent from dk_contest_detail
+            contest_type_id = None
+            contest_opponent = None
+            dk_detail = dk_detail_map.get(str(contest_id))
+            if dk_detail:
+                contest_type_id = dk_detail.contest_type_id
+                # Extract opponent from attributes if it's H2H
+                if dk_detail.contest_type_id == code_to_contest_type.get("H2H") or _is_h2h_from_attributes(dk_detail.attributes):
+                    contest_opponent = _extract_h2h_opponent(dk_detail.attributes)
+            
+            # Fallback to CSV contest_type_code if no DK detail
+            if not contest_type_id and r.get("contest_type_code"):
+                contest_type_id = code_to_contest_type.get(str(r.get("contest_type_code")))
+            if not sport_id:
+                errors.append(f"Entry {entry_key}: Unknown sport code '{r.get('sport_code')}'")
+                continue
+            if not game_type_id:
+                errors.append(f"Entry {entry_key}: Unknown game type '{r.get('game_type_code')}'")
+                continue
+            
+            net_profit = float(r.get("winnings_non_ticket") or 0) + float(r.get("winnings_ticket") or 0) - float(r.get("entry_fee_usd") or 0)
+            result_flag = 1 if ((r.get("winnings_non_ticket") or 0) > 0 or (r.get("winnings_ticket") or 0) > 0) else 0
+            # Prefer cached (created earlier in this batch), then DB lookup
+            existing = cache.get(entry_key) or db.query(Contest).filter(Contest.entry_key == entry_key).first()
+            if existing:
+                existing.week_id = week_id
+                existing.sport_id = sport_id
+                existing.lineup_id = r.get("lineup_id")
+                existing.game_type_id = game_type_id
+                existing.contest_type_id = contest_type_id
+                existing.contest_id = contest_id
+                existing.contest_description = r.get("contest_description")
+                existing.contest_opponent = contest_opponent or r.get("contest_opponent")
+                existing.contest_date_utc = r.get("contest_date_utc")
+                existing.contest_place = r.get("contest_place")
+                existing.contest_points = r.get("contest_points")
+                existing.winnings_non_ticket = r.get("winnings_non_ticket")
+                existing.winnings_ticket = r.get("winnings_ticket")
+                existing.contest_entries = r.get("contest_entries")
+                existing.places_paid = r.get("places_paid")
+                existing.entry_fee_usd = r.get("entry_fee_usd")
+                existing.prize_pool_usd = r.get("prize_pool_usd")
+                existing.net_profit_usd = net_profit
+                existing.result = bool(result_flag)
+                updated += 1
+            else:
+                obj = Contest(
+                    entry_key=entry_key,
+                    contest_id=contest_id,
+                    week_id=week_id,
+                    sport_id=sport_id,
+                    lineup_id=r.get("lineup_id"),
+                    game_type_id=game_type_id,
+                    contest_type_id=contest_type_id,
+                    contest_description=r.get("contest_description"),
+                    contest_opponent=contest_opponent or r.get("contest_opponent"),
+                    contest_date_utc=r.get("contest_date_utc"),
+                    contest_place=r.get("contest_place"),
+                    contest_points=r.get("contest_points"),
+                    winnings_non_ticket=r.get("winnings_non_ticket"),
+                    winnings_ticket=r.get("winnings_ticket"),
+                    contest_entries=r.get("contest_entries"),
+                    places_paid=r.get("places_paid"),
+                    entry_fee_usd=r.get("entry_fee_usd"),
+                    prize_pool_usd=r.get("prize_pool_usd"),
+                    net_profit_usd=net_profit,
+                    result=bool(result_flag),
+                )
+                db.add(obj)
+                # Flush so subsequent iterations can see this row
+                db.flush()
+                cache[entry_key] = obj
+                created += 1
+            # If lineup_id is provided, update lineup status to 'submitted'
+            try:
+                lineup_id_val = r.get("lineup_id")
+                if lineup_id_val:
+                    lineup_obj = db.query(Lineup).filter(Lineup.id == lineup_id_val).first()
+                    if lineup_obj and lineup_obj.status != 'submitted':
+                        lineup_obj.status = 'submitted'
+            except Exception:
+                pass
+        except Exception as e:
+            errors.append(f"Entry {r.get('entry_key')}: {str(e)}")
+    
+    db.commit()
+    
+    # Log activity
+    activity = RecentActivity(
+        timestamp=datetime.now(),
+        action='contests-import',
+        category='data-import',
+        file_type='CSV',
+        file_name=file.filename,
+        week_id=week_id,
+        draft_group='CONTEST_IMPORT',
+        records_added=created,
+        records_updated=updated,
+        records_skipped=len(errors),
+        records_failed=0,
+        operation_status='completed' if len(errors) == 0 else 'partial',
+        errors={'messages': errors, 'count': len(errors)} if errors else None,
+        error_count=len(errors),
+        details={
+            'total_processed': len(staged),
+            'created': created,
+            'updated': updated,
+        }
+    )
+    db.add(activity)
+    db.commit()
+    
+    return {
+        'total_processed': len(staged),
+        'created': created,
+        'updated': updated,
+        'errors': errors
+    }
 
 
 @router.post("/commit")
