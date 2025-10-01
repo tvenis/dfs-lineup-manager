@@ -120,8 +120,8 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
     retry: retryActivity
   } = useRecentActivityLegacy({
     importType: 'projections',
-    limit: 10,
-    weekId: selectedWeek ? parseInt(selectedWeek) : undefined
+    limit: 10
+    // No weekId filter - show all activities for this import type
   })
 
   // Fetch weeks and players on component mount

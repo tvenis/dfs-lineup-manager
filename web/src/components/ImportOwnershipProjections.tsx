@@ -78,8 +78,8 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
     retry: retryActivity
   } = useRecentActivityLegacy({
     importType: 'ownership',
-    limit: 10,
-    weekId: selectedWeek ? parseInt(selectedWeek) : undefined
+    limit: 10
+    // No weekId filter - show all activities for this import type
   })
 
   // Fetch weeks on component mount

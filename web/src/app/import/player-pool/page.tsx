@@ -46,8 +46,8 @@ export default function PlayerPoolImportPage() {
     retry: retryActivity
   } = useRecentActivityLegacy({
     importType: 'player-pool',
-    limit: 10,
-    weekId: selectedWeekId || undefined
+    limit: 10
+    // No weekId filter - show all activities for this import type
   });
 
   const fetchDraftGroups = async (weekId: number) => {
