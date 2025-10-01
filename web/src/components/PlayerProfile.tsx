@@ -4,12 +4,15 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Textarea } from "./ui/textarea";
-import { ArrowLeft, Loader2, Edit, Trash2, MessageSquare, Save, X } from "lucide-react";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { ArrowLeft, Loader2, Edit, Trash2, MessageSquare, Save, X, Plus, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Separator } from "./ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { PlayerService } from "@/lib/playerService";
 import { CommentService, Comment } from "@/lib/commentService";
-import { Player } from "@/types/prd";
+import { Player, PlayerNameAlias } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
 import PlayerProps from "./PlayerProps";
 
@@ -45,6 +48,11 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const [editingComment, setEditingComment] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
   const [isHiding, setIsHiding] = useState(false);
+  const [aliases, setAliases] = useState<PlayerNameAlias[]>([]);
+  const [aliasesLoading, setAliasesLoading] = useState(false);
+  const [isAliasModalOpen, setIsAliasModalOpen] = useState(false);
+  const [newAliasName, setNewAliasName] = useState('');
+  const [isCreatingAlias, setIsCreatingAlias] = useState(false);
 
 
   const loadComments = async (playerDkId: number) => {
@@ -69,6 +77,73 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     }
   };
 
+  const loadAliases = async (playerDkId: number) => {
+    try {
+      setAliasesLoading(true);
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/player-aliases/player/${playerDkId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAliases(data);
+      }
+    } catch (error) {
+      console.error('Error loading aliases:', error);
+    } finally {
+      setAliasesLoading(false);
+    }
+  };
+
+  const createAlias = async () => {
+    if (!playerData || !newAliasName.trim()) return;
+    
+    try {
+      setIsCreatingAlias(true);
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/player-aliases/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          playerDkId: playerData.playerDkId,
+          alias_name: newAliasName.trim(),
+        }),
+      });
+      
+      if (response.ok) {
+        const newAlias = await response.json();
+        setAliases([...aliases, newAlias]);
+        setNewAliasName('');
+        setIsAliasModalOpen(false);
+      } else {
+        const error = await response.json();
+        alert(`Error creating alias: ${error.detail || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error creating alias:', error);
+      alert('Error creating alias');
+    } finally {
+      setIsCreatingAlias(false);
+    }
+  };
+
+  const deleteAlias = async (aliasId: number) => {
+    if (!confirm('Are you sure you want to delete this alias?')) return;
+    
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/player-aliases/${aliasId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setAliases(aliases.filter(alias => alias.id !== aliasId));
+      } else {
+        alert('Error deleting alias');
+      }
+    } catch (error) {
+      console.error('Error deleting alias:', error);
+      alert('Error deleting alias');
+    }
+  };
+
   useEffect(() => {
     const fetchPlayerData = async () => {
       try {
@@ -90,8 +165,11 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
         
         if (player) {
           setPlayerData(player);
-          // Load comments for this player
-          await loadComments(player.playerDkId);
+          // Load comments and aliases for this player
+          await Promise.all([
+            loadComments(player.playerDkId),
+            loadAliases(player.playerDkId)
+          ]);
         } else {
           console.log("PlayerProfile - Player not found in response");
           console.log("PlayerProfile - Available players:", response.players?.map(p => ({ id: p.playerDkId, name: p.displayName })));
@@ -534,6 +612,81 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
               <Button variant="outline" className="w-full justify-start">
                 Injury History
               </Button>
+              
+              <Dialog open={isAliasModalOpen} onOpenChange={setIsAliasModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Add Player Alias
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Player Alias</DialogTitle>
+                    <DialogDescription>
+                      Add an alternative name or nickname for {playerData?.displayName} that can be used for matching.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="alias-name">Alias Name</Label>
+                      <Input
+                        id="alias-name"
+                        value={newAliasName}
+                        onChange={(e) => setNewAliasName(e.target.value)}
+                        placeholder="e.g., Hollywood Brown"
+                        disabled={isCreatingAlias}
+                      />
+                    </div>
+                    {aliases.length > 0 && (
+                      <div>
+                        <Label>Existing Aliases</Label>
+                        <div className="space-y-2 mt-2">
+                          {aliases.map((alias) => (
+                            <div key={alias.id} className="flex items-center justify-between p-2 border rounded">
+                              <span>{alias.alias_name}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteAlias(alias.id)}
+                                disabled={isCreatingAlias}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsAliasModalOpen(false);
+                        setNewAliasName('');
+                      }}
+                      disabled={isCreatingAlias}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={createAlias}
+                      disabled={!newAliasName.trim() || isCreatingAlias}
+                    >
+                      {isCreatingAlias ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Alias'
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              
               <Button 
                 variant={playerData?.hidden ? "default" : "destructive"} 
                 className="w-full justify-start"

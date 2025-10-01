@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 export default function PlayerProfilePage() {
   const params = useParams();
-  const playerId = params.playerId as string;
+  const playerId = params?.playerId as string;
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {

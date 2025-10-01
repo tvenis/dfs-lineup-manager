@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 import httpx
 import os
 from app.database import get_db
-from app.models import Team, Game, Player, PlayerPropBet
+from app.models import Team, Game, Player, PlayerPropBet, PlayerNameAlias
 from app.schemas import TeamCreate, TeamUpdate
 from app.services.activity_logging import ActivityLoggingService
 from datetime import datetime
@@ -848,6 +848,13 @@ async def import_player_props(
 
             # 8. Final fallback: contains on displayName
             player = db.query(Player).filter(Player.displayName.ilike(f"%{name_normalized}%")).first()
+            if player:
+                return player
+            
+            # 9. Alias matching as final fallback
+            player = db.query(Player).join(PlayerNameAlias).filter(
+                func.lower(PlayerNameAlias.alias_name) == name.strip().lower()
+            ).first()
             return player
 
         # Iterate over each event and request all selected markets in one API call (comma-delimited)

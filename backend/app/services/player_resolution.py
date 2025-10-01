@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 from typing import Optional, Tuple, List, Dict, Any
-from app.models import Player
+from app.models import Player, PlayerNameAlias
 from app.utils.name_normalization import normalize_for_matching
 
 
@@ -214,6 +214,24 @@ class PlayerResolutionService:
                     'team': p.team,
                 }
                 for p in short_name_matches
+            ]
+        
+        # 11. Try alias matching as final fallback
+        alias_matches = db.query(Player).join(PlayerNameAlias).filter(
+            func.lower(PlayerNameAlias.alias_name) == text.strip().lower()
+        ).all()
+        
+        if len(alias_matches) == 1:
+            return alias_matches[0], 'alias', []
+        elif len(alias_matches) > 1:
+            return None, 'ambiguous_alias', [
+                {
+                    'playerDkId': p.playerDkId,
+                    'name': p.displayName,
+                    'position': p.position,
+                    'team': p.team,
+                }
+                for p in alias_matches
             ]
         
         return None, 'none', []

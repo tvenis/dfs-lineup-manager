@@ -62,7 +62,7 @@ export function SettingsManager() {
 
   // Read section from URL parameters
   useEffect(() => {
-    const section = searchParams.get('section') as SettingsSection;
+    const section = searchParams?.get('section') as SettingsSection;
     if (section && settingsSections.some(s => s.id === section)) {
       setActiveSection(section);
     }

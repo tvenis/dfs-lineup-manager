@@ -226,7 +226,7 @@ export default function App({ children }: { children: React.ReactNode }) {
                     <button
                       onClick={() => setIsImportOpen(!isImportOpen)}
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
-                        pathname.startsWith('/import')
+                        pathname?.startsWith('/import')
                           ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
                           : "text-[var(--color-text-secondary)]"
                       }`}
@@ -247,7 +247,7 @@ export default function App({ children }: { children: React.ReactNode }) {
                       {importSubItems.map((subItem) => {
                         const SubIcon = subItem.icon;
                         const isSubActive = pathname === subItem.href || 
-                          (pathname.startsWith('/import') && new URLSearchParams(window.location.search).get('section') === subItem.id);
+                          (pathname?.startsWith('/import') && new URLSearchParams(window.location.search).get('section') === subItem.id);
                         
                         console.log(`🎯 Import sub-item ${subItem.label}: isSubActive=${isSubActive}, pathname=${pathname}, href=${subItem.href}`);
                         
@@ -279,7 +279,7 @@ export default function App({ children }: { children: React.ReactNode }) {
                     <button
                       onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
-                        pathname.startsWith('/settings')
+                        pathname?.startsWith('/settings')
                           ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
                           : "text-[var(--color-text-secondary)]"
                       }`}
@@ -300,7 +300,7 @@ export default function App({ children }: { children: React.ReactNode }) {
                       {settingsSubItems.map((subItem) => {
                         const SubIcon = subItem.icon;
                         const isSubActive = pathname === subItem.href || 
-                          (pathname.startsWith('/settings') && new URLSearchParams(window.location.search).get('section') === subItem.id);
+                          (pathname?.startsWith('/settings') && new URLSearchParams(window.location.search).get('section') === subItem.id);
                         
                         console.log(`🎯 Settings sub-item ${subItem.label}: isSubActive=${isSubActive}, pathname=${pathname}, href=${subItem.href}`);
                         

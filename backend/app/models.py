@@ -110,6 +110,26 @@ class Player(Base):
     
     # Relationships
     pool_entries = relationship("PlayerPoolEntry", back_populates="player")
+    aliases = relationship("PlayerNameAlias", back_populates="player", cascade="all, delete-orphan")
+
+class PlayerNameAlias(Base):
+    __tablename__ = "player_name_aliases"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    playerDkId = Column(Integer, ForeignKey("players.playerDkId", ondelete="CASCADE"), nullable=False)
+    alias_name = Column(String(100), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    player = relationship("Player", back_populates="aliases")
+    
+    # Constraints
+    __table_args__ = (
+        Index('idx_player_name_aliases_alias_name', 'alias_name'),
+        Index('idx_player_name_aliases_playerDkId', 'playerDkId'),
+        Index('idx_player_name_aliases_unique', 'playerDkId', 'alias_name', unique=True),
+    )
 
 class Week(Base):
     __tablename__ = "weeks"

@@ -89,11 +89,15 @@ def get_current_week(db: Session = Depends(get_db)):
     """Get the current active week"""
     today = date.today()
     
-    # Find the week that contains today's date
-    current_week = db.query(Week).filter(
-        Week.start_date <= today,
-        Week.end_date >= today
-    ).first()
+    # First, try to find the active week
+    current_week = db.query(Week).filter(Week.status == "Active").first()
+    
+    if not current_week:
+        # If no active week, find the week that contains today's date
+        current_week = db.query(Week).filter(
+            Week.start_date <= today,
+            Week.end_date >= today
+        ).first()
     
     if not current_week:
         # If no current week, find the next upcoming week

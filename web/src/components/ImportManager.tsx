@@ -64,7 +64,7 @@ interface RecentActivity {
 
 export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string }) {
   const searchParams = useSearchParams()
-  const section = searchParams.get('section')
+  const section = searchParams?.get('section')
   
   const [history, setHistory] = useState<RecentActivity[]>([])
   const [weeks, setWeeks] = useState<Week[]>([])

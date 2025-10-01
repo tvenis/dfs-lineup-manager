@@ -6,7 +6,7 @@ import { Suspense } from "react";
 
 function BuilderPageContent() {
   const searchParams = useSearchParams();
-  const lineupId = searchParams.get('lineupId') || undefined;
+  const lineupId = searchParams?.get('lineupId') || undefined;
   
   return <LineupBuilder lineupId={lineupId} />;
 }

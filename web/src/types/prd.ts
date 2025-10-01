@@ -96,6 +96,14 @@ export interface Player {
   updated_at?: string;
 }
 
+export interface PlayerNameAlias {
+  id: number;
+  playerDkId: number;
+  alias_name: string;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface Week {
   id: number;  // Updated to Integer
   week_number: number;

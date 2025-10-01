@@ -68,6 +68,24 @@ class Player(PlayerBase):
     class Config:
         from_attributes = True
 
+class PlayerNameAliasBase(BaseModel):
+    playerDkId: int = Field(..., description="DraftKings player ID (foreign key)")
+    alias_name: str = Field(..., min_length=1, max_length=100, description="Alternative name or nickname for the player")
+
+class PlayerNameAliasCreate(PlayerNameAliasBase):
+    pass
+
+class PlayerNameAliasUpdate(BaseModel):
+    alias_name: Optional[str] = Field(None, min_length=1, max_length=100, description="Alternative name or nickname for the player")
+
+class PlayerNameAlias(PlayerNameAliasBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
 class WeekBase(BaseModel):
     week_number: int = Field(..., ge=1, le=18)  # Week 1-18 (or more for playoffs)
     year: int = Field(..., ge=2020, le=2030)  # Reasonable year range

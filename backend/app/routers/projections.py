@@ -16,7 +16,7 @@ import logging
 from pathlib import Path
 
 from app.database import get_db
-from app.models import Player, Team, PlayerPoolEntry, Week, Projection
+from app.models import Player, Team, PlayerPoolEntry, Week, Projection, PlayerNameAlias
 from app.schemas import ProjectionImportRequest, ProjectionImportResponse, ProjectionCreate
 from app.services.activity_logging import ActivityLoggingService
 from app.utils.name_normalization import normalize_for_matching
@@ -597,6 +597,23 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
                 'team': p.team,
             }
             for p in name_only_list
+        ]
+
+    # 10. Alias matching as final fallback
+    alias_matches = db.query(Player).join(PlayerNameAlias).filter(
+        func.lower(PlayerNameAlias.alias_name) == name.lower()
+    ).all()
+    if len(alias_matches) == 1:
+        return alias_matches[0], 'alias', []
+    if len(alias_matches) > 1:
+        return None, 'ambiguous_alias', [
+            {
+                'playerDkId': p.playerDkId,
+                'name': p.displayName,
+                'position': p.position,
+                'team': p.team,
+            }
+            for p in alias_matches
         ]
 
     return None, 'none', []
