@@ -1034,10 +1034,11 @@ def parse_ownership_csv_data(csv_text: str, projection_source: str) -> List[Dict
     for i, row in enumerate(reader, start=1):
         name = get_val(row, ['player', 'PLAYER'])
         position = get_val(row, ['pos', 'POS', 'position', 'POSITION'])
+        team = get_val(row, ['team', 'TEAM'])
         ownership_raw = get_val(row, ['rst%', 'rst', 'ownership', 'RST%'])
         
         if i <= 3:  # Debug first few rows
-            print(f"DEBUG: Row {i+1} - name='{name}', position='{position}', ownership_raw='{ownership_raw}'")
+            print(f"DEBUG: Row {i+1} - name='{name}', position='{position}', team='{team}', ownership_raw='{ownership_raw}'")
             print(f"DEBUG: Row {i+1} - full row keys: {list(row.keys())}")
         
         if not name:
@@ -1064,6 +1065,8 @@ def parse_ownership_csv_data(csv_text: str, projection_source: str) -> List[Dict
 
         players.append({
             'name': name,
+            'position': position,
+            'team': team,
             'ownership': ownership,
             'source': projection_source
         })
@@ -1086,10 +1089,19 @@ def process_ownership_projections(db: Session, week_id: int, projection_source: 
 
     for i, player_data in enumerate(csv_data):
         try:
-            # Use existing player matching service
+            # Use existing player matching service with team and position context
             matched_player, confidence, possible_matches = find_player_match(
-                db, player_data['name'], '', ''
+                db, player_data['name'], player_data.get('team', ''), player_data.get('position', '')
             )
+            
+            if i < 3:  # Debug first few matches
+                print(f"DEBUG: Matching '{player_data['name']}' ({player_data.get('team', '')}, {player_data.get('position', '')}) -> {confidence}")
+                if matched_player:
+                    print(f"DEBUG: Matched to {matched_player.displayName} ({matched_player.team}, {matched_player.position})")
+                else:
+                    print(f"DEBUG: No match found")
+                    if possible_matches:
+                        print(f"DEBUG: Possible matches: {[m['name'] for m in possible_matches]}")
             
             if matched_player:
                 successful_matches += 1
