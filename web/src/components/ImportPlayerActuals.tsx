@@ -7,7 +7,7 @@ import { Label } from './ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Alert, AlertDescription } from './ui/alert'
 import { Badge } from './ui/badge'
-import { Upload, FileText, RefreshCw } from 'lucide-react'
+import { Upload, FileText, RefreshCw, Database, CheckCircle } from 'lucide-react'
 import { buildApiUrl } from '@/config/api'
 import { ImportResultDialog } from './ImportResultDialog'
 
@@ -82,6 +82,10 @@ export function ImportPlayerActuals({ }: ImportPlayerActualsProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
+  
+  // NFLVerse import state
+  const [isNflverseLoading, setIsNflverseLoading] = useState(false)
+  const [nflverseResult, setNflverseResult] = useState<any>(null)
 
   // Fetch weeks and players on component mount
   useEffect(() => {
@@ -300,17 +304,184 @@ export function ImportPlayerActuals({ }: ImportPlayerActualsProps) {
     }
   }
 
+  const handleNflverseImport = async () => {
+    if (!selectedWeek) return
+    
+    setIsNflverseLoading(true)
+    setNflverseResult(null)
+    
+    try {
+      const week = weeks.find(w => w.id.toString() === selectedWeek)
+      if (!week) {
+        alert('Selected week not found')
+        return
+      }
+      
+      const response = await fetch(buildApiUrl('/api/actuals/import-nflverse'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          week_id: week.id,
+          season: week.year,
+          week_number: week.week_number,
+          season_type: 'REG',
+          auto_import: false // Get data for review first
+        })
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || 'Failed to import from NFLVerse')
+      }
+      
+      const data = await response.json()
+      setNflverseResult(data)
+      
+      // Convert to matched players format and navigate to review
+      const matched: MatchedPlayer[] = data.matched_players.map((p: any, index: number) => ({
+        name: p.name,
+        team: p.team,
+        position: p.position,
+        csvIndex: index,
+        matchedPlayerId: p.playerDkId,
+        matchConfidence: p.match_confidence,
+        // Stats
+        completions: p.completions,
+        attempts: p.attempts,
+        pass_yds: p.pass_yds,
+        pass_tds: p.pass_tds,
+        interceptions: p.interceptions,
+        rush_att: p.rush_att,
+        rush_yds: p.rush_yds,
+        rush_tds: p.rush_tds,
+        rec_tgt: p.rec_tgt,
+        receptions: p.receptions,
+        rec_yds: p.rec_yds,
+        rec_tds: p.rec_tds,
+        fumbles_lost: p.fumbles_lost,
+        total_tds: p.total_tds,
+        two_pt_md: p.two_pt_md,
+        two_pt_pass: p.two_pt_pass,
+        dk_actuals: p.dk_actuals,
+        vbd: p.vbd,
+        pos_rank: p.pos_rank,
+        ov_rank: p.ov_rank
+      }))
+      
+      const reviewData = {
+        matchedPlayers: matched,
+        importData: {
+          week: selectedWeek,
+          csvFileName: 'NFLVerse Import',
+          csvData: matched
+        }
+      }
+      
+      sessionStorage.setItem('importActualsReviewData', JSON.stringify(reviewData))
+      router.push('/import/actuals-review')
+      
+    } catch (error) {
+      console.error('NFLVerse import error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to import from NFLVerse')
+    } finally {
+      setIsNflverseLoading(false)
+    }
+  }
+
   const getWeekLabel = (week: Week) => {
     return `Week ${week.week_number} (${week.year}) - ${week.status}`
   }
 
   return (
     <div className="space-y-6">
+      {/* NFLVerse Import Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Import from NFLVerse
+          </CardTitle>
+          <CardDescription>
+            Automatically fetch actual player stats from NFLVerse (nflverse.com) for the selected week.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Week Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="nflverse-week-select">Select Week</Label>
+            <Select value={selectedWeek} onValueChange={setSelectedWeek}>
+              <SelectTrigger id="nflverse-week-select">
+                <SelectValue placeholder="Select a week" />
+              </SelectTrigger>
+              <SelectContent>
+                {weeks.map((week) => (
+                  <SelectItem key={week.id} value={week.id.toString()}>
+                    {getWeekLabel(week)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Import Button */}
+          <Button
+            onClick={handleNflverseImport}
+            disabled={!selectedWeek || isNflverseLoading}
+            className="w-full"
+            variant="default"
+          >
+            {isNflverseLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Fetching from NFLVerse...
+              </>
+            ) : (
+              <>
+                <Database className="mr-2 h-4 w-4" />
+                Import from NFLVerse
+              </>
+            )}
+          </Button>
+
+          {/* Success Message */}
+          {nflverseResult && (
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription>
+                <div className="space-y-1">
+                  <p className="font-medium text-green-900">Successfully fetched data from NFLVerse!</p>
+                  <p className="text-sm text-green-700">
+                    {nflverseResult.total_nflverse_players} players found,{' '}
+                    {nflverseResult.matched_players?.length || 0} matched.
+                  </p>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Info Alert */}
+          <Alert>
+            <AlertDescription>
+              <div className="space-y-2">
+                <p className="font-medium">How it works:</p>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Automatically fetches real player stats from nflverse.com</li>
+                  <li>Matches players with your DraftKings player database</li>
+                  <li>Calculates DraftKings fantasy points automatically</li>
+                  <li>Takes you to review page before importing</li>
+                </ul>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+
+      {/* CSV Import Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Import Player Actuals
+            Import Player Actuals from CSV
           </CardTitle>
           <CardDescription>
             Upload a CSV file with player actual performance data for the selected week.

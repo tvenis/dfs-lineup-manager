@@ -10,3 +10,6 @@ pandas==2.2.3
 psycopg[binary]==3.2.10
 openai>=1.50.0
 firecrawl-py>=1.0.0
+nflreadpy>=0.1.3
+polars>=1.33.0
+pyarrow>=21.0.0

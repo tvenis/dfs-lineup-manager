@@ -166,6 +166,13 @@ export default function App({ children }: { children: React.ReactNode }) {
       icon: Trophy,
       href: "/import/contests",
     },
+    {
+      id: "player-actuals",
+      label: "Player Actuals",
+      description: "Import actual player stats from NFLVerse",
+      icon: Database,
+      href: "/import/player-actuals",
+    },
   ];
 
   return (

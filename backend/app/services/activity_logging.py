@@ -145,7 +145,7 @@ class ActivityLoggingService:
         Convenience method for logging import activities.
         
         Args:
-            import_type: Type of import ('player-pool', 'projections', 'odds-api', 'contests', 'actuals', 'ownership')
+            import_type: Type of import ('player-pool', 'projections', 'odds-api', 'contests', 'player-actuals', 'ownership')
             file_type: Type of file ('API', 'CSV', 'JSON', 'XML')
             week_id: Week ID
             records_added: Number of records added
