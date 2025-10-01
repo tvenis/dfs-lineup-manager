@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 import httpx
@@ -284,6 +284,7 @@ async def import_participants(
 async def import_events(
     sport: str,
     request: dict,
+    http_request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -299,6 +300,10 @@ async def import_events(
     """
     import time
     start_time = time.perf_counter()
+    
+    # Extract client IP and User-Agent
+    client_ip = http_request.client.host if http_request.client else None
+    user_agent = http_request.headers.get("user-agent")
     
     week_id = request.get("week_id")
     
@@ -454,7 +459,9 @@ async def import_events(
                     "regions": regions,
                     "markets": markets,
                     "bookmakers": bookmakers
-                }
+                },
+                ip_address=client_ip,
+                user_agent=user_agent
             )
             print(f"✅ Successfully logged odds-api events import activity in {duration_ms}ms")
         except Exception as e:
@@ -482,6 +489,7 @@ async def import_events(
 async def import_odds(
     sport: str,
     request: dict,
+    http_request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -497,6 +505,10 @@ async def import_odds(
     """
     import time
     start_time = time.perf_counter()
+    
+    # Extract client IP and User-Agent
+    client_ip = http_request.client.host if http_request.client else None
+    user_agent = http_request.headers.get("user-agent")
     
     week_id = request.get("week_id")
     
@@ -665,7 +677,9 @@ async def import_odds(
                     "regions": regions,
                     "markets": markets,
                     "bookmakers": bookmakers
-                }
+                },
+                ip_address=client_ip,
+                user_agent=user_agent
             )
             print(f"✅ Successfully logged odds-api odds import activity in {duration_ms}ms")
         except Exception as e:
@@ -708,6 +722,7 @@ async def get_available_sports():
 async def import_player_props(
     sport: str,
     request: dict,
+    http_request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -718,6 +733,10 @@ async def import_player_props(
     """
     import time
     start_time = time.perf_counter()
+    
+    # Extract client IP and User-Agent
+    client_ip = http_request.client.host if http_request.client else None
+    user_agent = http_request.headers.get("user-agent")
     
     week_id = request.get("week_id")
     # Accept single or multiple markets
@@ -1004,7 +1023,9 @@ async def import_player_props(
                     "bookmaker": bookmakers,
                     "regions": regions,
                     "markets": market_list,
-                }
+                },
+                ip_address=client_ip,
+                user_agent=user_agent
             )
             print(f"✅ Successfully logged odds-api player-props import activity in {duration_ms}ms")
         except Exception as e:
@@ -1045,7 +1066,9 @@ async def import_player_props(
                     "error_type": type(e).__name__,
                     "stage": "api_fetch",
                     "event_id": event_id if event_id else "All"
-                }
+                },
+                ip_address=client_ip,
+                user_agent=user_agent
             )
             print(f"❌ Player props import failed: {str(e)}")
         except Exception as log_error:

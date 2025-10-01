@@ -3,7 +3,7 @@ Contest Import API Router
 Handles endpoints for importing DraftKings contest results from CSV with a review step
 """
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Set
 from datetime import datetime
@@ -276,6 +276,7 @@ async def get_active_completed_weeks(db: Session = Depends(get_db)):
 
 @router.post("/parse")
 async def parse_contests_csv(
+    request: Request,
     file: UploadFile = File(...),
     week_id: int = Form(...),
     default_lineup_id: str = Form(None),
@@ -290,6 +291,10 @@ async def parse_contests_csv(
 
     import time
     start_time = time.perf_counter()
+    
+    # Extract client IP and User-Agent
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
 
     try:
         csv_text = (await file.read()).decode('utf-8')
@@ -312,7 +317,9 @@ async def parse_contests_csv(
                 operation_status='failed',
                 duration_ms=duration_ms,
                 errors=[f"File read error: {str(e)}"],
-                details={"error_type": type(e).__name__, "stage": "file_read"}
+                details={"error_type": type(e).__name__, "stage": "file_read"},
+                ip_address=client_ip,
+                user_agent=user_agent
             )
         except Exception as log_error:
             print(f"⚠️ Failed to log error activity: {log_error}")
@@ -562,7 +569,9 @@ async def parse_contests_csv(
                 'total_processed': len(staged),
                 'created': created,
                 'updated': updated,
-            }
+            },
+            ip_address=client_ip,
+            user_agent=user_agent
         )
         
         print(f"✅ Contest import completed in {duration_ms}ms: {created} created, {updated} updated")
@@ -595,7 +604,9 @@ async def parse_contests_csv(
                 operation_status='failed',
                 duration_ms=duration_ms,
                 errors=[str(e)],
-                details={"error_type": type(e).__name__, "stage": "processing"}
+                details={"error_type": type(e).__name__, "stage": "processing"},
+                ip_address=client_ip,
+                user_agent=user_agent
             )
             print(f"❌ Contest import failed after {duration_ms}ms: {str(e)}")
         except Exception as log_error:
@@ -604,7 +615,11 @@ async def parse_contests_csv(
 
 
 @router.post("/commit")
-async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)):
+async def commit_contests(payload: Dict[str, Any], request: Request, db: Session = Depends(get_db)):
+    # Extract client IP and User-Agent
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    
     try:
         week_id = int(payload.get("week_id"))
         rows: List[Dict[str, Any]] = payload.get("rows", [])
@@ -761,7 +776,9 @@ async def commit_contests(payload: Dict[str, Any], db: Session = Depends(get_db)
                 'total_processed': len(rows),
                 'created': created,
                 'updated': updated,
-            }
+            },
+            ip_address=client_ip,
+            user_agent=user_agent
         )
 
         return {

@@ -3,7 +3,7 @@ DraftKings Import API Router
 Handles API endpoints for importing player pool data from DraftKings
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from app.schemas import DraftKingsImportRequest, DraftKingsImportResponse, RecentActivity
 from app.services.draftkings_import import DraftKingsImportService
 from app.models import RecentActivity
@@ -40,10 +40,14 @@ async def get_active_upcoming_weeks(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/import")
-async def import_player_pool(request: DraftKingsImportRequest, db: Session = Depends(get_db)):
+async def import_player_pool(request: DraftKingsImportRequest, http_request: Request, db: Session = Depends(get_db)):
     """Import player pool from DraftKings API"""
     import time
     start_time = time.perf_counter()
+    
+    # Extract client IP and User-Agent
+    client_ip = http_request.client.host if http_request.client else None
+    user_agent = http_request.headers.get("user-agent")
     
     try:
         import logging
@@ -83,7 +87,9 @@ async def import_player_pool(request: DraftKingsImportRequest, db: Session = Dep
                     "entries_added": result.entries_added,
                     "entries_updated": result.entries_updated,
                     "total_processed": result.total_processed
-                }
+                },
+                ip_address=client_ip,
+                user_agent=user_agent
             )
             logger.info(f"✅ Import completed successfully in {duration_ms}ms: {result.players_added} players added, {result.players_updated} updated")
         except Exception as log_error:
@@ -118,7 +124,9 @@ async def import_player_pool(request: DraftKingsImportRequest, db: Session = Dep
                 operation_status="failed",
                 duration_ms=duration_ms,
                 errors=[str(e)],
-                details={"error_type": type(e).__name__, "stage": "api_fetch"}
+                details={"error_type": type(e).__name__, "stage": "api_fetch"},
+                ip_address=client_ip,
+                user_agent=user_agent
             )
             logger.info(f"❌ Import failed after {duration_ms}ms")
         except Exception as log_error:

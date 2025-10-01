@@ -3,7 +3,7 @@ Projection Import API Router
 Handles API endpoints for importing player projections from CSV files
 """
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 from typing import List, Dict, Any
@@ -60,12 +60,17 @@ async def get_active_upcoming_weeks(db: Session = Depends(get_db)):
 
 @router.post("/import", response_model=ProjectionImportResponse)
 async def import_projections(
+    request: Request,
     file: UploadFile = File(...),
     week_id: int = Form(...),
     projection_source: str = Form(...),
     db: Session = Depends(get_db)
 ):
     """Import player projections from CSV file with automatic player matching"""
+    
+    # Extract client IP and User-Agent
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
     
     # Start timing
     start_time = time.perf_counter()
@@ -106,7 +111,7 @@ async def import_projections(
         print(f"✅ Import completed in {duration_ms}ms")
         
         # Log activity with duration
-        log_import_activity(db, week_id, file.filename, result, projection_source, duration_ms=duration_ms)
+        log_import_activity(db, week_id, file.filename, result, projection_source, duration_ms=duration_ms, client_ip=client_ip, user_agent=user_agent)
         
         return result
     except Exception as e:
@@ -131,7 +136,9 @@ async def import_projections(
                 operation_status="failed",
                 duration_ms=duration_ms,
                 errors=[str(e)],
-                details={"error_type": type(e).__name__, "stage": "processing"}
+                details={"error_type": type(e).__name__, "stage": "processing"},
+                ip_address=client_ip,
+                user_agent=user_agent
             )
             print(f"❌ Import failed after {duration_ms}ms: {str(e)}")
         except Exception as log_error:
@@ -141,12 +148,17 @@ async def import_projections(
 
 @router.post("/import-ownership", response_model=ProjectionImportResponse)
 async def import_ownership_projections(
+    request: Request,
     file: UploadFile = File(...),
     week_id: int = Form(...),
     projection_source: str = Form(...),
     db: Session = Depends(get_db)
 ):
     """Import ownership projections from CSV file with automatic player matching"""
+    
+    # Extract client IP and User-Agent
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
     
     # Start timing
     start_time = time.perf_counter()
@@ -187,7 +199,7 @@ async def import_ownership_projections(
         print(f"✅ Ownership import completed in {duration_ms}ms")
         
         # Log activity with duration
-        log_import_activity(db, week_id, file.filename, result, projection_source, is_ownership=True, duration_ms=duration_ms)
+        log_import_activity(db, week_id, file.filename, result, projection_source, is_ownership=True, duration_ms=duration_ms, client_ip=client_ip, user_agent=user_agent)
         
         return result
     except Exception as e:
@@ -212,7 +224,9 @@ async def import_ownership_projections(
                 operation_status="failed",
                 duration_ms=duration_ms,
                 errors=[str(e)],
-                details={"error_type": type(e).__name__, "stage": "processing"}
+                details={"error_type": type(e).__name__, "stage": "processing"},
+                ip_address=client_ip,
+                user_agent=user_agent
             )
             print(f"❌ Ownership import failed after {duration_ms}ms: {str(e)}")
         except Exception as log_error:
@@ -910,7 +924,7 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
         unmatched_players=unmatched_players
     )
 
-def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, projection_source: str = "Custom Projections", is_ownership: bool = False, duration_ms: int = None):
+def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, projection_source: str = "Custom Projections", is_ownership: bool = False, duration_ms: int = None, client_ip: str = None, user_agent: str = None):
     """Log import activity to recent_activity table using ActivityLoggingService"""
     try:
         # Determine import type based on ownership flag
@@ -937,7 +951,9 @@ def log_import_activity(db: Session, week_id: int, filename: str, result: Projec
                 "failed_matches": result.failed_matches,
                 "total_processed": result.total_processed,
                 "player_pool_updated": result.player_pool_updated
-            }
+            },
+            ip_address=client_ip,
+            user_agent=user_agent
         )
         duration_str = f" in {duration_ms}ms" if duration_ms else ""
         print(f"✅ Successfully logged {import_type}-import activity: {filename}{duration_str}")
