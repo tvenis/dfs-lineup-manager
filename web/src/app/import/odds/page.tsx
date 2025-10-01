@@ -532,9 +532,6 @@ export default function OddsImportPage() {
                 <div>
                   <h4 className="font-medium flex items-center gap-2">
                     Odds
-                    <Badge variant="secondary" className="text-xs">
-                      New
-                    </Badge>
                   </h4>
                   <p className="text-sm text-muted-foreground">
                     Import NFL odds data to update game records with money lines, spreads, and totals
