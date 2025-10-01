@@ -10,6 +10,7 @@ from typing import List, Dict, Any
 import csv
 import io
 import json
+import time
 from datetime import datetime
 import logging
 from pathlib import Path
@@ -65,6 +66,9 @@ async def import_projections(
 ):
     """Import player projections from CSV file with automatic player matching"""
     
+    # Start timing
+    start_time = time.perf_counter()
+    
     print(f"DEBUG: Import request received - File: {file.filename}, Week: {week_id}, Source: {projection_source}")
     
     # Validate file type
@@ -95,8 +99,13 @@ async def import_projections(
     try:
         result = process_projections(db, week_id, projection_source, csv_data)
         
-        # Log activity
-        log_import_activity(db, week_id, file.filename, result, projection_source)
+        # Calculate duration in milliseconds
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        print(f"✅ Import completed in {duration_ms}ms")
+        
+        # Log activity with duration
+        log_import_activity(db, week_id, file.filename, result, projection_source, duration_ms=duration_ms)
         
         return result
     except Exception as e:
@@ -110,6 +119,9 @@ async def import_ownership_projections(
     db: Session = Depends(get_db)
 ):
     """Import ownership projections from CSV file with automatic player matching"""
+    
+    # Start timing
+    start_time = time.perf_counter()
     
     print(f"DEBUG: Ownership import request received - File: {file.filename}, Week: {week_id}, Source: {projection_source}")
     
@@ -141,8 +153,13 @@ async def import_ownership_projections(
     try:
         result = process_ownership_projections(db, week_id, projection_source, csv_data)
         
-        # Log activity
-        log_import_activity(db, week_id, file.filename, result, projection_source, is_ownership=True)
+        # Calculate duration in milliseconds
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        print(f"✅ Ownership import completed in {duration_ms}ms")
+        
+        # Log activity with duration
+        log_import_activity(db, week_id, file.filename, result, projection_source, is_ownership=True, duration_ms=duration_ms)
         
         return result
     except Exception as e:
@@ -682,7 +699,7 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
         unmatched_players=unmatched_players
     )
 
-def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, projection_source: str = "Custom Projections", is_ownership: bool = False):
+def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, projection_source: str = "Custom Projections", is_ownership: bool = False, duration_ms: int = None):
     """Log import activity to recent_activity table using ActivityLoggingService"""
     try:
         # Determine import type based on ownership flag
@@ -702,6 +719,7 @@ def log_import_activity(db: Session, week_id: int, filename: str, result: Projec
             import_source=projection_source,
             draft_group=None,
             operation_status="completed",
+            duration_ms=duration_ms,
             errors=result.errors if result.errors else None,
             details={
                 "successful_matches": result.successful_matches,
@@ -710,7 +728,8 @@ def log_import_activity(db: Session, week_id: int, filename: str, result: Projec
                 "player_pool_updated": result.player_pool_updated
             }
         )
-        print(f"✅ Successfully logged {import_type}-import activity: {filename}")
+        duration_str = f" in {duration_ms}ms" if duration_ms else ""
+        print(f"✅ Successfully logged {import_type}-import activity: {filename}{duration_str}")
     except Exception as e:
         print(f"❌ Failed to log import activity: {str(e)}")
         # Don't raise - logging failure shouldn't break the import

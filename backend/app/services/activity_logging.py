@@ -46,8 +46,7 @@ class ActivityLoggingService:
         ip_address: Optional[str] = None,
         session_id: Optional[str] = None,
         user_agent: Optional[str] = None,
-        parent_activity_id: Optional[int] = None,
-        user_name: Optional[str] = None
+        parent_activity_id: Optional[int] = None
     ) -> RecentActivity:
         """
         Log a new activity with comprehensive tracking.
@@ -73,7 +72,6 @@ class ActivityLoggingService:
             session_id: Session ID for tracking
             user_agent: User agent string
             parent_activity_id: Parent activity for chained operations
-            user_name: Legacy user name field
         
         Returns:
             Created RecentActivity record
@@ -114,8 +112,7 @@ class ActivityLoggingService:
                 session_id=session_id,
                 user_agent=user_agent,
                 parent_activity_id=parent_activity_id,
-                details=details,
-                user_name=user_name
+                details=details
             )
             
             self.db.add(activity)
