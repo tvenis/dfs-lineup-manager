@@ -101,10 +101,16 @@ export default function OddsImportPage() {
       const selectedWeek = weeks.find(w => w.id === selectedWeekId);
       if (selectedWeek) {
         if (selectedWeek.start_date) {
-          setOddsStartTime(new Date(selectedWeek.start_date));
+          // Parse date as UTC to avoid timezone shifts
+          const dateStr = selectedWeek.start_date;
+          const [year, month, day] = dateStr.split('-').map(Number);
+          setOddsStartTime(new Date(year, month - 1, day));
         }
         if (selectedWeek.end_date) {
-          setOddsEndTime(new Date(selectedWeek.end_date));
+          // Parse date as UTC to avoid timezone shifts
+          const dateStr = selectedWeek.end_date;
+          const [year, month, day] = dateStr.split('-').map(Number);
+          setOddsEndTime(new Date(year, month - 1, day));
         }
       }
       
