@@ -9,7 +9,7 @@ import { Label } from "./ui/label";
 import { ArrowLeft, Loader2, Edit, Trash2, MessageSquare, Save, X, Plus, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Separator } from "./ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+// import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"; // Temporarily disabled
 import { PlayerService } from "@/lib/playerService";
 import { CommentService, Comment } from "@/lib/commentService";
 import { Player, PlayerNameAlias } from "@/types/prd";
@@ -363,40 +363,76 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const currentWeekProj = Math.random() * 10 + 15;
   const status = 'active';
   
+  // Debug logging (can be removed in production)
+  // console.log('PlayerProfile rendering - playerData:', playerData);
+  // console.log('PlayerProfile rendering - aliases:', aliases);
+  // console.log('PlayerProfile rendering - isAliasModalOpen:', isAliasModalOpen);
+
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
+      {/* Back Button */}
+      <div className="mb-4">
         <Link href="/profile">
           <Button variant="outline" size="sm" className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back to Player Profile
           </Button>
         </Link>
-        <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12">
-            {playerData.playerImage160 ? (
-              <img
-                src={playerData.playerImage160}
-                alt={playerData.displayName}
-                className="w-full h-full object-cover rounded-full"
-              />
-            ) : (
-              <AvatarFallback className="text-lg">
-                {playerData.displayName ? playerData.displayName.split(' ').map((n: string) => n[0]).join('') : 'N/A'}
-              </AvatarFallback>
-            )}
-          </Avatar>
-          <div>
-            <h1 className="text-2xl">{playerData.displayName || 'Unknown Player'}</h1>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <span>{playerData.team || 'N/A'}</span>
-              <span>•</span>
-              <span>{playerData.position || 'N/A'}</span>
+      </div>
+
+      {/* Player Card */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-6">
+            <Avatar className="h-20 w-20">
+              {playerData.playerImage160 ? (
+                <img
+                  src={playerData.playerImage160}
+                  alt={playerData.displayName}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <AvatarFallback className="text-2xl">
+                  {playerData.displayName ? playerData.displayName.split(' ').map((n: string) => n[0]).join('') : 'N/A'}
+                </AvatarFallback>
+              )}
+            </Avatar>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold mb-2">{playerData.displayName || 'Unknown Player'}</h1>
+              <div className="flex items-center gap-4 text-lg text-muted-foreground mb-3">
+                <span className="font-medium">{playerData.team || 'N/A'}</span>
+                <span>•</span>
+                <span className="font-medium">{playerData.position || 'N/A'}</span>
+              </div>
+              
+              {/* Aliases - Small and subtle */}
+              {aliases.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Also known as:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {aliases.map((alias) => (
+                      <div
+                        key={alias.id}
+                        className="flex items-center gap-1 bg-gray-100 border border-gray-200 rounded px-2 py-1"
+                      >
+                        <span className="text-xs text-gray-700">{alias.alias_name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteAlias(alias.id)}
+                          className="h-4 w-4 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
@@ -603,6 +639,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              {/* Quick Actions section */}
               <Button variant="outline" className="w-full justify-start">
                 View Game Log
               </Button>
@@ -613,21 +650,25 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                 Injury History
               </Button>
               
-              <Dialog open={isAliasModalOpen} onOpenChange={setIsAliasModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Add Player Alias
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Player Alias</DialogTitle>
-                    <DialogDescription>
-                      Add an alternative name or nickname for {playerData?.displayName} that can be used for matching.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
+              {/* Add Player Alias button */}
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => setIsAliasModalOpen(true)}
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add Player Alias
+              </Button>
+              
+              {isAliasModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+                  <div className="bg-white rounded-lg p-6 max-w-md w-full space-y-4">
+                    <div>
+                      <h2 className="text-lg font-bold">Add Player Alias</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Add an alternative name or nickname for {playerData?.displayName} that can be used for matching.
+                      </p>
+                    </div>
                     <div>
                       <Label htmlFor="alias-name">Alias Name</Label>
                       <Input
@@ -658,34 +699,34 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                         </div>
                       </div>
                     )}
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsAliasModalOpen(false);
+                          setNewAliasName('');
+                        }}
+                        disabled={isCreatingAlias}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={createAlias}
+                        disabled={!newAliasName.trim() || isCreatingAlias}
+                      >
+                        {isCreatingAlias ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          'Create Alias'
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setIsAliasModalOpen(false);
-                        setNewAliasName('');
-                      }}
-                      disabled={isCreatingAlias}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={createAlias}
-                      disabled={!newAliasName.trim() || isCreatingAlias}
-                    >
-                      {isCreatingAlias ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        'Create Alias'
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                </div>
+              )}
               
               <Button 
                 variant={playerData?.hidden ? "default" : "destructive"} 

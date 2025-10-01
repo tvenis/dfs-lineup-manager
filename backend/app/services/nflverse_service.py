@@ -269,8 +269,17 @@ class NFLVerseService:
         confidence_map = {
             'exact': 'exact',
             'exact_no_team': 'high',
+            'exact_normalized': 'high',
+            'exact_normalized_no_team': 'high',
             'partial': 'medium',
             'partial_no_team': 'medium',
+            'partial_normalized': 'medium',
+            'suffix_agnostic': 'high',
+            'suffix_agnostic_with_team': 'high',
+            'fallback_first_last': 'low',
+            'fallback_normalized': 'low',
+            'name_only': 'low',
+            'alias': 'high',  # Alias matches should be treated as high confidence
             'none': 'none'
         }
         
