@@ -86,10 +86,22 @@ export default function OddsImportPage() {
     fetchWeeks();
   }, []);
 
-  // When week changes, fetch games for the week to populate the Game picker
+  // When week changes, fetch games and set date range from week data
   useEffect(() => {
     const fetchGamesForWeek = async () => {
       if (!selectedWeekId) return;
+      
+      // Set start and end dates from the selected week
+      const selectedWeek = weeks.find(w => w.id === selectedWeekId);
+      if (selectedWeek) {
+        if (selectedWeek.start_date) {
+          setOddsStartTime(new Date(selectedWeek.start_date));
+        }
+        if (selectedWeek.end_date) {
+          setOddsEndTime(new Date(selectedWeek.end_date));
+        }
+      }
+      
       try {
         const res = await fetch(`http://localhost:8000/api/games/week/${selectedWeekId}?future=true`);
         if (!res.ok) return;
@@ -114,7 +126,7 @@ export default function OddsImportPage() {
       }
     }
     fetchGamesForWeek();
-  }, [selectedWeekId]);
+  }, [selectedWeekId, weeks]);
 
 
   const handleOddsApiImport = async (endpoint: string) => {
