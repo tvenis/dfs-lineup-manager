@@ -965,6 +965,33 @@ async def import_player_props(
         raise
     except Exception as e:
         db.rollback()
+        
+        # Log failed import attempt
+        try:
+            service = ActivityLoggingService(db)
+            service.log_import_activity(
+                import_type="odds-api",
+                file_type="API",
+                week_id=week_id if week_id else 0,
+                records_added=0,
+                records_updated=0,
+                records_skipped=0,
+                records_failed=0,
+                file_name=f"player-props:{','.join(market_list) if market_list else 'unknown'}",
+                import_source="odds-api",
+                draft_group=None,
+                operation_status="failed",
+                errors=[str(e)],
+                details={
+                    "error_type": type(e).__name__,
+                    "stage": "api_fetch",
+                    "event_id": event_id if event_id else "All"
+                }
+            )
+            print(f"❌ Player props import failed: {str(e)}")
+        except Exception as log_error:
+            print(f"⚠️ Failed to log error activity: {log_error}")
+        
         raise HTTPException(status_code=500, detail=f"Failed to import player props: {str(e)}")
 
 @router.get("/activity")

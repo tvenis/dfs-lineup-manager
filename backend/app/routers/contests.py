@@ -288,20 +288,46 @@ async def parse_contests_csv(
     if not week:
         raise HTTPException(status_code=404, detail=f"Week {week_id} not found")
 
+    import time
+    start_time = time.perf_counter()
+
     try:
         csv_text = (await file.read()).decode('utf-8')
     except Exception as e:
+        # Log failed file read
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        try:
+            service = ActivityLoggingService(db)
+            service.log_import_activity(
+                import_type='contests',
+                file_type='CSV',
+                week_id=week_id,
+                records_added=0,
+                records_updated=0,
+                records_skipped=0,
+                records_failed=0,
+                file_name=file.filename,
+                import_source='csv',
+                operation_status='failed',
+                duration_ms=duration_ms,
+                errors=[f"File read error: {str(e)}"],
+                details={"error_type": type(e).__name__, "stage": "file_read"}
+            )
+        except Exception as log_error:
+            print(f"⚠️ Failed to log error activity: {log_error}")
         raise HTTPException(status_code=400, detail=f"Error reading file: {str(e)}")
 
-    reader = csv.DictReader(io.StringIO(csv_text))
-    if not reader.fieldnames:
-        raise HTTPException(status_code=400, detail="CSV has no header row")
+    try:
+        reader = csv.DictReader(io.StringIO(csv_text))
+        if not reader.fieldnames:
+            raise HTTPException(status_code=400, detail="CSV has no header row")
 
-    # Normalize headers to lowercase for mapping
-    header_map = { (h or '').strip().lower(): h for h in reader.fieldnames }
+        # Normalize headers to lowercase for mapping
+        header_map = { (h or '').strip().lower(): h for h in reader.fieldnames }
 
-    staged: List[Dict[str, Any]] = []
-    contest_keys: Set[str] = set()
+        staged: List[Dict[str, Any]] = []
+        contest_keys: Set[str] = set()
     for row in reader:
         # Map by provided spec names with variants
         entry_key_raw = _get_stripped(row, header_map, ["entry_key", "entry id", "entry key"]) or "0"
@@ -511,6 +537,10 @@ async def parse_contests_csv(
     
     db.commit()
     
+    # Calculate duration
+    end_time = time.perf_counter()
+    duration_ms = int((end_time - start_time) * 1000)
+    
     # Log activity using ActivityLoggingService
     service = ActivityLoggingService(db)
     service.log_import_activity(
@@ -525,6 +555,7 @@ async def parse_contests_csv(
         import_source='csv',
         draft_group='CONTEST_IMPORT',
         operation_status='completed' if len(errors) == 0 else 'partial',
+        duration_ms=duration_ms,
         errors=errors,
         details={
             'total_processed': len(staged),
@@ -533,12 +564,42 @@ async def parse_contests_csv(
         }
     )
     
-    return {
-        'total_processed': len(staged),
-        'created': created,
-        'updated': updated,
-        'errors': errors
-    }
+        print(f"✅ Contest import completed in {duration_ms}ms: {created} created, {updated} updated")
+        
+        return {
+            'total_processed': len(staged),
+            'created': created,
+            'updated': updated,
+            'errors': errors
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log failed import
+        db.rollback()
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        try:
+            service = ActivityLoggingService(db)
+            service.log_import_activity(
+                import_type='contests',
+                file_type='CSV',
+                week_id=week_id,
+                records_added=0,
+                records_updated=0,
+                records_skipped=0,
+                records_failed=0,
+                file_name=file.filename,
+                import_source='csv',
+                operation_status='failed',
+                duration_ms=duration_ms,
+                errors=[str(e)],
+                details={"error_type": type(e).__name__, "stage": "processing"}
+            )
+            print(f"❌ Contest import failed after {duration_ms}ms: {str(e)}")
+        except Exception as log_error:
+            print(f"⚠️ Failed to log error activity: {log_error}")
+        raise HTTPException(status_code=500, detail=f"Error processing contests: {str(e)}")
 
 
 @router.post("/commit")

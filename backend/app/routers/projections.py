@@ -109,6 +109,33 @@ async def import_projections(
         
         return result
     except Exception as e:
+        # Calculate duration even for failed imports
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        
+        # Log failed import attempt
+        try:
+            service = ActivityLoggingService(db)
+            service.log_import_activity(
+                import_type="projections",
+                file_type="CSV",
+                week_id=week_id,
+                records_added=0,
+                records_updated=0,
+                records_skipped=0,
+                records_failed=0,
+                file_name=file.filename,
+                import_source=projection_source,
+                draft_group=None,
+                operation_status="failed",
+                duration_ms=duration_ms,
+                errors=[str(e)],
+                details={"error_type": type(e).__name__, "stage": "processing"}
+            )
+            print(f"❌ Import failed after {duration_ms}ms: {str(e)}")
+        except Exception as log_error:
+            print(f"⚠️ Failed to log error activity: {log_error}")
+        
         raise HTTPException(status_code=500, detail=f"Error processing projections: {str(e)}")
 
 @router.post("/import-ownership", response_model=ProjectionImportResponse)
@@ -163,6 +190,33 @@ async def import_ownership_projections(
         
         return result
     except Exception as e:
+        # Calculate duration even for failed imports
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+        
+        # Log failed import attempt
+        try:
+            service = ActivityLoggingService(db)
+            service.log_import_activity(
+                import_type="ownership",
+                file_type="CSV",
+                week_id=week_id,
+                records_added=0,
+                records_updated=0,
+                records_skipped=0,
+                records_failed=0,
+                file_name=file.filename,
+                import_source=projection_source,
+                draft_group=None,
+                operation_status="failed",
+                duration_ms=duration_ms,
+                errors=[str(e)],
+                details={"error_type": type(e).__name__, "stage": "processing"}
+            )
+            print(f"❌ Ownership import failed after {duration_ms}ms: {str(e)}")
+        except Exception as log_error:
+            print(f"⚠️ Failed to log error activity: {log_error}")
+        
         raise HTTPException(status_code=500, detail=f"Error processing ownership projections: {str(e)}")
 
 def parse_csv_data(csv_text: str, projection_source: str) -> List[Dict[str, Any]]:
