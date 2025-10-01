@@ -205,46 +205,7 @@ export default function PlayerActualsImportPage() {
           </CardContent>
         </Card>
 
-        {/* Right Column - Manual CSV Upload */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Import from CSV
-            </CardTitle>
-            <CardDescription>
-              Or upload a CSV file with player actual performance data.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <Alert>
-              <Upload className="h-4 w-4" />
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p className="font-medium">CSV Import (Alternative)</p>
-                  <p className="text-sm">
-                    For CSV-based imports, you can still use the legacy import page. However, we recommend using NFLVerse for automatic, up-to-date stats.
-                  </p>
-                </div>
-              </AlertDescription>
-            </Alert>
-
-            <Alert>
-              <Database className="h-4 w-4" />
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p className="font-medium">Why NFLVerse?</p>
-                  <ul className="text-sm space-y-1 list-disc list-inside">
-                    <li>No manual CSV downloads required</li>
-                    <li>Always up-to-date official NFL stats</li>
-                    <li>Automatic DK points calculation</li>
-                    <li>Smart player matching (99%+ accuracy)</li>
-                  </ul>
-                </div>
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+        {/* Right Column intentionally left empty (CSV import deprecated) */}
       </div>
 
       {/* Activity Statistics */}
