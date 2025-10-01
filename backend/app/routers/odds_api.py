@@ -774,7 +774,8 @@ async def import_player_props(
 
         def strip_suffixes(name: str) -> str:
             suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
-            parts = [p for p in name.split() if p.lower().strip('.').strip(',') not in suffixes]
+            cleaned = name.replace('.', '').replace(',', ' ')
+            parts = [p for p in cleaned.split() if p.lower() not in suffixes]
             return " ".join(parts)
 
         def parse_first_last(name: str) -> tuple[str, str]:

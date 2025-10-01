@@ -380,11 +380,21 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
     position_upper = position.upper()
     team_upper = (team or '').upper()
 
+    # Helper to strip common suffixes in names for robust matching
+    def _strip_suffixes(text: str) -> str:
+        if not text:
+            return text
+        suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
+        parts = [p for p in text.replace(".", "").replace(",", "").split() if p.lower() not in suffixes]
+        return " ".join(parts)
+
+    name_clean = _strip_suffixes(name)
+
     if team_upper:
         # Exact match with team (case-insensitive for PostgreSQL compatibility)
         exact_with_team_list = db.query(Player).filter(
             and_(
-                func.lower(Player.displayName) == name.lower(),
+                func.lower(Player.displayName) == name_clean.lower(),
                 func.upper(Player.position) == position_upper,
                 func.upper(Player.team) == team_upper,
             )
@@ -405,7 +415,7 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
     # Exact match without team (name + position)
     exact_no_team_list = db.query(Player).filter(
         and_(
-            func.lower(Player.displayName) == name.lower(),
+            func.lower(Player.displayName) == name_clean.lower(),
             func.upper(Player.position) == position_upper,
         )
     ).all()
@@ -425,7 +435,7 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
     # Partial match with name and position
     partial_list = db.query(Player).filter(
         and_(
-            Player.displayName.ilike(f"%{name}%"),
+            Player.displayName.ilike(f"%{name_clean}%"),
             func.upper(Player.position) == position_upper,
         )
     ).all()
@@ -444,7 +454,7 @@ def find_player_match(db: Session, name: str, team: str, position: str) -> tuple
 
     # Name only match
     name_only_list = db.query(Player).filter(
-        Player.displayName.ilike(f"%{name}%")
+        Player.displayName.ilike(f"%{name_clean}%")
     ).all()
     if len(name_only_list) == 1:
         return name_only_list[0], 'name_only', []

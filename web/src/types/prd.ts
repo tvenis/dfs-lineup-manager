@@ -83,6 +83,7 @@ export interface Player {
   playerDkId: number;
   firstName: string;
   lastName: string;
+  suffix?: string;
   displayName: string;
   shortName?: string;
   position: string;

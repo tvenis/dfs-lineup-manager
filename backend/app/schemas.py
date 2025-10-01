@@ -36,6 +36,7 @@ class PlayerBase(BaseModel):
     playerDkId: int = Field(..., description="DraftKings player ID (unique key)")
     firstName: str = Field(..., min_length=1, max_length=100)
     lastName: str = Field(..., min_length=1, max_length=100)
+    suffix: Optional[str] = Field(None, max_length=20, description="Name suffix like Jr, Sr, II, III")
     displayName: str = Field(..., min_length=1, max_length=100)
     shortName: Optional[str] = Field(None, max_length=50)
     position: str = Field(..., min_length=1, max_length=10)  # 'QB' | 'RB' | 'WR' | 'TE' | 'DST'

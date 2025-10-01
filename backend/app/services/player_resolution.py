@@ -22,8 +22,14 @@ class PlayerResolutionService:
         if not text or not text.strip():
             return None, 'none', []
         
-        # Clean the text
-        text = text.strip()
+        # Clean the text and strip common suffixes for robust matching
+        def _strip_suffixes(s: str) -> str:
+            suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
+            cleaned = s.replace('.', '').replace(',', ' ').strip()
+            parts = [p for p in cleaned.split() if p.lower() not in suffixes]
+            return " ".join(parts)
+
+        text = _strip_suffixes(text.strip())
         
         # Try different matching strategies in order of confidence
         

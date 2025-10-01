@@ -92,6 +92,7 @@ class Player(Base):
     playerDkId = Column(Integer, primary_key=True)  # DraftKings player ID (unique key)
     firstName = Column(String(100), nullable=False)
     lastName = Column(String(100), nullable=False)
+    suffix = Column(String(20))  # Name suffix like Jr, Sr, II, III
     displayName = Column(String(100), nullable=False)
     shortName = Column(String(50))
     position = Column(String(10), nullable=False)  # 'QB' | 'RB' | 'WR' | 'TE' | 'DST'
