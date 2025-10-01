@@ -273,7 +273,7 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
                   All other columns will be ignored.
                 </p>
                 <p className="text-sm">
-                  <strong>Download CSV files:</strong> Visit winwithodds.com to download ownership CSV files.
+                  <strong>Download CSV files:</strong> Visit <a href="https://www.rotowire.com/daily/nfl/proj-roster-percent.php?site=DraftKings" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">RotoWire DraftKings Projected Ownership</a> to download ownership CSV files.
                 </p>
               </div>
             </AlertDescription>
