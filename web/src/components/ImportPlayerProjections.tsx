@@ -11,7 +11,7 @@ import { Upload, FileText, RefreshCw } from 'lucide-react'
 import { buildApiUrl } from '@/config/api'
 import { ImportResultDialog } from './ImportResultDialog'
 import { ActivityList } from './activity'
-import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy'
+import { useRecentActivity } from '@/hooks/useRecentActivity'
 
 interface ProjectionImportResponse {
   total_processed: number
@@ -111,14 +111,13 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
   } | null>(null)
   const [showResultDialog, setShowResultDialog] = useState(false)
 
-  // Use the legacy activity hook for projection activities
+  // Use the modern activity hook for projection activities
   const {
     activities: history,
     loading: activityLoading,
     error: activityError,
-    refresh: refreshActivity,
-    retry: retryActivity
-  } = useRecentActivityLegacy({
+    refresh: refreshActivity
+  } = useRecentActivity({
     importType: 'projections',
     limit: 10
     // No weekId filter - show all activities for this import type
@@ -620,7 +619,6 @@ export function ImportPlayerProjections({ onImportComplete }: ImportPlayerProjec
         error={activityError}
         emptyMessage="No recent projection import activity found."
         showFilters={false}
-        onRetry={retryActivity}
         onViewDetails={(activityId) => {
           console.log('View details for activity:', activityId);
         }}

@@ -13,7 +13,7 @@ import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
 import { ContestImportResultDialog } from '@/components/ContestImportResultDialog';
 import { ActivityList } from '@/components/activity';
-import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy';
+import { useRecentActivity } from '@/hooks/useRecentActivity';
 
 interface Lineup {
   id: string;
@@ -39,14 +39,13 @@ export default function ContestsImportPage() {
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [importResult, setImportResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
   
-  // Use the legacy activity hook for contest activities
+  // Use the modern activity hook for contest activities
   const {
     activities: history,
     loading: activityLoading,
     error: activityError,
-    refresh: refreshActivity,
-    retry: retryActivity
-  } = useRecentActivityLegacy({
+    refresh: refreshActivity
+  } = useRecentActivity({
     importType: 'contests',
     limit: 10
   });
@@ -531,7 +530,6 @@ export default function ContestsImportPage() {
         error={activityError}
         emptyMessage="No recent contest import activity found."
         showFilters={false}
-        onRetry={retryActivity}
         onViewDetails={(activityId) => {
           console.log('View details for activity:', activityId);
         }}

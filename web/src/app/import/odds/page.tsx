@@ -14,7 +14,7 @@ import { Upload, CheckCircle, RefreshCw, Globe, Calendar as CalendarIcon } from 
 import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
 import { ActivityList } from '@/components/activity';
-import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy';
+import { useRecentActivity } from '@/hooks/useRecentActivity';
 import { OddsImportResultDialog } from '@/components/OddsImportResultDialog';
 
 interface GameOption {
@@ -49,14 +49,13 @@ export default function OddsImportPage() {
   const [importResult, setImportResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
   const [lastEndpoint, setLastEndpoint] = useState<string>('');
 
-  // Use the legacy activity hook for odds-api activities
+  // Use the modern activity hook for odds-api activities
   const {
     activities: history,
     loading: activityLoading,
     error: activityError,
-    refresh: refreshActivity,
-    retry: retryActivity
-  } = useRecentActivityLegacy({
+    refresh: refreshActivity
+  } = useRecentActivity({
     importType: 'odds-api',
     limit: 10
     // No weekId filter - show all activities for this import type
@@ -909,7 +908,6 @@ export default function OddsImportPage() {
         error={activityError}
         emptyMessage="No recent Odds-API import activity found."
         showFilters={false}
-        onRetry={retryActivity}
         onViewDetails={(activityId) => {
           console.log('View details for activity:', activityId);
         }}

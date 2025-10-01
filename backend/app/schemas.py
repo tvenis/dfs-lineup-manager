@@ -207,8 +207,8 @@ class RecentActivityBase(BaseModel):
     duration_ms: Optional[int] = Field(None, ge=0)
     
     # Error handling
-    errors: Optional[Dict[str, Any]] = Field(None, description="Structured error information")
-    error_count: int = Field(default=0, ge=0)
+    errors: Optional[Union[Dict[str, Any], List[Any]]] = Field(None, description="Structured error information")
+    error_count: Optional[int] = Field(default=0, ge=0)
     
     # Audit trail
     created_by: Optional[str] = Field(None, max_length=100)

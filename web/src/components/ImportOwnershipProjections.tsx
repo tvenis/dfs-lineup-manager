@@ -11,7 +11,7 @@ import { Upload, FileText, RefreshCw, CheckCircle, XCircle, Eye, Calendar, Tag }
 import { buildApiUrl } from '@/config/api'
 import { OwnershipImportResultDialog } from './OwnershipImportResultDialog'
 import { ActivityList } from './activity'
-import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy'
+import { useRecentActivity } from '@/hooks/useRecentActivity'
 
 interface OwnershipImportResponse {
   total_processed: number
@@ -69,14 +69,13 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
   } | null>(null)
   const [showResultDialog, setShowResultDialog] = useState(false)
 
-  // Use the legacy activity hook for ownership activities
+  // Use the modern activity hook for ownership activities
   const {
     activities: history,
     loading: activityLoading,
     error: activityError,
-    refresh: refreshActivity,
-    retry: retryActivity
-  } = useRecentActivityLegacy({
+    refresh: refreshActivity
+  } = useRecentActivity({
     importType: 'ownership',
     limit: 10
     // No weekId filter - show all activities for this import type
@@ -342,7 +341,6 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
         error={activityError}
         emptyMessage="No recent ownership import activity found."
         showFilters={false}
-        onRetry={retryActivity}
         onViewDetails={(activityId) => {
           console.log('View details for activity:', activityId);
         }}

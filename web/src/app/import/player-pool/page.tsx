@@ -10,7 +10,7 @@ import { Upload, CheckCircle, Database, Globe } from 'lucide-react';
 import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
 import { ActivityList } from '@/components/activity';
-import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy';
+import { useRecentActivity } from '@/hooks/useRecentActivity';
 
 interface DraftKingsImportResponse {
   players_added: number;
@@ -37,14 +37,13 @@ export default function PlayerPoolImportPage() {
   }>>([]);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Use the legacy activity hook for player pool activities
+  // Use the modern activity hook for player pool activities
   const {
     activities: history,
     loading: activityLoading,
     error: activityError,
-    refresh: refreshActivity,
-    retry: retryActivity
-  } = useRecentActivityLegacy({
+    refresh: refreshActivity
+  } = useRecentActivity({
     importType: 'player-pool',
     limit: 10
     // No weekId filter - show all activities for this import type
@@ -332,7 +331,6 @@ export default function PlayerPoolImportPage() {
         error={activityError}
         emptyMessage="No recent player pool import activity found."
         showFilters={false}
-        onRetry={retryActivity}
         onViewDetails={(activityId) => {
           console.log('View details for activity:', activityId);
           // You can implement a modal or navigation here
