@@ -15,6 +15,7 @@ import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
 import { ActivityList } from '@/components/activity';
 import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy';
+import { OddsImportResultDialog } from '@/components/OddsImportResultDialog';
 
 interface GameOption {
   value: string;
@@ -42,6 +43,11 @@ export default function OddsImportPage() {
   const [oddsGame, setOddsGame] = useState<string>('All');
   const [gameOptions, setGameOptions] = useState<GameOption[]>([]);
   const [playerPropMarkets, setPlayerPropMarkets] = useState<string[]>(['player_pass_tds']);
+  
+  // Result dialog state
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [importResult, setImportResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
+  const [lastEndpoint, setLastEndpoint] = useState<string>('');
 
   // Use the legacy activity hook for odds-api activities
   const {
@@ -247,30 +253,27 @@ export default function OddsImportPage() {
       const data = await response.json();
       console.log(`Successfully imported ${description}:`, data);
       
-      // Add to recent activity
-      const newActivity: RecentActivity = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        action: 'import',
-        fileType: 'API',
-        fileName: `Odds-API ${endpoint}`,
-        week_id: endpoint === 'events' ? selectedWeekId || 0 : 0,
-        draftGroup: 'Odds-API',
-        recordsAdded: data.recordsAdded || 0,
-        recordsUpdated: data.recordsUpdated || 0,
-        recordsSkipped: 0,
-        errors: data.errors || [],
-        user_name: null,
-        details: data,
-        importType: 'odds-api'
-      };
-      
       await refreshActivity();
-      // Success - the activity will show in the Recent Activity section below
+      
+      // Show success dialog
+      setLastEndpoint(endpoint);
+      setImportResult({
+        success: true,
+        data: data
+      });
+      setShowResultDialog(true);
       
     } catch (error) {
       console.error(`Error importing ${endpoint}:`, error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Show error dialog
+      setLastEndpoint(endpoint);
+      setImportResult({
+        success: false,
+        error: errorMessage
+      });
+      setShowResultDialog(true);
     } finally {
       setIsImportingOdds(false);
     }
@@ -880,6 +883,16 @@ export default function OddsImportPage() {
         onViewDetails={(activityId) => {
           console.log('View details for activity:', activityId);
         }}
+      />
+
+      {/* Import Result Dialog */}
+      <OddsImportResultDialog
+        isOpen={showResultDialog}
+        onClose={() => setShowResultDialog(false)}
+        result={importResult?.success ? importResult.data : null}
+        error={importResult?.error || null}
+        endpoint={lastEndpoint}
+        week={selectedWeekData ? `Week ${selectedWeekData.week_number} (${selectedWeekData.year})` : 'Unknown'}
       />
     </div>
   );
