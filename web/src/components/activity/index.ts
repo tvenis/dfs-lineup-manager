@@ -24,7 +24,5 @@ export type {
 // Re-export hooks
 export {
   useRecentActivity,
-  useRecentActivityByType,
-  useRecentActivityByWeek,
-  useRecentActivityStats
+  default as useRecentActivityDefault
 } from '@/hooks/useRecentActivity';

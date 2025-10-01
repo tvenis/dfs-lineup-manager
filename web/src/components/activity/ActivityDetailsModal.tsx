@@ -52,6 +52,14 @@ export const ActivityDetailsModal: React.FC<ActivityDetailsModalProps> = ({
     errors,
     error_count,
     created_by,
+    ip_address,
+    session_id,
+    user_agent,
+    parent_activity_id,
+    created_at,
+    updated_at,
+    retention_until,
+    is_archived,
     details
   } = activity;
 

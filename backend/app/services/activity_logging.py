@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_, or_
 
 from ..models import RecentActivity
-from ..schemas import RecentActivityCreate, RecentActivityUpdate, RecentActivityLegacy
+from ..schemas import RecentActivityCreate, RecentActivityUpdate
 
 
 class ActivityLoggingService:

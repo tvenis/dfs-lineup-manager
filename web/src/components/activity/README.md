@@ -71,75 +71,52 @@ const {
   activities,
   loading,
   error,
-  stats,
-  filters,
-  hasMore,
-  totalCount,
-  setFilters,
   refresh,
-  loadMore,
-  retry,
-  clearError
+  retry
 } = useRecentActivity({
-  initialFilters: { limit: 20, week_id: 1 },
+  importType: 'player-pool',
+  limit: 20,
+  weekId: 1,
   autoRefresh: true,
   refreshInterval: 30000
 });
 ```
 
 **Options:**
-- `initialFilters`: Initial filter state
+- `importType`: Filter by import type (e.g., 'player-pool', 'projections')
+- `limit`: Maximum number of activities to fetch
+- `weekId`: Filter by week ID
 - `autoRefresh`: Whether to auto-refresh data
 - `refreshInterval`: Refresh interval in milliseconds
-- `enabled`: Whether the hook is enabled
 
-### useRecentActivityByType
+### useRecentActivity (with options)
 
-Specialized hook for fetching activities by import type.
+The `useRecentActivity` hook supports filtering by import type and week through its options:
 
 ```tsx
-import { useRecentActivityByType } from '@/hooks/useRecentActivity';
+import { useRecentActivity } from '@/hooks/useRecentActivity';
 
+// Filter by import type
 const {
   activities,
   loading,
   error,
   refresh
-} = useRecentActivityByType('player-pool', {
+} = useRecentActivity({
+  importType: 'player-pool',
   autoRefresh: false
 });
-```
 
-### useRecentActivityByWeek
-
-Specialized hook for fetching activities by week.
-
-```tsx
-import { useRecentActivityByWeek } from '@/hooks/useRecentActivity';
-
+// Filter by week
 const {
-  activities,
-  loading,
-  error,
-  refresh
-} = useRecentActivityByWeek(1, {
+  activities: weekActivities,
+  loading: weekLoading,
+  error: weekError,
+  refresh: weekRefresh
+} = useRecentActivity({
+  weekId: 1,
   autoRefresh: false
 });
-```
-
-### useRecentActivityStats
-
-Hook for fetching activity statistics.
-
-```tsx
-import { useRecentActivityStats } from '@/hooks/useRecentActivity';
-
-const {
-  stats,
-  loading,
-  error,
-  refresh
-} = useRecentActivityStats();
 ```
 
 ## Types
@@ -224,7 +201,7 @@ const MyComponent = () => {
     refresh,
     retry
   } = useRecentActivity({
-    initialFilters: { limit: 20 }
+    limit: 20
   });
 
   return (
@@ -246,10 +223,8 @@ import React, { useState } from 'react';
 import { ActivityList, useRecentActivity } from '@/components/activity';
 
 const FilteredActivityList = () => {
-  const [filters, setFilters] = useState({
-    category_filter: 'data-import',
-    operation_status: 'completed'
-  });
+  const [importType, setImportType] = useState('player-pool');
+  const [weekId, setWeekId] = useState(1);
 
   const {
     activities,
@@ -258,7 +233,9 @@ const FilteredActivityList = () => {
     refresh,
     retry
   } = useRecentActivity({
-    initialFilters: filters
+    importType,
+    weekId,
+    limit: 20
   });
 
   return (
@@ -267,8 +244,6 @@ const FilteredActivityList = () => {
       loading={loading}
       error={error}
       showFilters={true}
-      filters={filters}
-      onFiltersChange={setFilters}
       onRetry={retry}
     />
   );
