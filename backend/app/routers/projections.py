@@ -141,7 +141,7 @@ async def import_ownership_projections(
         result = process_ownership_projections(db, week_id, projection_source, csv_data)
         
         # Log activity
-        log_import_activity(db, week_id, file.filename, result, projection_source)
+        log_import_activity(db, week_id, file.filename, result, projection_source, is_ownership=True)
         
         return result
     except Exception as e:
@@ -681,11 +681,14 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
         unmatched_players=unmatched_players
     )
 
-def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, projection_source: str = "Custom Projections"):
+def log_import_activity(db: Session, week_id: int, filename: str, result: ProjectionImportResponse, projection_source: str = "Custom Projections", is_ownership: bool = False):
     """Log import activity to recent_activity table"""
     try:
+        # Determine action based on import type
+        action = "ownership-import" if is_ownership else "projections-import"
+        
         activity = RecentActivity(
-            action="projections-import",
+            action=action,
             category="data-import",
             file_type="CSV",
             file_name=filename,
@@ -709,7 +712,7 @@ def log_import_activity(db: Session, week_id: int, filename: str, result: Projec
         )
         db.add(activity)
         db.commit()
-        print(f"✅ Successfully logged projection import activity: {filename}")
+        print(f"✅ Successfully logged {action} activity: {filename}")
     except Exception as e:
         print(f"❌ Failed to log import activity: {str(e)}")
         db.rollback()

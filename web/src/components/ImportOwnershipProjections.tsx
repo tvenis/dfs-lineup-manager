@@ -10,6 +10,8 @@ import { Badge } from './ui/badge'
 import { Upload, FileText, RefreshCw, CheckCircle, XCircle, Eye, Calendar, Tag } from 'lucide-react'
 import { buildApiUrl } from '@/config/api'
 import { OwnershipImportResultDialog } from './OwnershipImportResultDialog'
+import { ActivityList } from './activity'
+import { useRecentActivityLegacy } from '@/hooks/useRecentActivityLegacy'
 
 interface OwnershipImportResponse {
   total_processed: number
@@ -40,23 +42,6 @@ interface Week {
   status: string
 }
 
-interface RecentActivity {
-  id: number
-  timestamp: string
-  action: 'import' | 'export'
-  fileType: 'API' | 'CSV'
-  fileName: string | null
-  week_id: number
-  draftGroup: string
-  recordsAdded: number
-  recordsUpdated: number
-  recordsSkipped: number
-  errors: string[]
-  user_name: string | null
-  details: unknown
-  importType?: 'player-pool' | 'projections' | 'odds-api' | 'actuals' | 'ownership'
-}
-
 interface ImportOwnershipProjectionsProps {
   onImportComplete?: (data: {
     filename: string
@@ -75,7 +60,6 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [projectionSource, setProjectionSource] = useState<string>('Rotowire')
-  const [history, setHistory] = useState<RecentActivity[]>([])
   
   // Import result dialog state
   const [importResult, setImportResult] = useState<{
@@ -85,10 +69,22 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
   } | null>(null)
   const [showResultDialog, setShowResultDialog] = useState(false)
 
-  // Fetch weeks and history on component mount
+  // Use the legacy activity hook for ownership activities
+  const {
+    activities: history,
+    loading: activityLoading,
+    error: activityError,
+    refresh: refreshActivity,
+    retry: retryActivity
+  } = useRecentActivityLegacy({
+    importType: 'ownership',
+    limit: 10,
+    weekId: selectedWeek ? parseInt(selectedWeek) : undefined
+  })
+
+  // Fetch weeks on component mount
   useEffect(() => {
     fetchWeeks()
-    fetchRecentActivity()
   }, [])
 
   const fetchWeeks = async () => {
@@ -106,52 +102,6 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
     }
   }
 
-  const fetchRecentActivity = async () => {
-    try {
-      // Fetch from all activity endpoints
-      const [draftkingsResponse, projectionsResponse, oddsApiResponse] = await Promise.all([
-        fetch(buildApiUrl('/api/draftkings/activity?limit=20')),
-        fetch(buildApiUrl('/api/projections/activity?limit=20')),
-        fetch(buildApiUrl('/api/odds-api/activity?limit=20'))
-      ])
-      
-      const allActivities: RecentActivity[] = []
-      
-      if (draftkingsResponse.ok) {
-        const draftkingsData = await draftkingsResponse.json()
-        allActivities.push(...draftkingsData)
-      }
-      
-      if (projectionsResponse.ok) {
-        const projectionsData = await projectionsResponse.json()
-        allActivities.push(...projectionsData)
-      }
-      
-      if (oddsApiResponse.ok) {
-        const oddsApiData = await oddsApiResponse.json()
-        allActivities.push(...oddsApiData)
-      }
-      
-      // Add import types and sort by timestamp (most recent first)
-      const sortedActivities = allActivities
-        .map(activity => ({
-          ...activity,
-          importType: activity.importType || (
-            activity.fileName?.startsWith('odds-api:') ? 'odds-api' :
-            activity.draftGroup === 'Odds-API' ? 'odds-api' :
-            activity.draftGroup === 'OWNERSHIP_IMPORT' ? 'ownership' :
-            activity.fileType === 'CSV' ? 'projections' :
-            'player-pool'
-          )
-        }))
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-        .slice(0, 20)
-      
-      setHistory(sortedActivities)
-    } catch (error) {
-      console.error('Failed to fetch recent activity:', error)
-    }
-  }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -230,7 +180,7 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
       }
       
       // Refresh activity history
-      fetchRecentActivity()
+      await refreshActivity()
       
     } catch (error) {
       console.error('Error during processing:', error)
@@ -351,62 +301,52 @@ export function ImportOwnershipProjections({ onImportComplete }: ImportOwnership
         </CardContent>
       </Card>
 
-      {/* Recent Import Activity */}
+      {/* Activity Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Import Activity</CardTitle>
-          <CardDescription>Your recent projection imports</CardDescription>
+          <CardTitle>Activity Statistics</CardTitle>
+          <CardDescription>Overview of your recent ownership import activity</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {history.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No recent import activity
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{history.length}</div>
+              <div className="text-sm text-blue-800">Total Activities</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {history.filter(a => a.operation_status === 'completed').length}
               </div>
-            ) : (
-              history.map((item, index) => (
-                <div key={`${item.id}-${item.timestamp}-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {item.recordsSkipped > 0 ? (
-                      <XCircle className="w-5 h-5 text-red-500" />
-                    ) : (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    )}
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{item.fileName || 'Unknown File'}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {item.week_id}
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          {item.draftGroup}
-                        </Badge>
-                        <Badge 
-                          variant={item.recordsSkipped > 0 ? "destructive" : "default"}
-                          className="text-xs"
-                        >
-                          {item.recordsSkipped > 0 ? 'Partial Success' : 'Success'}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {item.recordsAdded} added, {item.recordsUpdated} updated, {item.recordsSkipped} skipped
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(item.timestamp).toLocaleDateString()} {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
+              <div className="text-sm text-green-800">Successful</div>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">
+                {history.reduce((sum, a) => sum + (a.records_added || 0), 0)}
+              </div>
+              <div className="text-sm text-orange-800">Records Added</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">
+                {history.reduce((sum, a) => sum + (a.records_updated || 0), 0)}
+              </div>
+              <div className="text-sm text-purple-800">Records Updated</div>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Recent Import Activity */}
+      <ActivityList
+        activities={history}
+        loading={activityLoading}
+        error={activityError}
+        emptyMessage="No recent ownership import activity found."
+        showFilters={false}
+        onRetry={retryActivity}
+        onViewDetails={(activityId) => {
+          console.log('View details for activity:', activityId);
+        }}
+      />
 
       {/* Import Result Dialog */}
       {importResult && (
