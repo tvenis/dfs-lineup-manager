@@ -257,6 +257,10 @@ async def import_participants(
         # Commit all changes
         db.commit()
         
+        # Log activity (participants don't have week_id, so we'll use a default or skip)
+        # Note: Participants endpoint doesn't require week_id, so we'll log to a default week or skip
+        # For now, we'll skip logging for participants since it doesn't fit the week-based model
+        
         return {
             "success": True,
             "message": f"Successfully imported {len(participants)} participants",
@@ -419,6 +423,38 @@ async def import_events(
         
         # Commit all changes
         db.commit()
+        
+        # Log activity
+        try:
+            activity = RecentActivity(
+                action="odds-api-import",
+                category="data-import",
+                file_type="API",
+                file_name=f"events:{sport}",
+                week_id=week_id,
+                draft_group=None,
+                import_source="odds-api",
+                records_added=games_created,
+                records_updated=games_updated,
+                records_skipped=0,
+                records_failed=len(errors),
+                operation_status="completed" if len(errors) == 0 else "partial",
+                errors=errors if errors else None,
+                error_count=len(errors),
+                user_name="system",
+                details={
+                    "total_events": len(events),
+                    "regions": regions,
+                    "markets": markets,
+                    "bookmakers": bookmakers
+                }
+            )
+            db.add(activity)
+            db.commit()
+            print(f"✅ Successfully logged odds-api events import activity")
+        except Exception as e:
+            print(f"❌ Failed to log import activity: {str(e)}")
+            db.rollback()
         
         return {
             "success": True,
@@ -595,6 +631,38 @@ async def import_odds(
         
         # Commit all changes
         db.commit()
+        
+        # Log activity
+        try:
+            activity = RecentActivity(
+                action="odds-api-import",
+                category="data-import",
+                file_type="API",
+                file_name=f"odds:{sport}",
+                week_id=week_id,
+                draft_group=markets,
+                import_source="odds-api",
+                records_added=0,
+                records_updated=games_updated,
+                records_skipped=0,
+                records_failed=len(errors),
+                operation_status="completed" if len(errors) == 0 else "partial",
+                errors=errors if errors else None,
+                error_count=len(errors),
+                user_name="system",
+                details={
+                    "total_events": len(odds_data),
+                    "regions": regions,
+                    "markets": markets,
+                    "bookmakers": bookmakers
+                }
+            )
+            db.add(activity)
+            db.commit()
+            print(f"✅ Successfully logged odds-api odds import activity")
+        except Exception as e:
+            print(f"❌ Failed to log import activity: {str(e)}")
+            db.rollback()
         
         return {
             "success": True,
@@ -863,31 +931,39 @@ async def import_player_props(
         # Commit all changes
         db.commit()
 
-        # Log unmatched players into RecentActivity
-        # Log recent activity even if no unmatched players so we capture the request
+        # Log activity with new schema
         markets_param = ",".join(market_list)
-        activity = RecentActivity(
-            timestamp=datetime.utcnow(),
-            action="import",
-            fileType="API",
-            fileName=f"odds-api:player-props:{markets_param}",
-            week_id=week_id,
-            draftGroup=markets_param,
-            recordsAdded=total_created,
-            recordsUpdated=total_updated,
-            recordsSkipped=len(unmatched_players),
-            errors=errors,
-            user_name="system",
-            details={
-                "unmatched_players": unmatched_players,
-                "api_requests": api_requests,
-                "bookmaker": bookmakers,
-                "regions": regions,
-                "markets": market_list,
-            }
-        )
-        db.add(activity)
-        db.commit()
+        try:
+            activity = RecentActivity(
+                action="odds-api-import",
+                category="data-import",
+                file_type="API",
+                file_name=f"player-props:{markets_param}",
+                week_id=week_id,
+                draft_group=markets_param,
+                import_source="odds-api",
+                records_added=total_created,
+                records_updated=total_updated,
+                records_skipped=len(unmatched_players),
+                records_failed=0,
+                operation_status="completed",
+                errors=errors if errors else None,
+                error_count=len(errors) if errors else 0,
+                user_name="system",
+                details={
+                    "unmatched_players": unmatched_players,
+                    "api_requests": api_requests,
+                    "bookmaker": bookmakers,
+                    "regions": regions,
+                    "markets": market_list,
+                }
+            )
+            db.add(activity)
+            db.commit()
+            print(f"✅ Successfully logged odds-api player-props import activity")
+        except Exception as e:
+            print(f"❌ Failed to log import activity: {str(e)}")
+            db.rollback()
 
         return {
             "success": True,
