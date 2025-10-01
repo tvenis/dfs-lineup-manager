@@ -164,6 +164,9 @@ class NFLVerseService:
         # Passing
         if stats.get("pass_yds"):
             points += stats["pass_yds"] * 0.04
+            # 300+ Yard Passing Game bonus
+            if stats["pass_yds"] >= 300:
+                points += 3
         if stats.get("pass_tds"):
             points += stats["pass_tds"] * 4
         if stats.get("interceptions"):
@@ -172,6 +175,9 @@ class NFLVerseService:
         # Rushing
         if stats.get("rush_yds"):
             points += stats["rush_yds"] * 0.1
+            # 100+ Yard Rushing Game bonus
+            if stats["rush_yds"] >= 100:
+                points += 3
         if stats.get("rush_tds"):
             points += stats["rush_tds"] * 6
         
@@ -180,8 +186,15 @@ class NFLVerseService:
             points += stats["receptions"] * 1
         if stats.get("rec_yds"):
             points += stats["rec_yds"] * 0.1
+            # 100+ Yard Receiving Game bonus
+            if stats["rec_yds"] >= 100:
+                points += 3
         if stats.get("rec_tds"):
             points += stats["rec_tds"] * 6
+
+        # Special teams TDs (punt/kickoff/FG returns, offensive fumble recovery TDs captured here)
+        if stats.get("special_teams_tds"):
+            points += stats["special_teams_tds"] * 6
         
         # 2-point conversions
         if stats.get("two_pt_md"):
