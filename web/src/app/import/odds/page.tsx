@@ -816,6 +816,27 @@ export default function OddsImportPage() {
                       <p className="text-xs text-muted-foreground">Player rushing yards</p>
                     </div>
                   </div>
+
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="props-player_tds_over"
+                      checked={playerPropMarkets.includes('player_tds_over')}
+                      onCheckedChange={(checked) => {
+                        setPlayerPropMarkets((prev) => {
+                          const exists = prev.includes('player_tds_over');
+                          if (checked && !exists) return [...prev, 'player_tds_over'];
+                          if (!checked && exists) return prev.filter(m => m !== 'player_tds_over');
+                          return prev;
+                        });
+                      }}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <label htmlFor="props-player_tds_over" className="text-sm font-medium leading-none">
+                        Total TDs (Over)
+                      </label>
+                      <p className="text-xs text-muted-foreground">Player total touchdowns over</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
