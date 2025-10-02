@@ -2381,7 +2381,7 @@ export default function PlayerPoolPage() {
                             className="flex items-center gap-2 text-left hover:text-primary transition-colors group overflow-hidden"
                           >
                             <Link 
-                              href={`/profile/${player.player.playerDkId}`}
+                              href={`/profile/${player.player.playerDkId}?from=players`}
                               className={`text-sm font-medium ${player.excluded === true ? 'line-through' : ''} group-hover:underline truncate`}
                             >
                               {player.player.displayName} ({player.player.team})

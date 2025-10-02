@@ -479,7 +479,7 @@ export function PlayerPoolTable({
                   <TableCell className="w-48">
                     <div className="space-y-1">
                       <Link 
-                        href={`/profile/${entry.player?.playerDkId}`}
+                        href={`/profile/${entry.player?.playerDkId}?from=players`}
                         className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
                       >
                         {entry.player?.displayName}

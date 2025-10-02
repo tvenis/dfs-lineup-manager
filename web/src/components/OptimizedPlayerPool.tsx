@@ -279,7 +279,7 @@ export default function OptimizedPlayerPool() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Link href={`/profile/${entry.entry.player.playerDkId}`}>
+                            <Link href={`/profile/${entry.entry.player.playerDkId}?from=players`}>
                               <Button variant="ghost" size="sm">
                                 <ExternalLink className="h-4 w-4" />
                               </Button>

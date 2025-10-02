@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -23,6 +24,9 @@ interface PlayerProfileProps {
 
 
 export function PlayerProfile({ playerId }: PlayerProfileProps) {
+  const searchParams = useSearchParams();
+  const from = searchParams.get('from') || 'profile';
+  
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [playerPoolData, setPlayerPoolData] = useState<PlayerPoolEntry | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +42,20 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const [isAliasModalOpen, setIsAliasModalOpen] = useState(false);
   const [newAliasName, setNewAliasName] = useState('');
   const [isCreatingAlias, setIsCreatingAlias] = useState(false);
+
+  // Get back button configuration based on source
+  const getBackButtonConfig = () => {
+    switch (from) {
+      case 'players':
+        return { href: '/players', text: 'Back to Player Pool' };
+      case 'builder':
+        return { href: '/builder', text: 'Back to Lineup Builder' };
+      default:
+        return { href: '/profile', text: 'Back to Player Card List' };
+    }
+  };
+
+  const backButtonConfig = getBackButtonConfig();
 
 
   const loadComments = async (playerDkId: number) => {
@@ -329,10 +347,10 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     return (
       <div className="p-6 space-y-6">
         <div className="flex items-center gap-4">
-          <Link href="/profile">
+          <Link href={backButtonConfig.href}>
             <Button variant="ghost">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Player Card List
+              {backButtonConfig.text}
             </Button>
           </Link>
         </div>
@@ -363,10 +381,10 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     <div className="p-6 space-y-6">
       {/* Back Button */}
       <div className="mb-4">
-        <Link href="/profile">
+        <Link href={backButtonConfig.href}>
           <Button variant="outline" size="sm" className="gap-2">
             <ArrowLeft className="w-4 h-4" />
-            Back to Player Card List
+            {backButtonConfig.text}
           </Button>
         </Link>
       </div>

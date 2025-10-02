@@ -1172,7 +1172,7 @@ export function LineupBuilder({
                               <div className="col-span-1 min-w-0">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <Link
-                                    href={`/profile/${player.player.playerDkId}`}
+                                    href={`/profile/${player.player.playerDkId}?from=builder`}
                                     className="text-primary hover:underline text-left text-sm font-medium truncate"
                                   >
                                     {player.player.displayName}
