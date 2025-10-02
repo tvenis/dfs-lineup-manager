@@ -190,7 +190,7 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
               <thead>
                 <tr className="border-b bg-gray-50">
                   <th className="text-center p-2 font-medium">Week</th>
-                  <th className="text-right p-2 font-medium">Fantasy Points</th>
+                  <th className="text-right p-2 font-medium">Points</th>
                   <th className="text-right p-2 font-medium">Salary</th>
                   <th className="text-center p-2 font-medium">Opponent</th>
                   <th className="text-center p-2 font-medium">H/A</th>
