@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,109 +28,95 @@ interface PlayerProfile {
   badge?: string;
 }
 
-// Pagination constants
-const PAGE_SIZE = 50; // Reduced from 1000 to 50 for better performance
-const DEBOUNCE_DELAY = 300; // ms
-
-export default function PlayerProfilePageOptimized() {
+export default function PlayerProfilePage() {
   const [players, setPlayers] = useState<PlayerProfile[]>([]);
+  const [filteredPlayers, setFilteredPlayers] = useState<PlayerProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [positionFilter, setPositionFilter] = useState<string>('QB');
   const [teamFilter, setTeamFilter] = useState<string>('All');
   const [showHidden, setShowHidden] = useState<boolean>(false);
-  
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPlayers, setTotalPlayers] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
 
-  // Debounced search term
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-
-  // Debounce search input
+  // Fetch players from API
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(0); // Reset to first page when searching
-    }, DEBOUNCE_DELAY);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Fetch players with pagination
-  const fetchPlayers = useCallback(async (page: number = 0, reset: boolean = false) => {
-    try {
-      if (reset) {
+    const fetchPlayers = async () => {
+      try {
         setLoading(true);
-      }
-      
-      const data = await PlayerService.getPlayerProfilesWithPoolData({ 
-        limit: PAGE_SIZE, 
-        skip: page * PAGE_SIZE,
-        show_hidden: showHidden,
-        position: positionFilter !== 'All' ? positionFilter : undefined,
-        team_id: teamFilter !== 'All' ? teamFilter : undefined,
-        search: debouncedSearchTerm || undefined
-      });
-      
-      const transformedPlayers: PlayerProfile[] = data.players.map((player: any) => ({
-        playerDkId: player.playerDkId,
-        displayName: player.displayName,
-        team: player.team,
-        position: player.position,
-        playerImage50: player.playerImage50,
-        hidden: player.hidden,
-        currentWeekProj: player.currentWeekProj,
-        currentWeekSalary: player.currentWeekSalary,
-        consistency: player.consistency,
-        ownership: player.ownership,
-        status: player.status,
-        trend: ['up', 'down', 'stable'][Math.floor(Math.random() * 3)] as 'up' | 'down' | 'stable',
-        badge: Math.random() > 0.7 ? 'Consistent' : undefined
-      }));
-      
-      // Sort players alphabetically by last name
-      const sortedPlayers = transformedPlayers.sort((a, b) => {
-        const aLastName = a.displayName.split(' ').pop() || '';
-        const bLastName = b.displayName.split(' ').pop() || '';
-        return aLastName.localeCompare(bLastName);
-      });
-      
-      if (reset) {
+        const data = await PlayerService.getPlayerProfilesWithPoolData({ limit: 1000, show_hidden: showHidden });
+        
+        // Transform the data to match our PlayerProfile interface
+        const transformedPlayers: PlayerProfile[] = data.players.map((player: any) => ({
+          playerDkId: player.playerDkId,
+          displayName: player.displayName,
+          team: player.team,
+          position: player.position,
+          playerImage50: player.playerImage50,
+          hidden: player.hidden,
+          // Real data from current week pool entries
+          currentWeekProj: player.currentWeekProj,
+          currentWeekSalary: player.currentWeekSalary,
+          consistency: player.consistency,
+          ownership: player.ownership,
+          status: player.status,
+          trend: ['up', 'down', 'stable'][Math.floor(Math.random() * 3)] as 'up' | 'down' | 'stable', // Keep random for now
+          badge: Math.random() > 0.7 ? 'Consistent' : undefined
+        }));
+        
+        // Sort players alphabetically by last name
+        const sortedPlayers = transformedPlayers.sort((a, b) => {
+          const aLastName = a.displayName.split(' ').pop() || '';
+          const bLastName = b.displayName.split(' ').pop() || '';
+          return aLastName.localeCompare(bLastName);
+        });
+        
         setPlayers(sortedPlayers);
-      } else {
-        setPlayers(prev => [...prev, ...sortedPlayers]);
+        setFilteredPlayers(sortedPlayers);
+      } catch (err) {
+        console.error('Error fetching players:', err);
+        setError('Failed to fetch players');
+      } finally {
+        setLoading(false);
       }
-      
-      setTotalPlayers(data.total);
-      setHasMore((page + 1) * PAGE_SIZE < data.total);
-      
-    } catch (err) {
-      console.error('Error fetching players:', err);
-      setError('Failed to fetch players');
-    } finally {
-      setLoading(false);
-    }
-  }, [showHidden, positionFilter, teamFilter, debouncedSearchTerm]);
+    };
 
-  // Initial load and filter changes
+    fetchPlayers();
+  }, [showHidden]);
+
+  // Filter players based on search and filters
   useEffect(() => {
-    fetchPlayers(0, true);
-  }, [fetchPlayers]);
+    let filtered = players;
 
-  // Load more players
-  const loadMore = useCallback(() => {
-    if (!loading && hasMore) {
-      const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
-      fetchPlayers(nextPage, false);
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(player =>
+        player.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.team.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
-  }, [loading, hasMore, currentPage, fetchPlayers]);
+
+    // Position filter
+    if (positionFilter !== 'All') {
+      filtered = filtered.filter(player => player.position === positionFilter);
+    }
+
+    // Team filter
+    if (teamFilter !== 'All') {
+      filtered = filtered.filter(player => player.team === teamFilter);
+    }
+
+    // Sort filtered results alphabetically by last name
+    const sortedFiltered = filtered.sort((a, b) => {
+      const aLastName = a.displayName.split(' ').pop() || '';
+      const bLastName = b.displayName.split(' ').pop() || '';
+      return aLastName.localeCompare(bLastName);
+    });
+
+    setFilteredPlayers(sortedFiltered);
+  }, [players, searchTerm, positionFilter, teamFilter]);
 
   // Get status color for status badge
-  const getStatusColor = useCallback((status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active':
       case 'available':
@@ -144,9 +130,9 @@ export default function PlayerProfilePageOptimized() {
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
-  }, []);
+  };
 
-  const getTrendIcon = useCallback((trend: 'up' | 'down' | 'stable') => {
+  const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
     switch (trend) {
       case 'up':
         return <TrendingUp className="w-4 h-4 text-green-500" />;
@@ -155,20 +141,19 @@ export default function PlayerProfilePageOptimized() {
       case 'stable':
         return <Minus className="w-4 h-4 text-gray-500" />;
     }
-  }, []);
+  };
 
-  // Memoized filter options
-  const positionOptions = useMemo(() => {
-    const positions = ['All', 'QB', 'RB', 'WR', 'TE', 'DST'];
+  const getPositionOptions = () => {
+    const positions = ['All', ...Array.from(new Set(players.map(p => p.position)))];
     return positions;
-  }, []);
+  };
 
-  const teamOptions = useMemo(() => {
+  const getTeamOptions = () => {
     const teams = ['All', ...Array.from(new Set(players.map(p => p.team))).sort()];
     return teams;
-  }, [players]);
+  };
 
-  if (loading && players.length === 0) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -192,7 +177,7 @@ export default function PlayerProfilePageOptimized() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold text-gray-900">Player Profile Search (Optimized)</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Player Profile Search</h1>
         <p className="text-gray-600">Search and view detailed profiles for any NFL player</p>
       </div>
 
@@ -213,7 +198,7 @@ export default function PlayerProfilePageOptimized() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {positionOptions.map((position) => (
+            {getPositionOptions().map((position) => (
               <SelectItem key={position} value={position}>
                 {position}
               </SelectItem>
@@ -226,7 +211,7 @@ export default function PlayerProfilePageOptimized() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {teamOptions.map((team) => (
+            {getTeamOptions().map((team) => (
               <SelectItem key={team} value={team}>
                 {team}
               </SelectItem>
@@ -234,6 +219,7 @@ export default function PlayerProfilePageOptimized() {
           </SelectContent>
         </Select>
 
+        {/* Show Hidden Players Toggle */}
         <div className="flex items-center space-x-2">
           <Switch
             id="show-hidden"
@@ -249,16 +235,17 @@ export default function PlayerProfilePageOptimized() {
 
       {/* Player Count */}
       <p className="text-sm text-gray-600">
-        Showing {players.length} of {totalPlayers} players
+        Showing {filteredPlayers.length} of {players.length} players
       </p>
 
       {/* Player Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {players.map((player) => (
+        {filteredPlayers.map((player) => (
           <Card 
             key={player.playerDkId} 
             className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-[1.02]"
             onClick={() => {
+              // Navigate to player detail page
               window.location.href = `/profile/${player.playerDkId}`;
             }}
           >
@@ -343,21 +330,8 @@ export default function PlayerProfilePageOptimized() {
         ))}
       </div>
 
-      {/* Load More Button */}
-      {hasMore && (
-        <div className="text-center">
-          <Button 
-            onClick={loadMore}
-            disabled={loading}
-            className="px-8 py-2"
-          >
-            {loading ? 'Loading...' : 'Load More Players'}
-          </Button>
-        </div>
-      )}
-
       {/* No Results */}
-      {players.length === 0 && !loading && (
+      {filteredPlayers.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           <Search className="w-8 h-8 mx-auto mb-3 opacity-50" />
           <p>No players found matching your search criteria.</p>
