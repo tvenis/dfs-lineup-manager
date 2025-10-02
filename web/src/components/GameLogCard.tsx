@@ -193,31 +193,40 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-gray-50">
-                  <th className="text-center p-2 font-medium">Week</th>
-                  <th className="text-right p-2 font-medium">Points</th>
-                  <th className="text-right p-2 font-medium">Salary</th>
-                  <th className="text-center p-2 font-medium">Opponent</th>
-                  <th className="text-center p-2 font-medium">H/A</th>
-                  <th className="text-center p-2 font-medium">Result</th>
-                  <th className="text-center p-2 font-medium">OPRK</th>
+                  <th rowSpan={2} className="text-center p-2 font-medium">Week</th>
+                  <th rowSpan={2} className="text-right p-2 font-medium">Points</th>
+                  <th rowSpan={2} className="text-right p-2 font-medium">Salary</th>
+                  <th rowSpan={2} className="text-center p-2 font-medium">Opponent</th>
+                  <th rowSpan={2} className="text-center p-2 font-medium">H/A</th>
+                  <th rowSpan={2} className="text-center p-2 font-medium">Result</th>
+                  <th rowSpan={2} className="text-center p-2 font-medium">OPRK</th>
+                  {playerPosition === 'QB' && (
+                    <th colSpan={5} className="text-center p-2 font-medium border-l border-r bg-blue-50">Passing</th>
+                  )}
+                  <th colSpan={3} className="text-center p-2 font-medium border-r bg-green-50">Rushing</th>
+                  {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && (
+                    <th colSpan={4} className="text-center p-2 font-medium bg-purple-50">Receiving</th>
+                  )}
+                </tr>
+                <tr className="border-b bg-gray-100">
                   {playerPosition === 'QB' && (
                     <>
-                      <th className="text-right p-2 font-medium">Pass Comp</th>
-                      <th className="text-right p-2 font-medium">Pass Att</th>
-                      <th className="text-right p-2 font-medium">Pass Yds</th>
-                      <th className="text-right p-2 font-medium">Pass TD</th>
-                      <th className="text-right p-2 font-medium">Pass Int</th>
+                      <th className="text-right p-2 font-medium text-xs bg-blue-50">Comp</th>
+                      <th className="text-right p-2 font-medium text-xs bg-blue-50">Att</th>
+                      <th className="text-right p-2 font-medium text-xs bg-blue-50">Yds</th>
+                      <th className="text-right p-2 font-medium text-xs bg-blue-50">TD</th>
+                      <th className="text-right p-2 font-medium text-xs bg-blue-50 border-r">Int</th>
                     </>
                   )}
-                  <th className="text-right p-2 font-medium">Rush Att</th>
-                  <th className="text-right p-2 font-medium">Rush Yds</th>
-                  <th className="text-right p-2 font-medium">Rush TD</th>
+                  <th className="text-right p-2 font-medium text-xs bg-green-50">Att</th>
+                  <th className="text-right p-2 font-medium text-xs bg-green-50">Yds</th>
+                  <th className="text-right p-2 font-medium text-xs bg-green-50 border-r">TD</th>
                   {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && (
                     <>
-                      <th className="text-right p-2 font-medium">Rec Tgt</th>
-                      <th className="text-right p-2 font-medium">Rec</th>
-                      <th className="text-right p-2 font-medium">Rec Yds</th>
-                      <th className="text-right p-2 font-medium">Rec TD</th>
+                      <th className="text-right p-2 font-medium text-xs bg-purple-50">Tgt</th>
+                      <th className="text-right p-2 font-medium text-xs bg-purple-50">Rec</th>
+                      <th className="text-right p-2 font-medium text-xs bg-purple-50">Yds</th>
+                      <th className="text-right p-2 font-medium text-xs bg-purple-50">TD</th>
                     </>
                   )}
                 </tr>
@@ -269,12 +278,12 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
                         <td className="p-2 text-right">{game.passing?.attempts || 0}</td>
                         <td className="p-2 text-right">{game.passing?.yards || 0}</td>
                         <td className="p-2 text-right">{game.passing?.touchdowns || 0}</td>
-                        <td className="p-2 text-right">{game.passing?.interceptions || 0}</td>
+                        <td className="p-2 text-right border-r">{game.passing?.interceptions || 0}</td>
                       </>
                     )}
                     <td className="p-2 text-right">{game.rushing?.attempts || 0}</td>
                     <td className="p-2 text-right">{game.rushing?.yards || 0}</td>
-                    <td className="p-2 text-right">{game.rushing?.touchdowns || 0}</td>
+                    <td className="p-2 text-right border-r">{game.rushing?.touchdowns || 0}</td>
                     {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && (
                       <>
                         <td className="p-2 text-right">{game.receiving?.targets || 0}</td>
