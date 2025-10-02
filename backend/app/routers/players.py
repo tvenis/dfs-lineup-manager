@@ -840,7 +840,7 @@ async def get_player_game_log(
             Week.year == year,
             Week.status == "Completed"
         )
-    ).order_by(Week.week_number).all()
+    ).order_by(Week.week_number.desc()).all()
     
     if not weeks:
         return {"game_log": [], "year": year, "player": player.displayName}
