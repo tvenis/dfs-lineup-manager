@@ -381,6 +381,20 @@ class PlayerListResponse(BaseModel):
     page: int
     size: int
 
+class PlayerWithPoolData(Player):
+    currentWeekProj: Optional[float] = None
+    currentWeekSalary: Optional[int] = None
+    consistency: Optional[float] = None
+    ownership: Optional[float] = None
+    status: Optional[str] = None
+    poolEntryId: Optional[int] = None
+
+class PlayerListWithPoolDataResponse(BaseModel):
+    players: List[PlayerWithPoolData]
+    total: int
+    page: int
+    size: int
+
 class LineupListResponse(BaseModel):
     lineups: List[LineupSimple]
     total: int

@@ -267,6 +267,38 @@ export class PlayerService {
     }
   }
 
+  static async getPlayerProfilesWithPoolData(filters: {
+    position?: string;
+    team_id?: string;
+    search?: string;
+    skip?: number;
+    limit?: number;
+    show_hidden?: boolean;
+  } = {}): Promise<PlayerListResponse> {
+    try {
+      const params = new URLSearchParams();
+      
+      if (filters.position) params.append('position', filters.position);
+      if (filters.team_id) params.append('team_id', filters.team_id);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.skip !== undefined) params.append('skip', filters.skip.toString());
+      if (filters.limit !== undefined) params.append('limit', filters.limit.toString());
+      if (filters.show_hidden !== undefined) params.append('show_hidden', filters.show_hidden.toString());
+
+      const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
+      const url = `${baseUrl}/profiles-with-pool-data-optimized?${params.toString()}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching player profiles with pool data:', error);
+      throw error;
+    }
+  }
+
   static async getPlayerPoolEntries(weekId: number): Promise<PlayerPoolEntry[]> {
     try {
       const response = await fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS)}/pool/${weekId}`);
