@@ -332,7 +332,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
           <Link href="/profile">
             <Button variant="ghost">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Player Profile
+              Back to Player Card List
             </Button>
           </Link>
         </div>
@@ -366,7 +366,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
         <Link href="/profile">
           <Button variant="outline" size="sm" className="gap-2">
             <ArrowLeft className="w-4 h-4" />
-            Back to Player Profile
+            Back to Player Card List
           </Button>
         </Link>
       </div>
