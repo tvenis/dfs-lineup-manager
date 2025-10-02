@@ -934,7 +934,8 @@ async def get_player_game_log(
             game_log_entry["rushing"] = {
                 "attempts": actuals.rush_att or 0,
                 "yards": actuals.rush_yds or 0,
-                "touchdowns": actuals.rush_tds or 0
+                "touchdowns": actuals.rush_tds or 0,
+                "fumbles": actuals.fumbles_lost or 0
             }
             
             # Receiving stats (for RB, WR, TE)

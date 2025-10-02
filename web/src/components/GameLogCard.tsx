@@ -28,6 +28,7 @@ interface GameLogData {
     attempts: number;
     yards: number;
     touchdowns: number;
+    fumbles: number;
   };
   receiving?: {
     targets: number;
@@ -203,7 +204,7 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
                   {playerPosition === 'QB' && (
                     <th colSpan={5} className="text-center p-2 font-medium border-l border-r bg-blue-50">Passing</th>
                   )}
-                  <th colSpan={3} className="text-center p-2 font-medium border-r bg-green-50">Rushing</th>
+                  <th colSpan={4} className="text-center p-2 font-medium border-r bg-green-50">Rushing</th>
                   {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && (
                     <th colSpan={4} className="text-center p-2 font-medium bg-purple-50">Receiving</th>
                   )}
@@ -220,7 +221,8 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
                   )}
                   <th className="text-right p-2 font-medium text-xs bg-green-50">Att</th>
                   <th className="text-right p-2 font-medium text-xs bg-green-50">Yds</th>
-                  <th className="text-right p-2 font-medium text-xs bg-green-50 border-r">TD</th>
+                  <th className="text-right p-2 font-medium text-xs bg-green-50">TD</th>
+                  <th className="text-right p-2 font-medium text-xs bg-green-50 border-r">Fum</th>
                   {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && (
                     <>
                       <th className="text-right p-2 font-medium text-xs bg-purple-50">Tgt</th>
@@ -283,7 +285,8 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
                     )}
                     <td className="p-2 text-right">{game.rushing?.attempts || 0}</td>
                     <td className="p-2 text-right">{game.rushing?.yards || 0}</td>
-                    <td className="p-2 text-right border-r">{game.rushing?.touchdowns || 0}</td>
+                    <td className="p-2 text-right">{game.rushing?.touchdowns || 0}</td>
+                    <td className="p-2 text-right border-r">{game.rushing?.fumbles || 0}</td>
                     {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && (
                       <>
                         <td className="p-2 text-right">{game.receiving?.targets || 0}</td>
