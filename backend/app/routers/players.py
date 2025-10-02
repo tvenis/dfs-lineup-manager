@@ -880,6 +880,17 @@ async def get_player_game_log(
             )
         ).first()
         
+        # Extract OPRK from draftStatAttributes
+        oprk_value = None
+        oprk_quality = None
+        if pool_entry and pool_entry.draftStatAttributes:
+            draft_stats = pool_entry.draftStatAttributes
+            if isinstance(draft_stats, list):
+                oprk_attr = next((attr for attr in draft_stats if attr.get('id') == -2), None)
+                if oprk_attr:
+                    oprk_value = oprk_attr.get('value')
+                    oprk_quality = oprk_attr.get('quality')
+        
         # Build game log entry
         game_log_entry = {
             "week": week.week_number,
@@ -888,6 +899,10 @@ async def get_player_game_log(
             "opponent": None,
             "home_or_away": None,
             "result": None,
+            "oprk": {
+                "value": oprk_value,
+                "quality": oprk_quality
+            },
             "passing": None,
             "rushing": None,
             "receiving": None

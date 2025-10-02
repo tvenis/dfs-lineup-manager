@@ -13,6 +13,10 @@ interface GameLogData {
   opponent: string | null;
   home_or_away: string | null;
   result: string | null;
+  oprk?: {
+    value: number | null;
+    quality: 'High' | 'Medium' | 'Low' | null;
+  };
   passing?: {
     completions: number;
     attempts: number;
@@ -195,6 +199,7 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
                   <th className="text-center p-2 font-medium">Opponent</th>
                   <th className="text-center p-2 font-medium">H/A</th>
                   <th className="text-center p-2 font-medium">Result</th>
+                  <th className="text-center p-2 font-medium">OPRK</th>
                   {playerPosition === 'QB' && (
                     <>
                       <th className="text-right p-2 font-medium">Pass Comp</th>
@@ -233,6 +238,30 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
+                    </td>
+                    <td className="p-2 text-center">
+                      {(() => {
+                        const { value, quality } = game.oprk || {};
+                        // Derive quality from value if quality is missing
+                        let derivedQuality: 'High' | 'Medium' | 'Low' = 'Medium';
+                        if (quality) {
+                          derivedQuality = quality;
+                        } else if (typeof value === 'number') {
+                          if (value <= 10) derivedQuality = 'High';
+                          else if (value <= 20) derivedQuality = 'Medium';
+                          else derivedQuality = 'Low';
+                        }
+                        
+                        const color = derivedQuality === 'High' ? 'text-green-600' : 
+                                     derivedQuality === 'Low' ? 'text-red-600' : 
+                                     'text-yellow-600';
+                        
+                        return (
+                          <span className={color}>
+                            {value ?? '-'}
+                          </span>
+                        );
+                      })()}
                     </td>
                     {playerPosition === 'QB' && (
                       <>
