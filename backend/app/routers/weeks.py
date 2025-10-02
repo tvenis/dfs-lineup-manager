@@ -111,6 +111,12 @@ def get_current_week(db: Session = Depends(get_db)):
     
     return current_week
 
+@router.get("/years")
+async def get_available_years(db: Session = Depends(get_db)):
+    """Get available years for game log dropdown"""
+    years = db.query(Week.year).distinct().order_by(Week.year.desc()).all()
+    return {"years": [year[0] for year in years]}
+
 @router.get("/{week_id}", response_model=WeekSchema)
 def get_week(week_id: int, db: Session = Depends(get_db)):
     """Get a specific week by ID"""

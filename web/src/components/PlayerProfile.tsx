@@ -12,34 +12,19 @@ import { Separator } from "./ui/separator";
 // import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog"; // Temporarily disabled
 import { PlayerService } from "@/lib/playerService";
 import { CommentService, Comment } from "@/lib/commentService";
-import { Player, PlayerNameAlias } from "@/types/prd";
+import { Player, PlayerNameAlias, PlayerPoolEntry } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
 import PlayerProps from "./PlayerProps";
+import { GameLogCard } from "./GameLogCard";
 
 interface PlayerProfileProps {
   playerId: string;
 }
 
-// Mock data for stats (keeping for now until we have real stats API)
-const mockStats = {
-  season: {
-    games: 16,
-    yards: 4250,
-    touchdowns: 28,
-    interceptions: 8,
-    rating: 98.5
-  },
-  career: {
-    games: 89,
-    yards: 24500,
-    touchdowns: 156,
-    interceptions: 45,
-    rating: 94.2
-  }
-};
 
 export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const [playerData, setPlayerData] = useState<Player | null>(null);
+  const [playerPoolData, setPlayerPoolData] = useState<PlayerPoolEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -149,31 +134,33 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
       try {
         setLoading(true);
         setError(null);
-        
+
         console.log("PlayerProfile - Fetching data for playerId:", playerId);
-        console.log("PlayerProfile - API base URL:", process.env.NEXT_PUBLIC_API_URL || "using default");
-        
-        // Get player from the profiles endpoint
-        const response = await PlayerService.getPlayerProfiles({ limit: 1000 });
-        console.log("PlayerProfile - API response:", response);
-        
-        const player = response.players?.find(p => 
-          p.playerDkId.toString() === playerId
+
+        // Get current week first
+        const currentWeek = await PlayerService.getCurrentWeek();
+        console.log("PlayerProfile - Current week:", currentWeek);
+
+        // Get player pool data for the current week
+        const playerPoolResponse = await PlayerService.getPlayerPool(currentWeek.id, { limit: 1000 });
+        console.log("PlayerProfile - Player pool response:", playerPoolResponse);
+
+        const playerPoolEntry = playerPoolResponse.entries?.find(entry =>
+          entry.playerDkId.toString() === playerId
         );
-        
-        console.log("PlayerProfile - Found player:", player);
-        
-        if (player) {
-          setPlayerData(player);
+
+        console.log("PlayerProfile - Found player pool entry:", playerPoolEntry);
+
+        if (playerPoolEntry) {
+          setPlayerData(playerPoolEntry.player);
+          setPlayerPoolData(playerPoolEntry);
           // Load comments and aliases for this player
           await Promise.all([
-            loadComments(player.playerDkId),
-            loadAliases(player.playerDkId)
+            loadComments(playerPoolEntry.playerDkId),
+            loadAliases(playerPoolEntry.playerDkId)
           ]);
         } else {
-          console.log("PlayerProfile - Player not found in response");
-          console.log("PlayerProfile - Available players:", response.players?.map(p => ({ id: p.playerDkId, name: p.displayName })));
-          setError(`Player with ID ${playerId} not found`);
+          setError(`Player with ID ${playerId} not found in current week's player pool`);
         }
       } catch (err) {
         console.error("PlayerProfile - Error fetching player data:", err);
@@ -358,15 +345,19 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     );
   }
 
-  // Mock data for current week stats
-  const currentWeekSalary = Math.floor(Math.random() * 3000) + 5000;
-  const currentWeekProj = Math.random() * 10 + 15;
-  const status = 'active';
+  // Get real data from player pool entry
+  const currentWeekSalary = playerPoolData?.salary || 0;
+  const currentWeekProj = playerPoolData?.projectedPoints || 0;
+  const status = playerPoolData?.status || 'unknown';
+  const ownership = playerPoolData?.ownership || 0;
   
   // Debug logging (can be removed in production)
-  // console.log('PlayerProfile rendering - playerData:', playerData);
-  // console.log('PlayerProfile rendering - aliases:', aliases);
-  // console.log('PlayerProfile rendering - isAliasModalOpen:', isAliasModalOpen);
+  console.log('PlayerProfile rendering - playerData:', playerData);
+  console.log('PlayerProfile rendering - playerPoolData:', playerPoolData);
+  console.log('PlayerProfile rendering - loading:', loading);
+  console.log('PlayerProfile rendering - error:', error);
+  console.log('PlayerProfile rendering - aliases:', aliases);
+  console.log('PlayerProfile rendering - isAliasModalOpen:', isAliasModalOpen);
 
   return (
     <div className="p-6 space-y-6">
@@ -450,7 +441,11 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Current Week Proj</div>
-                  <div className="text-lg">{currentWeekProj.toFixed(1)}</div>
+                  <div className="text-lg">{currentWeekProj > 0 ? currentWeekProj.toFixed(1) : 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Current Week Ownership</div>
+                  <div className="text-lg">{ownership > 0 ? `${ownership.toFixed(1)}%` : 'N/A'}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Status</div>
@@ -458,43 +453,41 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                     {status}
                   </Badge>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <div className="text-sm text-muted-foreground">Hidden</div>
                   <Badge variant={playerData?.hidden ? "destructive" : "secondary"}>
                     {playerData?.hidden ? "Yes" : "No"}
                   </Badge>
                 </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Excluded</div>
+                  <Badge variant={playerPoolData?.excluded ? "destructive" : "secondary"}>
+                    {playerPoolData?.excluded ? "Yes" : "No"}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Tier</div>
+                  <div className="text-lg">{playerPoolData?.tier || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Disabled</div>
+                  <Badge variant={playerPoolData?.isDisabled ? "destructive" : "secondary"}>
+                    {playerPoolData?.isDisabled ? "Yes" : "No"}
+                  </Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Season Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle>2024 Season Stats</CardTitle>
-              <CardDescription>{mockStats.season.games} games played</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-sm text-muted-foreground">Passing Yards</div>
-                  <div className="text-2xl">{mockStats.season.yards.toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Touchdowns</div>
-                  <div className="text-2xl">{mockStats.season.touchdowns}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Interceptions</div>
-                  <div className="text-2xl">{mockStats.season.interceptions}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Passer Rating</div>
-                  <div className="text-2xl">{mockStats.season.rating}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Game Log */}
+          {playerData && (
+            <GameLogCard 
+              playerId={playerId} 
+              playerPosition={playerData.position} 
+            />
+          )}
 
           {/* Player Props Section */}
           <PlayerProps playerId={playerData.playerDkId} />
@@ -607,31 +600,6 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Career Stats</CardTitle>
-              <CardDescription>{mockStats.career.games} career games</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Passing Yards</span>
-                <span className="text-sm">{mockStats.career.yards.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Touchdowns</span>
-                <span className="text-sm">{mockStats.career.touchdowns}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Interceptions</span>
-                <span className="text-sm">{mockStats.career.interceptions}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Career Rating</span>
-                <span className="text-sm">{mockStats.career.rating}</span>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Quick Actions */}
           <Card>

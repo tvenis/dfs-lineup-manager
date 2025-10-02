@@ -6,6 +6,7 @@ import uuid
 
 from app.database import get_db
 from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet, PlayerActuals
+from sqlalchemy.orm import aliased
 from app.schemas import (
     PlayerCreate, PlayerUpdate, Player as PlayerSchema,
     PlayerPoolEntryCreate, PlayerPoolEntryUpdate, PlayerPoolEntry as PlayerPoolEntrySchema,
@@ -819,3 +820,123 @@ def get_player_props(
         )
 
     return PlayerPropsResponse(props=props, total=len(props))
+
+@router.get("/{player_id}/game-log/{year}")
+async def get_player_game_log(
+    player_id: int, 
+    year: int, 
+    db: Session = Depends(get_db)
+):
+    """Get player's game log for a specific year with fantasy points, salary, and game details"""
+    
+    # Verify player exists
+    player = db.query(Player).filter(Player.playerDkId == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    # Get completed weeks for the year
+    weeks = db.query(Week).filter(
+        and_(
+            Week.year == year,
+            Week.status == "Completed"
+        )
+    ).order_by(Week.week_number).all()
+    
+    if not weeks:
+        return {"game_log": [], "year": year, "player": player.displayName}
+    
+    # Create aliases for team joins
+    team_alias = aliased(Team)
+    opponent_alias = aliased(Team)
+    
+    game_log = []
+    
+    for week in weeks:
+        # Get player actuals for this week
+        actuals = db.query(PlayerActuals).filter(
+            and_(
+                PlayerActuals.playerDkId == player_id,
+                PlayerActuals.week_id == week.id
+            )
+        ).first()
+        
+        # Get game data for this week
+        game = db.query(Game, team_alias, opponent_alias).join(
+            team_alias, Game.team_id == team_alias.id
+        ).outerjoin(
+            opponent_alias, Game.opponent_team_id == opponent_alias.id
+        ).filter(
+            and_(
+                Game.week_id == week.id,
+                team_alias.abbreviation == player.team
+            )
+        ).first()
+        
+        # Get salary from player pool entry
+        pool_entry = db.query(PlayerPoolEntry).filter(
+            and_(
+                PlayerPoolEntry.playerDkId == player_id,
+                PlayerPoolEntry.week_id == week.id
+            )
+        ).first()
+        
+        # Build game log entry
+        game_log_entry = {
+            "week": week.week_number,
+            "fantasy_points": actuals.dk_actuals if actuals else 0,
+            "salary": pool_entry.salary if pool_entry else 0,
+            "opponent": None,
+            "home_or_away": None,
+            "result": None,
+            "passing": None,
+            "rushing": None,
+            "receiving": None
+        }
+        
+        # Add game details if available
+        if game:
+            game_obj, team, opponent = game
+            game_log_entry["opponent"] = opponent.abbreviation if opponent else "BYE"
+            game_log_entry["home_or_away"] = game_obj.homeoraway
+            
+            # Determine result (simplified - would need actual game results)
+            # For now, we'll use a placeholder
+            game_log_entry["result"] = "W"  # This would need actual game result logic
+        
+        # Add actuals data if available
+        if actuals:
+            # Passing stats (for QBs)
+            if player.position == "QB":
+                game_log_entry["passing"] = {
+                    "completions": actuals.completions or 0,
+                    "attempts": actuals.attempts or 0,
+                    "yards": actuals.pass_yds or 0,
+                    "touchdowns": actuals.pass_tds or 0,
+                    "interceptions": actuals.interceptions or 0
+                }
+            
+            # Rushing stats (for all positions)
+            game_log_entry["rushing"] = {
+                "attempts": actuals.rush_att or 0,
+                "yards": actuals.rush_yds or 0,
+                "touchdowns": actuals.rush_tds or 0
+            }
+            
+            # Receiving stats (for RB, WR, TE)
+            if player.position in ["RB", "WR", "TE"]:
+                game_log_entry["receiving"] = {
+                    "targets": actuals.rec_tgt or 0,
+                    "receptions": actuals.receptions or 0,
+                    "yards": actuals.rec_yds or 0,
+                    "touchdowns": actuals.rec_tds or 0
+                }
+        
+        game_log.append(game_log_entry)
+    
+    return {
+        "game_log": game_log,
+        "year": year,
+        "player": player.displayName,
+        "position": player.position
+    }
+
