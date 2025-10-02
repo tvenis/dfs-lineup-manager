@@ -188,77 +188,71 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2 font-medium">Week</th>
-                  <th className="text-center p-2 font-medium">Fantasy</th>
-                  <th className="text-center p-2 font-medium">Salary</th>
-                  <th className="text-center p-2 font-medium">Game</th>
+                <tr className="border-b bg-gray-50">
+                  <th className="text-center p-2 font-medium">Week</th>
+                  <th className="text-right p-2 font-medium">Fantasy Points</th>
+                  <th className="text-right p-2 font-medium">Salary</th>
+                  <th className="text-center p-2 font-medium">Opponent</th>
+                  <th className="text-center p-2 font-medium">H/A</th>
+                  <th className="text-center p-2 font-medium">Result</th>
                   {playerPosition === 'QB' && (
                     <>
-                      <th className="text-center p-2 font-medium">Passing</th>
+                      <th className="text-right p-2 font-medium">Pass Comp</th>
+                      <th className="text-right p-2 font-medium">Pass Att</th>
+                      <th className="text-right p-2 font-medium">Pass Yds</th>
+                      <th className="text-right p-2 font-medium">Pass TD</th>
+                      <th className="text-right p-2 font-medium">Pass Int</th>
                     </>
                   )}
-                  <th className="text-center p-2 font-medium">Rushing</th>
+                  <th className="text-right p-2 font-medium">Rush Att</th>
+                  <th className="text-right p-2 font-medium">Rush Yds</th>
+                  <th className="text-right p-2 font-medium">Rush TD</th>
                   {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && (
-                    <th className="text-center p-2 font-medium">Receiving</th>
+                    <>
+                      <th className="text-right p-2 font-medium">Rec Tgt</th>
+                      <th className="text-right p-2 font-medium">Rec</th>
+                      <th className="text-right p-2 font-medium">Rec Yds</th>
+                      <th className="text-right p-2 font-medium">Rec TD</th>
+                    </>
                   )}
                 </tr>
               </thead>
               <tbody>
                 {gameLogData.map((game, index) => (
                   <tr key={index} className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-gray-50/30' : 'bg-white'}`}>
-                    <td className="p-2 font-medium">{game.week}</td>
-                    <td className="p-2 text-center font-medium">{game.fantasy_points.toFixed(1)}</td>
-                    <td className="p-2 text-center">${game.salary.toLocaleString()}</td>
+                    <td className="p-2 text-center font-medium">{game.week}</td>
+                    <td className="p-2 text-right font-medium">{game.fantasy_points.toFixed(1)}</td>
+                    <td className="p-2 text-right">${game.salary.toLocaleString()}</td>
+                    <td className="p-2 text-center">{game.opponent || 'BYE'}</td>
+                    <td className="p-2 text-center">{formatHomeOrAway(game.home_or_away)}</td>
                     <td className="p-2 text-center">
-                      <div className="flex flex-col items-center space-y-1">
-                        <div className="flex items-center space-x-1">
-                          <span className="text-xs">{formatHomeOrAway(game.home_or_away)}</span>
-                          <span className="font-medium">{game.opponent || 'BYE'}</span>
-                        </div>
-                        {game.result && (
-                          <Badge className={`text-xs ${getResultColor(game.result)}`}>
-                            {game.result}
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    {playerPosition === 'QB' && (
-                      <td className="p-2 text-center">
-                        {game.passing ? (
-                          <div className="text-xs space-y-1">
-                            <div>{game.passing.completions}/{game.passing.attempts}</div>
-                            <div>{game.passing.yards} yds</div>
-                            <div>{game.passing.touchdowns} TD, {game.passing.interceptions} INT</div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                    )}
-                    <td className="p-2 text-center">
-                      {game.rushing ? (
-                        <div className="text-xs space-y-1">
-                          <div>{game.rushing.attempts} att</div>
-                          <div>{game.rushing.yards} yds</div>
-                          <div>{game.rushing.touchdowns} TD</div>
-                        </div>
+                      {game.result ? (
+                        <Badge className={`text-xs ${getResultColor(game.result)}`}>
+                          {game.result}
+                        </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
+                    {playerPosition === 'QB' && (
+                      <>
+                        <td className="p-2 text-right">{game.passing?.completions || 0}</td>
+                        <td className="p-2 text-right">{game.passing?.attempts || 0}</td>
+                        <td className="p-2 text-right">{game.passing?.yards || 0}</td>
+                        <td className="p-2 text-right">{game.passing?.touchdowns || 0}</td>
+                        <td className="p-2 text-right">{game.passing?.interceptions || 0}</td>
+                      </>
+                    )}
+                    <td className="p-2 text-right">{game.rushing?.attempts || 0}</td>
+                    <td className="p-2 text-right">{game.rushing?.yards || 0}</td>
+                    <td className="p-2 text-right">{game.rushing?.touchdowns || 0}</td>
                     {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && (
-                      <td className="p-2 text-center">
-                        {game.receiving ? (
-                          <div className="text-xs space-y-1">
-                            <div>{game.receiving.receptions}/{game.receiving.targets}</div>
-                            <div>{game.receiving.yards} yds</div>
-                            <div>{game.receiving.touchdowns} TD</div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
+                      <>
+                        <td className="p-2 text-right">{game.receiving?.targets || 0}</td>
+                        <td className="p-2 text-right">{game.receiving?.receptions || 0}</td>
+                        <td className="p-2 text-right">{game.receiving?.yards || 0}</td>
+                        <td className="p-2 text-right">{game.receiving?.touchdowns || 0}</td>
+                      </>
                     )}
                   </tr>
                 ))}
