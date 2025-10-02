@@ -206,7 +206,7 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
               </thead>
               <tbody>
                 {gameLogData.map((game, index) => (
-                  <tr key={index} className="border-b hover:bg-gray-50">
+                  <tr key={index} className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-gray-50/30' : 'bg-white'}`}>
                     <td className="p-2 font-medium">{game.week}</td>
                     <td className="p-2 text-center font-medium">{game.fantasy_points.toFixed(1)}</td>
                     <td className="p-2 text-center">${game.salary.toLocaleString()}</td>
