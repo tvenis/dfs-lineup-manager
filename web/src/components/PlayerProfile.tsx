@@ -609,13 +609,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
             <CardContent className="space-y-2">
               {/* Quick Actions section */}
               <Button variant="outline" className="w-full justify-start">
-                View Game Log
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                Compare vs Position
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                Injury History
+                Compare Players
               </Button>
               
               {/* Add Player Alias button */}
