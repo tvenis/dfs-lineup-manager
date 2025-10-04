@@ -289,7 +289,7 @@ export function ProjectionsVsActualsChart({ playerId }: ProjectionsVsActualsChar
                 stroke="#ef4444"
                 strokeDasharray="5 5"
                 strokeWidth={2}
-                label={{ value: "Value Target = 3.0", position: "topRight", style: { fontSize: 10, fill: "#ef4444" } }}
+                label={{ value: "Value Target = 3.0", position: "top", style: { fontSize: 10, fill: "#ef4444" } }}
               />
               <Line 
                 yAxisId="right"

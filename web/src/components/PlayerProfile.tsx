@@ -183,15 +183,15 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
           // Player not in current week's pool - try to get player directly
           console.log("PlayerProfile - Player not in current week pool, fetching directly");
           try {
-            const player = await PlayerService.getPlayerByDkId(parseInt(playerId));
-            console.log("PlayerProfile - Found player directly:", player);
+            const playerPoolEntry = await PlayerService.getPlayerByDkId(parseInt(playerId));
+            console.log("PlayerProfile - Found player directly:", playerPoolEntry);
             
-            setPlayerData(player);
+            setPlayerData(playerPoolEntry.player);
             setPlayerPoolData(null); // No current week pool data
             // Load comments and aliases for this player
             await Promise.all([
-              loadComments(player.playerDkId),
-              loadAliases(player.playerDkId)
+              loadComments(playerPoolEntry.playerDkId),
+              loadAliases(playerPoolEntry.playerDkId)
             ]);
           } catch (directFetchError) {
             console.error("PlayerProfile - Error fetching player directly:", directFetchError);

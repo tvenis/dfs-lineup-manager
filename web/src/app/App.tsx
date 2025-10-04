@@ -173,6 +173,13 @@ export default function App({ children }: { children: React.ReactNode }) {
       icon: Database,
       href: "/import/player-actuals",
     },
+    {
+      id: "team-stats",
+      label: "Team Stats",
+      description: "Import team statistics from NFLVerse",
+      icon: Shield,
+      href: "/import/team-stats",
+    },
   ];
 
   return (
