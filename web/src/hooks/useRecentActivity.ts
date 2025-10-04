@@ -46,7 +46,7 @@ export const useRecentActivity = (options: UseRecentActivityOptions = {}): UseRe
     if (limit) params.set('limit', limit.toString());
     if (weekId) params.set('week_id', weekId.toString());
 
-    return `/api/recent-activity?${params.toString()}`;
+    return buildBaseUrl('/api/recent-activity') + '?' + params.toString();
   }, [importType, limit, weekId]);
 
   // Fetch activities from API
@@ -55,7 +55,7 @@ export const useRecentActivity = (options: UseRecentActivityOptions = {}): UseRe
     setError(null);
 
     try {
-      const url = buildBaseUrl(buildApiUrl());
+      const url = buildApiUrl();
       const response = await fetch(url);
       
       if (!response.ok) {
