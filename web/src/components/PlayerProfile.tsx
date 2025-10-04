@@ -323,12 +323,20 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'questionable': return 'bg-yellow-100 text-yellow-800';
-      case 'doubtful': return 'bg-orange-100 text-orange-800';
-      case 'out': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+    switch (status?.toLowerCase()) {
+      case 'active':
+      case 'available':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'questionable':
+      case 'q':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'doubtful':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'out':
+      case 'ir':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -412,7 +420,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                 <span className="font-medium">{playerData.team || 'N/A'}</span>
                 <span>•</span>
                 <span className="font-medium">{playerData.position || 'N/A'}</span>
-                <Badge variant="secondary" className={`${getStatusColor(status)} text-sm`}>
+                <Badge variant="outline" className={`${getStatusColor(status)} text-sm font-medium`}>
                   {status}
                 </Badge>
               </div>
