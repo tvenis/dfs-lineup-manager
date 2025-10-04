@@ -11,6 +11,7 @@ import { Week } from '@/types/prd';
 import { API_CONFIG, buildApiUrl } from '@/config/api';
 import { ActivityList } from '@/components/activity';
 import { useRecentActivity } from '@/hooks/useRecentActivity';
+import { PlayerPoolImportResultDialog } from '@/components/PlayerPoolImportResultDialog';
 
 interface DraftKingsImportResponse {
   players_added: number;
@@ -18,6 +19,8 @@ interface DraftKingsImportResponse {
   entries_added: number;
   entries_updated: number;
   entries_skipped: number;
+  auto_excluded_count: number;
+  status_updates: number;
   errors: string[];
   total_processed: number;
 }
@@ -36,6 +39,11 @@ export default function PlayerPoolImportPage() {
     updated_at: string;
   }>>([]);
   const [isImporting, setIsImporting] = useState(false);
+  
+  // Dialog state
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [importResult, setImportResult] = useState<DraftKingsImportResponse | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // Use the modern activity hook for player pool activities
   const {
@@ -121,6 +129,8 @@ export default function PlayerPoolImportPage() {
     }
 
     setIsImporting(true);
+    setImportResult(null);
+    setImportError(null);
 
     try {
       const response = await fetch(buildApiUrl('/api/draftkings/import'), {
@@ -148,19 +158,42 @@ export default function PlayerPoolImportPage() {
       }
 
       const result: DraftKingsImportResponse = await response.json();
+      
+      // Set the result and show the dialog
+      setImportResult(result);
+      setShowResultDialog(true);
 
       // Refresh the activity list to show the new import
       await refreshActivity();
 
     } catch (error) {
       console.error('Error importing player data:', error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setImportError(errorMessage);
+      setShowResultDialog(true);
     } finally {
       setIsImporting(false);
     }
   };
 
   const selectedWeek = weeks.find(week => week.id === selectedWeekId);
+  const selectedDraftGroupInfo = draftGroups.find(group => group.draftGroup.toString() === draftGroup);
+
+  const getWeekDisplayName = () => {
+    if (!selectedWeek) return 'Unknown Week';
+    return `Week ${selectedWeek.week_number} (${selectedWeek.year})`;
+  };
+
+  const getDraftGroupDisplayName = () => {
+    if (!selectedDraftGroupInfo) return draftGroup;
+    return `${draftGroup} - ${selectedDraftGroupInfo.draftGroup_description}`;
+  };
+
+  const handleCloseResultDialog = () => {
+    setShowResultDialog(false);
+    setImportResult(null);
+    setImportError(null);
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -335,6 +368,16 @@ export default function PlayerPoolImportPage() {
           console.log('View details for activity:', activityId);
           // You can implement a modal or navigation here
         }}
+      />
+
+      {/* Import Result Dialog */}
+      <PlayerPoolImportResultDialog
+        isOpen={showResultDialog}
+        onClose={handleCloseResultDialog}
+        result={importResult}
+        error={importError}
+        draftGroup={getDraftGroupDisplayName()}
+        week={getWeekDisplayName()}
       />
 
     </div>
