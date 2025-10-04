@@ -228,7 +228,7 @@ async def import_matched_team_stats(
                 ip_address=client_ip,
                 user_agent=user_agent
             )
-            print(f"✅ Successfully logged team-defense-stats-import activity in {duration_ms}ms")
+            print(f"✅ Successfully logged team-stats-import activity in {duration_ms}ms")
         except Exception as log_error:
             print(f"⚠️ Failed to log import activity: {str(log_error)}")
             # Don't raise - logging failure shouldn't break the import
@@ -313,7 +313,7 @@ async def import_team_stats_from_nflverse(
     
     try:
         # Fetch and match NFLVerse data
-        result = NFLVerseService.process_team_defense_stats(
+        result = NFLVerseService.process_team_stats(
             db=db,
             week_id=week_id,
             season=season,

@@ -565,7 +565,7 @@ class NFLVerseService:
             return (None, 'none')
     
     @staticmethod
-    def process_team_defense_stats(
+    def process_team_stats(
         db: Session,
         week_id: int,
         season: int,
