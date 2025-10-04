@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { ComposedChart, Bar, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ComposedChart, Bar, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line, ReferenceLine } from 'recharts';
 import { buildApiUrl } from '@/config/api';
 import { Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
@@ -11,6 +11,8 @@ interface ProjectionsVsActualsData {
   year: number;
   projection: number | null;
   actual: number | null;
+  salary: number | null;
+  value: number | null;
   week_status: string;
 }
 
@@ -60,6 +62,8 @@ export function ProjectionsVsActualsChart({ playerId }: ProjectionsVsActualsChar
             week: `Week ${item.week_number}`,
             projection: item.projection || 0,
             actual: item.actual || 0,
+            value: item.value || 0,
+            salary: item.salary || 0,
             weekNumber: item.week_number,
             year: item.year
           }))
@@ -107,6 +111,8 @@ export function ProjectionsVsActualsChart({ playerId }: ProjectionsVsActualsChar
       const data = payload[0].payload;
       const projection = data.projection;
       const actual = data.actual;
+      const value = data.value;
+      const salary = data.salary;
       const difference = actual - projection;
       const percentage = projection > 0 ? ((difference / projection) * 100).toFixed(1) : 0;
 
@@ -127,6 +133,17 @@ export function ProjectionsVsActualsChart({ playerId }: ProjectionsVsActualsChar
               {difference >= 0 ? '+' : ''}{difference.toFixed(1)} ({percentage}%)
             </span>
           </p>
+          {salary && salary > 0 && (
+            <p className="text-sm text-muted-foreground">
+              <span className="inline-block w-3 h-3 bg-emerald-500 rounded mr-2"></span>
+              Value: <span className="font-medium">{value.toFixed(2)}</span> pts/$
+            </p>
+          )}
+          {salary && salary > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Salary: ${salary.toLocaleString()}
+            </p>
+          )}
         </div>
       );
     }
@@ -226,7 +243,7 @@ export function ProjectionsVsActualsChart({ playerId }: ProjectionsVsActualsChar
       <CardContent>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <ComposedChart data={chartData} margin={{ top: 20, right: 80, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis 
                 dataKey="week" 
@@ -234,26 +251,55 @@ export function ProjectionsVsActualsChart({ playerId }: ProjectionsVsActualsChar
                 tick={{ fontSize: 12 }}
               />
               <YAxis 
+                yAxisId="left"
                 className="text-xs"
                 tick={{ fontSize: 12 }}
                 label={{ value: 'Fantasy Points', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fontSize: 12 } }}
+              />
+              <YAxis 
+                yAxisId="right"
+                orientation="right"
+                className="text-xs"
+                tick={{ fontSize: 12 }}
+                domain={[0, (dataMax) => Math.max(5, dataMax + 2)]}
+                label={{ value: 'Value', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fontSize: 12 } }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend 
                 wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
                 iconType="rect"
               />
+              <ReferenceLine 
+                yAxisId="right"
+                y={3.0}
+                stroke="#ef4444"
+                strokeDasharray="5 5"
+                strokeWidth={2}
+                label={{ value: "Value Target = 3.0", position: "topRight", style: { fontSize: 10, fill: "#ef4444" } }}
+              />
               <Bar 
+                yAxisId="left"
                 dataKey="projection" 
                 fill="#e5e7eb" 
                 name="Projection"
                 radius={[2, 2, 0, 0]}
               />
               <Scatter 
+                yAxisId="left"
                 dataKey="actual" 
                 fill="#3b82f6" 
                 name="Actual"
                 r={4}
+              />
+              <Line 
+                yAxisId="right"
+                type="monotone"
+                dataKey="value" 
+                stroke="#10b981" 
+                strokeWidth={2}
+                name="Value"
+                dot={{ fill: '#10b981', strokeWidth: 2, r: 3 }}
+                connectNulls={false}
               />
             </ComposedChart>
           </ResponsiveContainer>

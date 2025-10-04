@@ -160,7 +160,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
         const currentWeek = await PlayerService.getCurrentWeek();
         console.log("PlayerProfile - Current week:", currentWeek);
 
-        // Get player pool data for the current week
+        // First, try to get player from current week's player pool
         const playerPoolResponse = await PlayerService.getPlayerPool(currentWeek.id, { limit: 1000 });
         console.log("PlayerProfile - Player pool response:", playerPoolResponse);
 
@@ -171,6 +171,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
         console.log("PlayerProfile - Found player pool entry:", playerPoolEntry);
 
         if (playerPoolEntry) {
+          // Player found in current week's pool - use existing logic
           setPlayerData(playerPoolEntry.player);
           setPlayerPoolData(playerPoolEntry);
           // Load comments and aliases for this player
@@ -179,7 +180,23 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
             loadAliases(playerPoolEntry.playerDkId)
           ]);
         } else {
-          setError(`Player with ID ${playerId} not found in current week's player pool`);
+          // Player not in current week's pool - try to get player directly
+          console.log("PlayerProfile - Player not in current week pool, fetching directly");
+          try {
+            const player = await PlayerService.getPlayerByDkId(parseInt(playerId));
+            console.log("PlayerProfile - Found player directly:", player);
+            
+            setPlayerData(player);
+            setPlayerPoolData(null); // No current week pool data
+            // Load comments and aliases for this player
+            await Promise.all([
+              loadComments(player.playerDkId),
+              loadAliases(player.playerDkId)
+            ]);
+          } catch (directFetchError) {
+            console.error("PlayerProfile - Error fetching player directly:", directFetchError);
+            setError(`Player with ID ${playerId} not found`);
+          }
         }
       } catch (err) {
         console.error("PlayerProfile - Error fetching player data:", err);
@@ -501,6 +518,18 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                       <div className="text-lg font-semibold text-purple-600">{ownership > 0 ? `${ownership.toFixed(1)}%` : 'N/A'}</div>
                     </div>
                   </div>
+                  
+                  {/* Current Week Pool Status Message */}
+                  {!playerPoolData && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center">
+                        <div className="text-yellow-600 mr-2">⚠️</div>
+                        <div className="text-sm text-yellow-800">
+                          <strong>Not in current week's DFS pool.</strong> This player is not available for the current week (possibly on bye week or not in contests).
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Aliases - Small and subtle */}
                   {aliases.length > 0 && (

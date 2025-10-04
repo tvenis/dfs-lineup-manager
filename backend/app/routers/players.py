@@ -224,6 +224,7 @@ def get_player_profiles_with_pool_data_optimized(
     
     # Build the main query with consistency calculation in a single SQL query
     # This uses a subquery to calculate YTD totals for each player
+    # Only include players who have both pool entries and actuals data
     consistency_subquery = db.query(
         PlayerPoolEntry.playerDkId,
         func.sum(PlayerActuals.dk_actuals).label('ytd_actuals'),
@@ -237,10 +238,11 @@ def get_player_profiles_with_pool_data_optimized(
         )
     ).filter(
         PlayerPoolEntry.week_id <= week_id,
-        PlayerPoolEntry.projectedPoints.isnot(None)
+        PlayerPoolEntry.projectedPoints.isnot(None),
+        PlayerActuals.dk_actuals.isnot(None)
     ).group_by(PlayerPoolEntry.playerDkId).subquery()
     
-    # Main query with left join to consistency data
+    # Main query with left join to pool data and consistency data
     query = (
         db.query(
             Player,
@@ -248,7 +250,7 @@ def get_player_profiles_with_pool_data_optimized(
             consistency_subquery.c.ytd_actuals,
             consistency_subquery.c.ytd_projected
         )
-        .join(PlayerPoolEntry, 
+        .outerjoin(PlayerPoolEntry, 
               and_(PlayerPoolEntry.playerDkId == Player.playerDkId,
                    PlayerPoolEntry.week_id == week_id))
         .outerjoin(consistency_subquery, 
@@ -294,12 +296,12 @@ def get_player_profiles_with_pool_data_optimized(
             'hidden': player.hidden,
             'created_at': player.created_at,
             'updated_at': player.updated_at,
-            'currentWeekProj': pool_entry.projectedPoints,
-            'currentWeekSalary': pool_entry.salary,
+            'currentWeekProj': pool_entry.projectedPoints if pool_entry else None,
+            'currentWeekSalary': pool_entry.salary if pool_entry else None,
             'consistency': consistency,
-            'ownership': pool_entry.ownership,
-            'status': pool_entry.status,
-            'poolEntryId': pool_entry.id
+            'ownership': pool_entry.ownership if pool_entry else None,
+            'status': pool_entry.status if pool_entry else None,
+            'poolEntryId': pool_entry.id if pool_entry else None
         }
         players_with_pool_data.append(enhanced_player)
     
@@ -997,15 +999,30 @@ async def get_player_projections_vs_actuals(
         )
     ).all()
     
+    # Get salary data from player pool entries
+    pool_entries = db.query(PlayerPoolEntry).filter(
+        and_(
+            PlayerPoolEntry.playerDkId == player_id,
+            PlayerPoolEntry.salary.isnot(None)
+        )
+    ).all()
+    
     # Create lookup dictionaries for faster access
     projections_by_week = {p.week_id: p.pprProjections for p in projections}
     actuals_by_week = {a.week_id: a.dk_actuals for a in actuals}
+    salary_by_week = {p.week_id: p.salary for p in pool_entries}
     
     # Build response data
     chart_data = []
     for week in weeks:
         projection_value = projections_by_week.get(week.id)
         actual_value = actuals_by_week.get(week.id)
+        salary_value = salary_by_week.get(week.id)
+        
+        # Calculate value (actual / (salary/1000))
+        value = None
+        if actual_value is not None and salary_value is not None and salary_value > 0:
+            value = actual_value / (salary_value / 1000)
         
         # Only include weeks where we have at least projection or actual data
         if projection_value is not None or actual_value is not None:
@@ -1014,6 +1031,8 @@ async def get_player_projections_vs_actuals(
                 year=week.year,
                 projection=projection_value,
                 actual=actual_value,
+                salary=salary_value,
+                value=value,
                 week_status=week.status
             ))
     

@@ -831,6 +831,8 @@ class ProjectionsVsActualsData(BaseModel):
     year: int
     projection: Optional[float]
     actual: Optional[float]
+    salary: Optional[int]
+    value: Optional[float]  # actual / (salary/1000)
     week_status: str
 
 class ProjectionsVsActualsResponse(BaseModel):
