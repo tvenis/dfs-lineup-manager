@@ -586,6 +586,28 @@ class GameBase(BaseModel):
     actual_spread: Optional[float] = Field(None, description="Actual spread")
     actual_total: Optional[float] = Field(None, description="Actual total")
     odds_api_gameid: Optional[str] = Field(None, max_length=50, description="Odds API game ID for external API integration")
+    
+    # NFLVerse game results fields
+    nflverse_game_id: Optional[str] = Field(None, max_length=50, description="NFLVerse game ID")
+    away_score: Optional[int] = Field(None, description="Away team score")
+    home_score: Optional[int] = Field(None, description="Home team score")
+    result: Optional[float] = Field(None, description="Game result (spread result)")
+    total: Optional[float] = Field(None, description="Total points scored")
+    overtime: Optional[bool] = Field(None, description="Overtime flag")
+    weekday: Optional[str] = Field(None, max_length=10, description="Day of week")
+    gsis: Optional[int] = Field(None, description="GSIS ID")
+    pfr: Optional[str] = Field(None, max_length=50, description="PFR ID")
+    pff: Optional[str] = Field(None, max_length=50, description="PFF ID")
+    espn: Optional[int] = Field(None, description="ESPN ID")
+    away_rest: Optional[int] = Field(None, description="Away team rest days")
+    home_rest: Optional[int] = Field(None, description="Home team rest days")
+    div_game: Optional[bool] = Field(None, description="Division game flag")
+    roof: Optional[str] = Field(None, max_length=20, description="Stadium roof type")
+    surface: Optional[str] = Field(None, max_length=20, description="Playing surface")
+    temp: Optional[int] = Field(None, description="Temperature")
+    wind: Optional[int] = Field(None, description="Wind speed")
+    stadium_id: Optional[str] = Field(None, max_length=50, description="Stadium ID")
+    stadium: Optional[str] = Field(None, max_length=100, description="Stadium name")
 
 class GameCreate(GameBase):
     pass
@@ -601,6 +623,28 @@ class GameUpdate(BaseModel):
     actual_spread: Optional[float] = Field(None, description="Actual spread")
     actual_total: Optional[float] = Field(None, description="Actual total")
     odds_api_gameid: Optional[str] = Field(None, max_length=50, description="Odds API game ID for external API integration")
+    
+    # NFLVerse game results fields
+    nflverse_game_id: Optional[str] = Field(None, max_length=50, description="NFLVerse game ID")
+    away_score: Optional[int] = Field(None, description="Away team score")
+    home_score: Optional[int] = Field(None, description="Home team score")
+    result: Optional[float] = Field(None, description="Game result (spread result)")
+    total: Optional[float] = Field(None, description="Total points scored")
+    overtime: Optional[bool] = Field(None, description="Overtime flag")
+    weekday: Optional[str] = Field(None, max_length=10, description="Day of week")
+    gsis: Optional[int] = Field(None, description="GSIS ID")
+    pfr: Optional[str] = Field(None, max_length=50, description="PFR ID")
+    pff: Optional[str] = Field(None, max_length=50, description="PFF ID")
+    espn: Optional[int] = Field(None, description="ESPN ID")
+    away_rest: Optional[int] = Field(None, description="Away team rest days")
+    home_rest: Optional[int] = Field(None, description="Home team rest days")
+    div_game: Optional[bool] = Field(None, description="Division game flag")
+    roof: Optional[str] = Field(None, max_length=20, description="Stadium roof type")
+    surface: Optional[str] = Field(None, max_length=20, description="Playing surface")
+    temp: Optional[int] = Field(None, description="Temperature")
+    wind: Optional[int] = Field(None, description="Wind speed")
+    stadium_id: Optional[str] = Field(None, max_length=50, description="Stadium ID")
+    stadium: Optional[str] = Field(None, max_length=100, description="Stadium name")
 
 class Game(GameBase):
     id: int
@@ -627,6 +671,29 @@ class GameSimple(BaseModel):
     actual_spread: Optional[float] = None
     actual_total: Optional[float] = None
     odds_api_gameid: Optional[str] = None
+    
+    # NFLVerse game results fields
+    nflverse_game_id: Optional[int] = None
+    away_score: Optional[int] = None
+    home_score: Optional[int] = None
+    result: Optional[float] = None
+    total: Optional[float] = None
+    overtime: Optional[bool] = None
+    weekday: Optional[str] = None
+    gsis: Optional[int] = None
+    pfr: Optional[int] = None
+    pff: Optional[int] = None
+    espn: Optional[int] = None
+    away_rest: Optional[int] = None
+    home_rest: Optional[int] = None
+    div_game: Optional[bool] = None
+    roof: Optional[str] = None
+    surface: Optional[str] = None
+    temp: Optional[int] = None
+    wind: Optional[int] = None
+    stadium_id: Optional[str] = None
+    stadium: Optional[str] = None
+    
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -637,6 +704,28 @@ class GameListResponse(BaseModel):
     games: List[GameSimple]
     total: int
     week_id: int
+
+# Game Results import schemas
+class GameResultsImportRequest(BaseModel):
+    week_id: int = Field(..., description="Week ID from weeks table")
+    season: int = Field(..., description="NFL season year")
+    week_number: int = Field(..., description="Week number (1-18)")
+    season_type: str = Field(default="REG", description="Season type (REG, POST, PRE)")
+    auto_import: bool = Field(default=False, description="If true, auto-import exact matches")
+
+class GameResultsImportResponse(BaseModel):
+    total_processed: int = Field(..., ge=0, description="Total number of records processed")
+    successful_matches: int = Field(..., ge=0, description="Number of successful team matches")
+    failed_matches: int = Field(..., ge=0, description="Number of failed team matches")
+    games_created: int = Field(..., ge=0, description="Number of new game records created")
+    games_updated: int = Field(..., ge=0, description="Number of existing game records updated")
+    errors: List[str] = Field(default=[], description="List of error messages")
+    unmatched_games: List[Dict[str, Any]] = Field(default=[], description="List of unmatched games for manual review")
+    match_stats: Dict[str, int] = Field(default={}, description="Match confidence statistics")
+
+class GameResultsMatchedImportRequest(BaseModel):
+    week_id: int = Field(..., description="Week ID from weeks table")
+    matched_games: List[Dict[str, Any]] = Field(..., description="List of matched game records to import")
 
 # Analysis types for player pool joined with games
 class WeekAnalysisData(BaseModel):

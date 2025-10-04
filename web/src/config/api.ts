@@ -25,7 +25,11 @@ export const API_CONFIG = {
     CSV_IMPORT: '/api/csv',
     CONTESTS: '/api/contests',
     DRAFTGROUPS: '/api/draftgroups',
-    COMMENTS: '/api/comments'
+    COMMENTS: '/api/comments',
+    // Game Results endpoints
+    GAME_RESULTS_WEEKS: '/api/game-results/weeks',
+    GAME_RESULTS_IMPORT_NFLVERSE: '/api/game-results/import-nflverse',
+    GAME_RESULTS_IMPORT_MATCHED: '/api/game-results/import-matched'
   }
 };
 

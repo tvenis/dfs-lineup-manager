@@ -180,6 +180,13 @@ export default function App({ children }: { children: React.ReactNode }) {
       icon: Shield,
       href: "/import/team-stats",
     },
+    {
+      id: "games",
+      label: "Games",
+      description: "Import game results from NFLVerse",
+      icon: Trophy,
+      href: "/import/games",
+    },
   ];
 
   return (

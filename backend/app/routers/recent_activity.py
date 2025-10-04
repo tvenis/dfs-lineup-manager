@@ -22,7 +22,8 @@ IMPORT_TYPE_MAP = {
     "contests": "contests-import",
     "actuals": "actuals-import",  # Legacy - kept for backward compatibility
     "player-actuals": "player-actuals-import",
-    "team-stats": "team-stats-import"
+    "team-stats": "team-stats-import",
+    "game-results": "game-results-import"
 }
 
 @router.get("/recent-activity", response_model=List[RecentActivitySchema])

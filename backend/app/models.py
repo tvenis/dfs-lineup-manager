@@ -339,6 +339,29 @@ class Game(Base):
     actual_spread = Column(Float)  # actual spread
     actual_total = Column(Float)  # actual total
     odds_api_gameid = Column(String(50))  # Odds API game ID for external API integration
+    
+    # NFLVerse game results fields
+    nflverse_game_id = Column(String(50))  # NFLVerse game_id (string format like "2024_01_BAL_KC")
+    away_score = Column(Integer)        # Away team score
+    home_score = Column(Integer)        # Home team score
+    result = Column(Float)              # Game result (spread result)
+    total = Column(Float)               # Total points scored
+    overtime = Column(Boolean)          # Overtime flag
+    weekday = Column(String(10))        # Day of week
+    gsis = Column(Integer)              # GSIS ID (numeric)
+    pfr = Column(String(50))            # PFR ID (can be string like '202409050kan')
+    pff = Column(String(50))            # PFF ID (can be string)
+    espn = Column(Integer)              # ESPN ID (numeric)
+    away_rest = Column(Integer)         # Away team rest days
+    home_rest = Column(Integer)         # Home team rest days
+    div_game = Column(Boolean)          # Division game flag
+    roof = Column(String(20))           # Stadium roof type
+    surface = Column(String(20))        # Playing surface
+    temp = Column(Integer)              # Temperature
+    wind = Column(Integer)              # Wind speed
+    stadium_id = Column(String(50))     # Stadium ID
+    stadium = Column(String(100))       # Stadium name
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

@@ -651,4 +651,216 @@ class NFLVerseService:
             "week": week_number,
             "season_type": season_type
         }
+    
+    @staticmethod
+    def fetch_game_results(
+        season: int, 
+        week: int, 
+        season_type: str = "REG"
+    ) -> pl.DataFrame:
+        """
+        Fetch game results from nflverse for a specific week
+        
+        Args:
+            season: NFL season year (e.g., 2025)
+            week: Week number (1-18)
+            season_type: "REG", "POST", or "PRE"
+        
+        Returns:
+            Polars DataFrame with game results
+        """
+        # Load schedules data
+        df = nfl.load_schedules(seasons=[season])
+        
+        # Filter to specific week and game type (season_type maps to game_type in NFLVerse)
+        wk_df = df.filter(
+            (pl.col("season") == season) & 
+            (pl.col("game_type") == season_type) & 
+            (pl.col("week") == week)
+        )
+        
+        return wk_df
+    
+    @staticmethod
+    def map_game_results_to_schema(nflverse_row: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Map NFLVerse game results to Game schema
+        
+        Args:
+            nflverse_row: Dictionary with nflverse column names
+        
+        Returns:
+            Dictionary with Game column names
+        """
+        game_data = {}
+        
+        # Map all the statistical fields, defaulting missing values appropriately
+        field_mapping = {
+            # Core game data
+            "game_id": "nflverse_game_id",
+            "away_score": "away_score",
+            "home_score": "home_score", 
+            "result": "result",
+            "total": "total",
+            "overtime": "overtime",
+            "weekday": "weekday",
+            "gsis": "gsis",
+            "pfr": "pfr",
+            "pff": "pff",
+            "espn": "espn",
+            "away_rest": "away_rest",
+            "home_rest": "home_rest",
+            "div_game": "div_game",
+            "roof": "roof",
+            "surface": "surface",
+            "temp": "temp",
+            "wind": "wind",
+            "stadium_id": "stadium_id",
+            "stadium": "stadium",
+        }
+        
+        for nflverse_field, game_field in field_mapping.items():
+            value = nflverse_row.get(nflverse_field)
+            
+            # Handle different data types appropriately
+            if value is not None:
+                if game_field == "nflverse_game_id":
+                    # String field for NFLVerse game ID
+                    game_data[game_field] = str(value)
+                elif game_field in ["away_score", "home_score", "gsis", "espn", "away_rest", "home_rest", "temp", "wind"]:
+                    # Integer fields
+                    game_data[game_field] = int(value)
+                elif game_field in ["pfr", "pff"]:
+                    # String fields for PFR/PFF IDs (can be strings like '202409050kan')
+                    game_data[game_field] = str(value) if value is not None else None
+                elif game_field in ["result", "total"]:
+                    # Float fields
+                    game_data[game_field] = float(value)
+                elif game_field in ["overtime", "div_game"]:
+                    # Boolean fields
+                    game_data[game_field] = bool(value)
+                else:
+                    # String fields
+                    game_data[game_field] = str(value)
+            else:
+                # Set appropriate defaults for None values
+                if game_field == "nflverse_game_id":
+                    game_data[game_field] = None
+                elif game_field in ["away_score", "home_score", "gsis", "espn", "away_rest", "home_rest", "temp", "wind"]:
+                    game_data[game_field] = None
+                elif game_field in ["pfr", "pff"]:
+                    game_data[game_field] = None
+                elif game_field in ["result", "total"]:
+                    game_data[game_field] = None
+                elif game_field in ["overtime", "div_game"]:
+                    game_data[game_field] = None
+                else:
+                    game_data[game_field] = None
+        
+        # Store raw NFLVerse data for reference
+        game_data["_nflverse_away_team"] = nflverse_row.get("away_team")
+        game_data["_nflverse_home_team"] = nflverse_row.get("home_team")
+        
+        return game_data
+    
+    @staticmethod
+    def process_game_results(
+        db: Session,
+        week_id: int,
+        season: int,
+        week_number: int,
+        season_type: str = "REG"
+    ) -> Dict[str, Any]:
+        """
+        Fetch NFLVerse game results and prepare for import into Games table
+        
+        Args:
+            db: Database session
+            week_id: Database week ID
+            season: NFL season year
+            week_number: Week number
+            season_type: Season type (REG, POST, PRE)
+        
+        Returns:
+            Dictionary with matched games and import statistics
+        """
+        # Verify week exists
+        week = db.query(Week).filter(Week.id == week_id).first()
+        if not week:
+            raise ValueError(f"Week ID {week_id} not found in database")
+        
+        # Fetch NFLVerse data
+        nflverse_df = NFLVerseService.fetch_game_results(season, week_number, season_type)
+        
+        # Convert to list of dicts
+        nflverse_data = nflverse_df.to_dicts()
+        
+        matched_games = []
+        unmatched_games = []
+        match_stats = {
+            'exact': 0,
+            'none': 0
+        }
+        
+        for nfl_game in nflverse_data:
+            # Map game data
+            game_data = NFLVerseService.map_game_results_to_schema(nfl_game)
+            
+            # Try to match teams
+            away_team_abbr = nfl_game.get("away_team", "")
+            home_team_abbr = nfl_game.get("home_team", "")
+            
+            matched_away_team, away_confidence = NFLVerseService.match_team(db, away_team_abbr)
+            matched_home_team, home_confidence = NFLVerseService.match_team(db, home_team_abbr)
+            
+            # Both teams must match for the game to be importable
+            if matched_away_team and matched_home_team:
+                match_stats['exact'] += 1
+                
+                # Create two game records (one for each team's perspective)
+                # Away team record
+                away_game_data = game_data.copy()
+                away_game_data.update({
+                    "team_id": matched_away_team.id,
+                    "opponent_team_id": matched_home_team.id,
+                    "homeoraway": "A",
+                    "team_name": away_team_abbr,
+                    "opponent_name": home_team_abbr,
+                    "match_confidence": away_confidence
+                })
+                matched_games.append(away_game_data)
+                
+                # Home team record
+                home_game_data = game_data.copy()
+                home_game_data.update({
+                    "team_id": matched_home_team.id,
+                    "opponent_team_id": matched_away_team.id,
+                    "homeoraway": "H",
+                    "team_name": home_team_abbr,
+                    "opponent_name": away_team_abbr,
+                    "match_confidence": home_confidence
+                })
+                matched_games.append(home_game_data)
+                
+            else:
+                match_stats['none'] += 1
+                unmatched_games.append({
+                    "away_team": away_team_abbr,
+                    "home_team": home_team_abbr,
+                    "away_matched": bool(matched_away_team),
+                    "home_matched": bool(matched_home_team),
+                    "away_confidence": away_confidence,
+                    "home_confidence": home_confidence,
+                    "game_data": game_data
+                })
+        
+        return {
+            "matched_games": matched_games,
+            "unmatched_games": unmatched_games,
+            "match_stats": match_stats,
+            "total_games": len(nflverse_data),
+            "season": season,
+            "week": week_number,
+            "season_type": season_type
+        }
 
