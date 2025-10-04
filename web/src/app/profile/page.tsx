@@ -192,7 +192,7 @@ export default function PlayerProfilePageOptimized() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold text-gray-900">Player Profile Search (Optimized)</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Player Profile Search</h1>
         <p className="text-gray-600">Search and view detailed profiles for any NFL player</p>
       </div>
 
