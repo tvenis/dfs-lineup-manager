@@ -17,6 +17,7 @@ import { Player, PlayerNameAlias, PlayerPoolEntry } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
 import PlayerProps from "./PlayerProps";
 import { GameLogCard } from "./GameLogCard";
+import { ProjectionsVsActualsChart } from "./ProjectionsVsActualsChart";
 
 interface PlayerProfileProps {
   playerId: string;
@@ -25,7 +26,7 @@ interface PlayerProfileProps {
 
 export function PlayerProfile({ playerId }: PlayerProfileProps) {
   const searchParams = useSearchParams();
-  const from = searchParams.get('from') || 'profile';
+  const from = searchParams?.get('from') || 'profile';
   
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [playerPoolData, setPlayerPoolData] = useState<PlayerPoolEntry | null>(null);
@@ -638,6 +639,11 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
+
+          {/* Projections vs Actuals Chart */}
+          {playerData && (
+            <ProjectionsVsActualsChart playerId={playerId} />
+          )}
 
           {/* Game Log */}
           {playerData && (

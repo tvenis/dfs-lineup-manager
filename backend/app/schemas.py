@@ -825,6 +825,20 @@ class PlayerActualsListResponse(BaseModel):
     total: int
     week_id: int
 
+# Projections vs Actuals comparison schema
+class ProjectionsVsActualsData(BaseModel):
+    week_number: int
+    year: int
+    projection: Optional[float]
+    actual: Optional[float]
+    week_status: str
+
+class ProjectionsVsActualsResponse(BaseModel):
+    data: List[ProjectionsVsActualsData]
+    player_name: str
+    player_position: str
+    total_weeks: int
+
 # Tips Configuration schemas
 class TipsConfigBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)

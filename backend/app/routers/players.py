@@ -5,13 +5,14 @@ from typing import List, Optional
 import uuid
 
 from app.database import get_db
-from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet, PlayerActuals
+from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet, PlayerActuals, Projection
 from sqlalchemy.orm import aliased
 from app.schemas import (
     PlayerCreate, PlayerUpdate, Player as PlayerSchema,
     PlayerPoolEntryCreate, PlayerPoolEntryUpdate, PlayerPoolEntry as PlayerPoolEntrySchema,
     PlayerListResponse, PlayerListWithPoolDataResponse, PlayerPoolResponse, PlayerPoolAnalysisResponse, PlayerPoolEntryWithAnalysis, WeekAnalysisData,
-    PlayerPropsResponse, PlayerPropBetWithMeta
+    PlayerPropsResponse, PlayerPropBetWithMeta,
+    ProjectionsVsActualsResponse, ProjectionsVsActualsData
 )
 from typing import Dict, Any
 
@@ -955,4 +956,71 @@ async def get_player_game_log(
         "player": player.displayName,
         "position": player.position
     }
+
+@router.get("/{player_id}/projections-vs-actuals", response_model=ProjectionsVsActualsResponse)
+async def get_player_projections_vs_actuals(
+    player_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get player's projections vs actuals data for chart visualization"""
+    
+    # Verify player exists
+    player = db.query(Player).filter(Player.playerDkId == player_id).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    
+    # Get all completed weeks (ordered by year desc, week desc to get most recent first)
+    weeks = db.query(Week).filter(
+        Week.status == "Completed"
+    ).order_by(Week.year.desc(), Week.week_number.desc()).all()
+    
+    if not weeks:
+        return ProjectionsVsActualsResponse(
+            data=[],
+            player_name=player.displayName,
+            player_position=player.position,
+            total_weeks=0
+        )
+    
+    # Get projections and actuals for this player
+    projections = db.query(Projection).filter(
+        and_(
+            Projection.playerDkId == player_id,
+            Projection.pprProjections.isnot(None)
+        )
+    ).all()
+    
+    actuals = db.query(PlayerActuals).filter(
+        and_(
+            PlayerActuals.playerDkId == player_id,
+            PlayerActuals.dk_actuals.isnot(None)
+        )
+    ).all()
+    
+    # Create lookup dictionaries for faster access
+    projections_by_week = {p.week_id: p.pprProjections for p in projections}
+    actuals_by_week = {a.week_id: a.dk_actuals for a in actuals}
+    
+    # Build response data
+    chart_data = []
+    for week in weeks:
+        projection_value = projections_by_week.get(week.id)
+        actual_value = actuals_by_week.get(week.id)
+        
+        # Only include weeks where we have at least projection or actual data
+        if projection_value is not None or actual_value is not None:
+            chart_data.append(ProjectionsVsActualsData(
+                week_number=week.week_number,
+                year=week.year,
+                projection=projection_value,
+                actual=actual_value,
+                week_status=week.status
+            ))
+    
+    return ProjectionsVsActualsResponse(
+        data=chart_data,
+        player_name=player.displayName,
+        player_position=player.position,
+        total_weeks=len(chart_data)
+    )
 
