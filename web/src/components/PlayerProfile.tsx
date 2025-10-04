@@ -392,8 +392,8 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
       {/* Player Card */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center gap-6">
-            <Avatar className="h-20 w-20">
+          <div className="flex items-start gap-6">
+            <Avatar className="h-20 w-20 flex-shrink-0">
               {playerData.playerImage160 ? (
                 <img
                   src={playerData.playerImage160}
@@ -406,12 +406,38 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                 </AvatarFallback>
               )}
             </Avatar>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h1 className="text-3xl font-bold mb-2">{playerData.displayName || 'Unknown Player'}</h1>
-              <div className="flex items-center gap-4 text-lg text-muted-foreground mb-3">
+              <div className="flex items-center gap-4 text-lg text-muted-foreground mb-4">
                 <span className="font-medium">{playerData.team || 'N/A'}</span>
                 <span>•</span>
                 <span className="font-medium">{playerData.position || 'N/A'}</span>
+              </div>
+              
+              {/* Current Week Information */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-muted-foreground mb-1">Salary</div>
+                  <div className="text-lg font-semibold text-green-600">${currentWeekSalary.toLocaleString()}</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-muted-foreground mb-1">Projected</div>
+                  <div className="text-lg font-semibold text-blue-600">{currentWeekProj > 0 ? currentWeekProj.toFixed(1) : 'N/A'}</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-muted-foreground mb-1">Ownership</div>
+                  <div className="text-lg font-semibold text-purple-600">{ownership > 0 ? `${ownership.toFixed(1)}%` : 'N/A'}</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-muted-foreground mb-1">Status</div>
+                  <Badge variant="secondary" className={`${getStatusColor(status)} text-sm`}>
+                    {status}
+                  </Badge>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-muted-foreground mb-1">Tier</div>
+                  <div className="text-lg font-semibold text-orange-600">{playerPoolData?.tier || 'N/A'}</div>
+                </div>
               </div>
               
               {/* Aliases - Small and subtle */}
@@ -446,58 +472,6 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Player Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Player Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-sm text-muted-foreground">Current Week Salary</div>
-                  <div className="text-lg">${currentWeekSalary.toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Current Week Proj</div>
-                  <div className="text-lg">{currentWeekProj > 0 ? currentWeekProj.toFixed(1) : 'N/A'}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Current Week Ownership</div>
-                  <div className="text-lg">{ownership > 0 ? `${ownership.toFixed(1)}%` : 'N/A'}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Status</div>
-                  <Badge variant="secondary" className={getStatusColor(status)}>
-                    {status}
-                  </Badge>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <div className="text-sm text-muted-foreground">Hidden</div>
-                  <Badge variant={playerData?.hidden ? "destructive" : "secondary"}>
-                    {playerData?.hidden ? "Yes" : "No"}
-                  </Badge>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Excluded</div>
-                  <Badge variant={playerPoolData?.excluded ? "destructive" : "secondary"}>
-                    {playerPoolData?.excluded ? "Yes" : "No"}
-                  </Badge>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Tier</div>
-                  <div className="text-lg">{playerPoolData?.tier || 'N/A'}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">Disabled</div>
-                  <Badge variant={playerPoolData?.isDisabled ? "destructive" : "secondary"}>
-                    {playerPoolData?.isDisabled ? "Yes" : "No"}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Game Log */}
           {playerData && (
