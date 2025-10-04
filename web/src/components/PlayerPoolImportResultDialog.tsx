@@ -230,7 +230,6 @@ ${result.errors.length > 0 ? `Errors: ${result.errors.join(', ')}` : ''}`;
                 </AlertDescription>
               </Alert>
             )}
-          </div>
         )}
 
         {/* Actions */}
