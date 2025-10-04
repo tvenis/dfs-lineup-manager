@@ -23,7 +23,7 @@ except Exception as e:
 
 # Import routers conditionally to avoid database import errors
 try:
-    from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments, recent_activity, player_aliases
+    from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments, recent_activity, player_aliases, team_stats
     ROUTERS_AVAILABLE = True
 except Exception as e:
     print(f"⚠️ Router imports failed: {e}")
@@ -33,6 +33,7 @@ except Exception as e:
     draftkings_import = projections = odds_api = games = contests = None
     actuals = draftgroups = players_batch = tips = firecrawl = None
     import_opponent_roster = comments = recent_activity = player_aliases = None
+    team_stats = None
 
 # Create database tables - moved to startup event
 
@@ -82,6 +83,7 @@ if ROUTERS_AVAILABLE:
     if comments: app.include_router(comments.router, prefix="/api/comments", tags=["comments"])
     if recent_activity: app.include_router(recent_activity.router, tags=["recent-activity"])
     if player_aliases: app.include_router(player_aliases.router, tags=["player-aliases"])
+    if team_stats: app.include_router(team_stats.router, prefix="", tags=["team-stats"])
 else:
     print("⚠️ Skipping router registration due to import failures") 
 

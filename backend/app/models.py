@@ -654,3 +654,94 @@ class ScrapingJobUrl(Base):
         Index('idx_scraping_job_urls_status', 'status'),
         Index('idx_scraping_job_urls_scraped_data_id', 'scraped_data_id'),
     )
+
+
+class TeamStats(Base):
+    """Model for storing team statistics from NFLverse (both offensive and defensive)"""
+    __tablename__ = "team_stats"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
+    opponent_team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    
+    # Offensive stats allowed (for DK scoring context)
+    completions = Column(Numeric, default=0)
+    attempts = Column(Numeric, default=0)
+    passing_yards = Column(Numeric, default=0)
+    passing_tds = Column(Numeric, default=0)
+    passing_interceptions = Column(Numeric, default=0)
+    sacks_suffered = Column(Numeric, default=0)
+    sack_yards_lost = Column(Numeric, default=0)
+    sack_fumbles = Column(Numeric, default=0)
+    sack_fumbles_lost = Column(Numeric, default=0)
+    passing_air_yards = Column(Numeric, default=0)
+    passing_yards_after_catch = Column(Numeric, default=0)
+    passing_first_downs = Column(Numeric, default=0)
+    passing_epa = Column(Numeric, default=0)
+    passing_cpoe = Column(Numeric, default=0)
+    passing_2pt_conversions = Column(Numeric, default=0)
+    carries = Column(Numeric, default=0)
+    rushing_yards = Column(Numeric, default=0)
+    rushing_tds = Column(Numeric, default=0)
+    rushing_fumbles = Column(Numeric, default=0)
+    rushing_fumbles_lost = Column(Numeric, default=0)
+    rushing_first_downs = Column(Numeric, default=0)
+    rushing_epa = Column(Numeric, default=0)
+    rushing_2pt_conversions = Column(Numeric, default=0)
+    receptions = Column(Numeric, default=0)
+    targets = Column(Numeric, default=0)
+    receiving_yards = Column(Numeric, default=0)
+    receiving_tds = Column(Numeric, default=0)
+    receiving_fumbles = Column(Numeric, default=0)
+    receiving_fumbles_lost = Column(Numeric, default=0)
+    receiving_air_yards = Column(Numeric, default=0)
+    receiving_yards_after_catch = Column(Numeric, default=0)
+    receiving_first_downs = Column(Numeric, default=0)
+    receiving_epa = Column(Numeric, default=0)
+    receiving_2pt_conversions = Column(Numeric, default=0)
+    special_teams_tds = Column(Numeric, default=0)
+    
+    # Defensive stats
+    def_tackles_solo = Column(Numeric, default=0)
+    def_tackles_with_assist = Column(Numeric, default=0)
+    def_tackle_assists = Column(Numeric, default=0)
+    def_tackles_for_loss = Column(Numeric, default=0)
+    def_tackles_for_loss_yards = Column(Numeric, default=0)
+    def_fumbles_forced = Column(Numeric, default=0)
+    def_sacks = Column(Numeric, default=0)
+    def_sack_yards = Column(Numeric, default=0)
+    def_qb_hits = Column(Numeric, default=0)
+    def_interceptions = Column(Numeric, default=0)
+    def_interception_yards = Column(Numeric, default=0)
+    def_pass_defended = Column(Numeric, default=0)
+    def_tds = Column(Numeric, default=0)
+    def_fumbles = Column(Numeric, default=0)
+    def_safeties = Column(Numeric, default=0)
+    misc_yards = Column(Numeric, default=0)
+    fumble_recovery_own = Column(Numeric, default=0)
+    fumble_recovery_yards_own = Column(Numeric, default=0)
+    fumble_recovery_opp = Column(Numeric, default=0)
+    fumble_recovery_yards_opp = Column(Numeric, default=0)
+    fumble_recovery_tds = Column(Numeric, default=0)
+    penalties = Column(Numeric, default=0)
+    penalty_yards = Column(Numeric, default=0)
+    
+    # Calculated fields
+    dk_defense_score = Column(Numeric, default=0)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    week = relationship("Week")
+    team = relationship("Team", foreign_keys=[team_id])
+    opponent_team = relationship("Team", foreign_keys=[opponent_team_id])
+    
+    # Constraints and indexes
+    __table_args__ = (
+        Index('idx_team_stats_week_id', 'week_id'),
+        Index('idx_team_stats_team_id', 'team_id'),
+        Index('idx_team_stats_opponent_team_id', 'opponent_team_id'),
+        Index('idx_team_stats_unique', 'week_id', 'team_id', unique=True),
+    )

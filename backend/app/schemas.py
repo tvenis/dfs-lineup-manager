@@ -980,3 +980,169 @@ class ContestRosterDetailsResponse(BaseModel):
     message: str
     roster: Optional[ContestRosterDetails] = None
     error: Optional[str] = None
+
+# Team Stats schemas
+class TeamStatsBase(BaseModel):
+    week_id: int = Field(..., description="Week ID from weeks table")
+    team_id: int = Field(..., description="Team ID from teams table")
+    opponent_team_id: Optional[int] = Field(None, description="Opponent team ID from teams table")
+    
+    # Offensive stats allowed (for DK scoring context)
+    completions: Optional[float] = Field(default=0)
+    attempts: Optional[float] = Field(default=0)
+    passing_yards: Optional[float] = Field(default=0)
+    passing_tds: Optional[float] = Field(default=0)
+    passing_interceptions: Optional[float] = Field(default=0)
+    sacks_suffered: Optional[float] = Field(default=0)
+    sack_yards_lost: Optional[float] = Field(default=0)
+    sack_fumbles: Optional[float] = Field(default=0)
+    sack_fumbles_lost: Optional[float] = Field(default=0)
+    passing_air_yards: Optional[float] = Field(default=0)
+    passing_yards_after_catch: Optional[float] = Field(default=0)
+    passing_first_downs: Optional[float] = Field(default=0)
+    passing_epa: Optional[float] = Field(default=0)
+    passing_cpoe: Optional[float] = Field(default=0)
+    passing_2pt_conversions: Optional[float] = Field(default=0)
+    carries: Optional[float] = Field(default=0)
+    rushing_yards: Optional[float] = Field(default=0)
+    rushing_tds: Optional[float] = Field(default=0)
+    rushing_fumbles: Optional[float] = Field(default=0)
+    rushing_fumbles_lost: Optional[float] = Field(default=0)
+    rushing_first_downs: Optional[float] = Field(default=0)
+    rushing_epa: Optional[float] = Field(default=0)
+    rushing_2pt_conversions: Optional[float] = Field(default=0)
+    receptions: Optional[float] = Field(default=0)
+    targets: Optional[float] = Field(default=0)
+    receiving_yards: Optional[float] = Field(default=0)
+    receiving_tds: Optional[float] = Field(default=0)
+    receiving_fumbles: Optional[float] = Field(default=0)
+    receiving_fumbles_lost: Optional[float] = Field(default=0)
+    receiving_air_yards: Optional[float] = Field(default=0)
+    receiving_yards_after_catch: Optional[float] = Field(default=0)
+    receiving_first_downs: Optional[float] = Field(default=0)
+    receiving_epa: Optional[float] = Field(default=0)
+    receiving_2pt_conversions: Optional[float] = Field(default=0)
+    special_teams_tds: Optional[float] = Field(default=0)
+    
+    # Defensive stats
+    def_tackles_solo: Optional[float] = Field(default=0)
+    def_tackles_with_assist: Optional[float] = Field(default=0)
+    def_tackle_assists: Optional[float] = Field(default=0)
+    def_tackles_for_loss: Optional[float] = Field(default=0)
+    def_tackles_for_loss_yards: Optional[float] = Field(default=0)
+    def_fumbles_forced: Optional[float] = Field(default=0)
+    def_sacks: Optional[float] = Field(default=0)
+    def_sack_yards: Optional[float] = Field(default=0)
+    def_qb_hits: Optional[float] = Field(default=0)
+    def_interceptions: Optional[float] = Field(default=0)
+    def_interception_yards: Optional[float] = Field(default=0)
+    def_pass_defended: Optional[float] = Field(default=0)
+    def_tds: Optional[float] = Field(default=0)
+    def_fumbles: Optional[float] = Field(default=0)
+    def_safeties: Optional[float] = Field(default=0)
+    misc_yards: Optional[float] = Field(default=0)
+    fumble_recovery_own: Optional[float] = Field(default=0)
+    fumble_recovery_yards_own: Optional[float] = Field(default=0)
+    fumble_recovery_opp: Optional[float] = Field(default=0)
+    fumble_recovery_yards_opp: Optional[float] = Field(default=0)
+    fumble_recovery_tds: Optional[float] = Field(default=0)
+    penalties: Optional[float] = Field(default=0)
+    penalty_yards: Optional[float] = Field(default=0)
+    
+    # Calculated fields
+    dk_defense_score: Optional[float] = Field(default=0)
+
+class TeamStatsCreate(TeamStatsBase):
+    pass
+
+class TeamStatsUpdate(BaseModel):
+    opponent_team_id: Optional[int] = Field(None, description="Opponent team ID from teams table")
+    completions: Optional[float] = None
+    attempts: Optional[float] = None
+    passing_yards: Optional[float] = None
+    passing_tds: Optional[float] = None
+    passing_interceptions: Optional[float] = None
+    sacks_suffered: Optional[float] = None
+    sack_yards_lost: Optional[float] = None
+    sack_fumbles: Optional[float] = None
+    sack_fumbles_lost: Optional[float] = None
+    passing_air_yards: Optional[float] = None
+    passing_yards_after_catch: Optional[float] = None
+    passing_first_downs: Optional[float] = None
+    passing_epa: Optional[float] = None
+    passing_cpoe: Optional[float] = None
+    passing_2pt_conversions: Optional[float] = None
+    carries: Optional[float] = None
+    rushing_yards: Optional[float] = None
+    rushing_tds: Optional[float] = None
+    rushing_fumbles: Optional[float] = None
+    rushing_fumbles_lost: Optional[float] = None
+    rushing_first_downs: Optional[float] = None
+    rushing_epa: Optional[float] = None
+    rushing_2pt_conversions: Optional[float] = None
+    receptions: Optional[float] = None
+    targets: Optional[float] = None
+    receiving_yards: Optional[float] = None
+    receiving_tds: Optional[float] = None
+    receiving_fumbles: Optional[float] = None
+    receiving_fumbles_lost: Optional[float] = None
+    receiving_air_yards: Optional[float] = None
+    receiving_yards_after_catch: Optional[float] = None
+    receiving_first_downs: Optional[float] = None
+    receiving_epa: Optional[float] = None
+    receiving_2pt_conversions: Optional[float] = None
+    special_teams_tds: Optional[float] = None
+    def_tackles_solo: Optional[float] = None
+    def_tackles_with_assist: Optional[float] = None
+    def_tackle_assists: Optional[float] = None
+    def_tackles_for_loss: Optional[float] = None
+    def_tackles_for_loss_yards: Optional[float] = None
+    def_fumbles_forced: Optional[float] = None
+    def_sacks: Optional[float] = None
+    def_sack_yards: Optional[float] = None
+    def_qb_hits: Optional[float] = None
+    def_interceptions: Optional[float] = None
+    def_interception_yards: Optional[float] = None
+    def_pass_defended: Optional[float] = None
+    def_tds: Optional[float] = None
+    def_fumbles: Optional[float] = None
+    def_safeties: Optional[float] = None
+    misc_yards: Optional[float] = None
+    fumble_recovery_own: Optional[float] = None
+    fumble_recovery_yards_own: Optional[float] = None
+    fumble_recovery_opp: Optional[float] = None
+    fumble_recovery_yards_opp: Optional[float] = None
+    fumble_recovery_tds: Optional[float] = None
+    penalties: Optional[float] = None
+    penalty_yards: Optional[float] = None
+    dk_defense_score: Optional[float] = None
+
+class TeamStats(TeamStatsBase):
+    id: int
+    week: Week
+    team: Team
+    opponent_team: Optional[Team] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+# Team Stats import schemas
+class TeamStatsImportRequest(BaseModel):
+    week_id: int = Field(..., description="Week ID from weeks table")
+    csv_data: List[Dict[str, Any]] = Field(..., description="Parsed CSV data")
+
+class TeamStatsImportResponse(BaseModel):
+    total_processed: int = Field(..., ge=0, description="Total number of records processed")
+    successful_matches: int = Field(..., ge=0, description="Number of successful team matches")
+    failed_matches: int = Field(..., ge=0, description="Number of failed team matches")
+    stats_created: int = Field(..., ge=0, description="Number of new team stats created")
+    stats_updated: int = Field(..., ge=0, description="Number of existing team stats updated")
+    errors: List[str] = Field(default=[], description="List of error messages")
+    unmatched_teams: List[Dict[str, Any]] = Field(default=[], description="List of unmatched teams for manual review")
+
+class TeamStatsListResponse(BaseModel):
+    stats: List[TeamStats]
+    total: int
+    week_id: int

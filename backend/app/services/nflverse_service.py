@@ -7,7 +7,7 @@ import nflreadpy as nfl
 import polars as pl
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
-from app.models import Player, Week
+from app.models import Player, Week, Team, TeamStats
 
 
 class NFLVerseService:
@@ -369,6 +369,284 @@ class NFLVerseService:
             "unmatched_players": unmatched_players,
             "match_stats": match_stats,
             "total_players": len(nflverse_data),
+            "season": season,
+            "week": week_number,
+            "season_type": season_type
+        }
+    
+    @staticmethod
+    def fetch_team_stats(
+        season: int, 
+        week: int, 
+        season_type: str = "REG"
+    ) -> pl.DataFrame:
+        """
+        Fetch team stats from nflverse for a specific week
+        
+        Args:
+            season: NFL season year (e.g., 2025)
+            week: Week number (1-18)
+            season_type: "REG", "POST", or "PRE"
+        
+        Returns:
+            Polars DataFrame with team stats
+        """
+        # Load team stats
+        df = nfl.load_team_stats(seasons=[season], summary_level="week")
+        
+        # Filter to specific week and season type
+        wk_df = df.filter(
+            (pl.col("season") == season) & 
+            (pl.col("season_type") == season_type) & 
+            (pl.col("week") == week)
+        )
+        
+        return wk_df
+    
+    @staticmethod
+    def map_team_stats_to_defense(nflverse_row: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Map NFLVerse team stats to TeamStats schema
+        
+        Args:
+            nflverse_row: Dictionary with nflverse column names
+        
+        Returns:
+            Dictionary with TeamStats column names
+        """
+        defense_data = {
+            "team": nflverse_row.get("team", ""),
+            "opponent_team": nflverse_row.get("opponent_team", ""),
+        }
+        
+        # Map all the statistical fields, defaulting missing values to 0
+        field_mapping = {
+            # Offensive stats allowed
+            "completions": "completions",
+            "attempts": "attempts", 
+            "passing_yards": "passing_yards",
+            "passing_tds": "passing_tds",
+            "passing_interceptions": "passing_interceptions",
+            "sacks_suffered": "sacks_suffered",
+            "sack_yards_lost": "sack_yards_lost",
+            "sack_fumbles": "sack_fumbles",
+            "sack_fumbles_lost": "sack_fumbles_lost",
+            "passing_air_yards": "passing_air_yards",
+            "passing_yards_after_catch": "passing_yards_after_catch",
+            "passing_first_downs": "passing_first_downs",
+            "passing_epa": "passing_epa",
+            "passing_cpoe": "passing_cpoe",
+            "passing_2pt_conversions": "passing_2pt_conversions",
+            "carries": "carries",
+            "rushing_yards": "rushing_yards",
+            "rushing_tds": "rushing_tds",
+            "rushing_fumbles": "rushing_fumbles",
+            "rushing_fumbles_lost": "rushing_fumbles_lost",
+            "rushing_first_downs": "rushing_first_downs",
+            "rushing_epa": "rushing_epa",
+            "rushing_2pt_conversions": "rushing_2pt_conversions",
+            "receptions": "receptions",
+            "targets": "targets",
+            "receiving_yards": "receiving_yards",
+            "receiving_tds": "receiving_tds",
+            "receiving_fumbles": "receiving_fumbles",
+            "receiving_fumbles_lost": "receiving_fumbles_lost",
+            "receiving_air_yards": "receiving_air_yards",
+            "receiving_yards_after_catch": "receiving_yards_after_catch",
+            "receiving_first_downs": "receiving_first_downs",
+            "receiving_epa": "receiving_epa",
+            "receiving_2pt_conversions": "receiving_2pt_conversions",
+            "special_teams_tds": "special_teams_tds",
+            
+            # Defensive stats
+            "def_tackles_solo": "def_tackles_solo",
+            "def_tackles_with_assist": "def_tackles_with_assist",
+            "def_tackle_assists": "def_tackle_assists",
+            "def_tackles_for_loss": "def_tackles_for_loss",
+            "def_tackles_for_loss_yards": "def_tackles_for_loss_yards",
+            "def_fumbles_forced": "def_fumbles_forced",
+            "def_sacks": "def_sacks",
+            "def_sack_yards": "def_sack_yards",
+            "def_qb_hits": "def_qb_hits",
+            "def_interceptions": "def_interceptions",
+            "def_interception_yards": "def_interception_yards",
+            "def_pass_defended": "def_pass_defended",
+            "def_tds": "def_tds",
+            "def_fumbles": "def_fumbles",
+            "def_safeties": "def_safeties",
+            "misc_yards": "misc_yards",
+            "fumble_recovery_own": "fumble_recovery_own",
+            "fumble_recovery_yards_own": "fumble_recovery_yards_own",
+            "fumble_recovery_opp": "fumble_recovery_opp",
+            "fumble_recovery_yards_opp": "fumble_recovery_yards_opp",
+            "fumble_recovery_tds": "fumble_recovery_tds",
+            "penalties": "penalties",
+            "penalty_yards": "penalty_yards",
+        }
+        
+        for nflverse_field, defense_field in field_mapping.items():
+            value = nflverse_row.get(nflverse_field)
+            defense_data[defense_field] = float(value) if value is not None else 0.0
+        
+        # Store raw NFLVerse data for reference
+        defense_data["_nflverse_team"] = nflverse_row.get("team")
+        defense_data["_nflverse_opponent"] = nflverse_row.get("opponent_team")
+        
+        return defense_data
+    
+    @staticmethod
+    def calculate_dk_defense_score(stats: Dict[str, Any]) -> float:
+        """
+        Calculate DraftKings fantasy points for defense based on stats
+        DraftKings Defense scoring:
+        - Sacks: +1 point each
+        - Interceptions: +2 points each
+        - Fumble Recoveries: +2 points each
+        - Safeties: +2 points each
+        - Defensive TDs: +6 points each
+        - Points Allowed: Variable (to be implemented later)
+        """
+        points = 0.0
+        
+        # Sacks: +1 point each
+        if stats.get("def_sacks"):
+            points += stats["def_sacks"] * 1
+        
+        # Interceptions: +2 points each
+        if stats.get("def_interceptions"):
+            points += stats["def_interceptions"] * 2
+        
+        # Fumble Recoveries: +2 points each
+        if stats.get("fumble_recovery_opp"):
+            points += stats["fumble_recovery_opp"] * 2
+        
+        # Safeties: +2 points each
+        if stats.get("def_safeties"):
+            points += stats["def_safeties"] * 2
+        
+        # Defensive TDs: +6 points each
+        if stats.get("def_tds"):
+            points += stats["def_tds"] * 6
+        
+        # Points Allowed scoring will be implemented later when we have a better source
+        
+        return round(points, 2)
+    
+    @staticmethod
+    def match_team(
+        db: Session,
+        nflverse_team: str
+    ) -> Tuple[Optional[Team], str]:
+        """
+        Match NFLVerse team abbreviation to database team
+        
+        Args:
+            db: Database session
+            nflverse_team: Team abbreviation from nflverse (e.g., "KC", "BUF")
+        
+        Returns:
+            Tuple of (matched_team, confidence)
+            confidence: 'exact', 'none'
+        """
+        # Special handling for LA -> LAR mapping
+        if nflverse_team == "LA":
+            team = db.query(Team).filter(Team.id == 19).first()  # LAR team_id = 19
+            if team:
+                return (team, 'exact')
+            else:
+                return (None, 'none')
+        
+        # Try exact match first
+        team = db.query(Team).filter(Team.abbreviation == nflverse_team).first()
+        
+        if team:
+            return (team, 'exact')
+        else:
+            return (None, 'none')
+    
+    @staticmethod
+    def process_team_defense_stats(
+        db: Session,
+        week_id: int,
+        season: int,
+        week_number: int,
+        season_type: str = "REG"
+    ) -> Dict[str, Any]:
+        """
+        Fetch NFLVerse team stats and prepare for import into TeamStats
+        
+        Args:
+            db: Database session
+            week_id: Database week ID
+            season: NFL season year
+            week_number: Week number
+            season_type: Season type (REG, POST, PRE)
+        
+        Returns:
+            Dictionary with matched teams and import statistics
+        """
+        # Verify week exists
+        week = db.query(Week).filter(Week.id == week_id).first()
+        if not week:
+            raise ValueError(f"Week ID {week_id} not found in database")
+        
+        # Fetch NFLVerse data
+        nflverse_df = NFLVerseService.fetch_team_stats(season, week_number, season_type)
+        
+        # Convert to list of dicts
+        nflverse_data = nflverse_df.to_dicts()
+        
+        matched_teams = []
+        unmatched_teams = []
+        match_stats = {
+            'exact': 0,
+            'none': 0
+        }
+        
+        for nfl_team in nflverse_data:
+            # Map stats
+            defense_data = NFLVerseService.map_team_stats_to_defense(nfl_team)
+            
+            # Calculate DK defense score
+            defense_data["dk_defense_score"] = NFLVerseService.calculate_dk_defense_score(defense_data)
+            
+            # Try to match team
+            team_abbr = nfl_team.get("team", "")
+            opponent_abbr = nfl_team.get("opponent_team", "")
+            
+            matched_team, team_confidence = NFLVerseService.match_team(db, team_abbr)
+            matched_opponent, opponent_confidence = NFLVerseService.match_team(db, opponent_abbr)
+            
+            match_stats[team_confidence] += 1
+            
+            if matched_team:
+                defense_data["team_id"] = matched_team.id
+                defense_data["week_id"] = week_id
+                defense_data["team_name"] = team_abbr  # Keep for UI display
+                defense_data["match_confidence"] = team_confidence
+                
+                # Add opponent if matched
+                if matched_opponent:
+                    defense_data["opponent_team_id"] = matched_opponent.id
+                    defense_data["opponent_name"] = opponent_abbr
+                else:
+                    defense_data["opponent_team_id"] = None
+                    defense_data["opponent_name"] = opponent_abbr
+                
+                matched_teams.append(defense_data)
+            else:
+                unmatched_teams.append({
+                    "team": team_abbr,
+                    "opponent": opponent_abbr,
+                    "stats": defense_data,
+                    "match_confidence": team_confidence
+                })
+        
+        return {
+            "matched_teams": matched_teams,
+            "unmatched_teams": unmatched_teams,
+            "match_stats": match_stats,
+            "total_teams": len(nflverse_data),
             "season": season,
             "week": week_number,
             "season_type": season_type
