@@ -340,6 +340,56 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     }
   };
 
+  const getTierConfig = (tier: number) => {
+    switch (tier) {
+      case 1:
+        return {
+          label: 'Core/Cash',
+          description: 'Must-have foundational plays',
+          color: 'bg-blue-100 text-blue-800 border-blue-300',
+          icon: '⭐',
+          headerColor: 'bg-blue-50/80 border-b border-blue-200',
+          headerTextColor: 'text-blue-800'
+        };
+      case 2:
+        return {
+          label: 'Strong Plays',
+          description: 'Solid complementary pieces',
+          color: 'bg-green-100 text-green-800 border-green-300',
+          icon: '💪',
+          headerColor: 'bg-green-50/80 border-b border-green-200',
+          headerTextColor: 'text-green-800'
+        };
+      case 3:
+        return {
+          label: 'GPP/Ceiling',
+          description: 'High-variance leverage plays',
+          color: 'bg-purple-100 text-purple-800 border-purple-300',
+          icon: '🚀',
+          headerColor: 'bg-purple-50/80 border-b border-purple-200',
+          headerTextColor: 'text-purple-800'
+        };
+      case 4:
+        return {
+          label: 'Avoids/Thin',
+          description: 'Rarely played options',
+          color: 'bg-red-100 text-red-800 border-red-300',
+          icon: '⚠️',
+          headerColor: 'bg-red-50/80 border-b border-red-200',
+          headerTextColor: 'text-red-800'
+        };
+      default:
+        return {
+          label: 'Unknown',
+          description: 'Unknown tier',
+          color: 'bg-gray-100 text-gray-800 border-gray-300',
+          icon: '❓',
+          headerColor: 'bg-gray-50/80 border-b border-gray-200',
+          headerTextColor: 'text-gray-800'
+        };
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
@@ -423,10 +473,17 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                 <Badge variant="outline" className={`${getStatusColor(status)} text-sm font-medium`}>
                   {status}
                 </Badge>
+                {playerPoolData?.tier && (
+                  <span className="text-sm">
+                    Tier: <span className={`font-medium ${getTierConfig(playerPoolData.tier).headerTextColor}`}>
+                      {playerPoolData.tier}
+                    </span>
+                  </span>
+                )}
               </div>
               
               {/* Current Week Information */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <div className="text-sm text-muted-foreground mb-1">Salary</div>
                   <div className="text-lg font-semibold text-green-600">${currentWeekSalary.toLocaleString()}</div>
@@ -438,10 +495,6 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <div className="text-sm text-muted-foreground mb-1">Ownership</div>
                   <div className="text-lg font-semibold text-purple-600">{ownership > 0 ? `${ownership.toFixed(1)}%` : 'N/A'}</div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-sm text-muted-foreground mb-1">Tier</div>
-                  <div className="text-lg font-semibold text-orange-600">{playerPoolData?.tier || 'N/A'}</div>
                 </div>
               </div>
               
