@@ -84,6 +84,17 @@ def get_weeks(
         print(f"Error in get_weeks: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/seasons", response_model=List[int])
+def get_seasons(db: Session = Depends(get_db)):
+    """Get distinct seasons (years) from the weeks table, ordered by year descending"""
+    try:
+        from sqlalchemy import distinct
+        seasons = db.query(distinct(Week.year)).order_by(Week.year.desc()).all()
+        return [season[0] for season in seasons]
+    except Exception as e:
+        print(f"Error in get_seasons: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/current", response_model=WeekSchema)
 def get_current_week(db: Session = Depends(get_db)):
     """Get the current active week"""

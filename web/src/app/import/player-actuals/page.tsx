@@ -34,7 +34,10 @@ interface NFLVerseImportResponse {
 
 export default function PlayerActualsImportPage() {
   const [weeks, setWeeks] = useState<Week[]>([]);
+  const [seasons, setSeasons] = useState<number[]>([]);
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
+  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
+  const [selectedSeasonType, setSelectedSeasonType] = useState<string>('REG');
   const [isImporting, setIsImporting] = useState(false);
   
   // Result dialog state
@@ -53,32 +56,54 @@ export default function PlayerActualsImportPage() {
     limit: 10
   });
 
-  // Fetch weeks on component mount
+  // Fetch weeks and seasons on component mount
   useEffect(() => {
-    const fetchWeeks = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS));
-        if (response.ok) {
-          const data = await response.json();
-          const weeksData = data.weeks || data;
-          setWeeks(weeksData);
-          // Set default to active week
-          const activeWeek = weeksData.find((week: Week) => week.status === 'Active');
-          if (activeWeek) {
-            setSelectedWeekId(activeWeek.id);
+        // Fetch weeks
+        const weeksResponse = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS));
+        if (weeksResponse.ok) {
+          const weeksData = await weeksResponse.json();
+          const weeksList = weeksData.weeks || weeksData;
+          setWeeks(weeksList);
+          
+          // Set default to last completed week instead of active week
+          const completedWeeks = weeksList.filter((week: Week) => week.status === 'Completed');
+          if (completedWeeks.length > 0) {
+            // Sort by year and week_number descending to get the latest completed week
+            const sortedCompletedWeeks = completedWeeks.sort((a: Week, b: Week) => {
+              if (a.year !== b.year) return b.year - a.year;
+              return b.week_number - a.week_number;
+            });
+            setSelectedWeekId(sortedCompletedWeeks[0].id);
+          }
+        }
+
+        // Fetch seasons
+        const seasonsResponse = await fetch(buildApiUrl('/api/weeks/seasons'));
+        if (seasonsResponse.ok) {
+          const seasonsData = await seasonsResponse.json();
+          setSeasons(seasonsData);
+          // Set default to latest season
+          if (seasonsData.length > 0) {
+            setSelectedSeason(seasonsData[0]); // seasons are already sorted descending
           }
         }
       } catch (error) {
-        console.error('Error fetching weeks:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchWeeks();
+    fetchData();
   }, []);
 
   const handleImportFromNFLVerse = async () => {
     if (!selectedWeekId) {
       alert('Please select a week');
+      return;
+    }
+    if (!selectedSeason) {
+      alert('Please select a season');
       return;
     }
 
@@ -98,9 +123,9 @@ export default function PlayerActualsImportPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           week_id: week.id,
-          season: week.year,
+          season: selectedSeason,
           week_number: week.week_number,
-          season_type: 'REG',
+          season_type: selectedSeasonType,
           auto_import: true // Auto-commit server side
         })
       });
@@ -145,33 +170,75 @@ export default function PlayerActualsImportPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Week Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="import-week">Import Week</Label>
-              <Select
-                value={selectedWeekId?.toString() || ''}
-                onValueChange={(value) => setSelectedWeekId(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select week" />
-                </SelectTrigger>
-                <SelectContent>
-                  {weeks.map((week) => (
-                    <SelectItem key={week.id} value={week.id.toString()}>
-                      Week {week.week_number} ({week.year}) - {week.status === 'Active' ? 'Active' : week.status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                Actual stats will be imported for the selected week.
-              </p>
+            {/* Configuration Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Week Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="import-week">Week</Label>
+                <Select
+                  value={selectedWeekId?.toString() || ''}
+                  onValueChange={(value) => setSelectedWeekId(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select week" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {weeks.map((week) => (
+                      <SelectItem key={week.id} value={week.id.toString()}>
+                        Week {week.week_number} ({week.year}) - {week.status === 'Active' ? 'Active' : week.status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Season Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="import-season">Season</Label>
+                <Select
+                  value={selectedSeason?.toString() || ''}
+                  onValueChange={(value) => setSelectedSeason(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select season" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {seasons.map((season) => (
+                      <SelectItem key={season} value={season.toString()}>
+                        {season}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Season Type Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="import-season-type">Season Type</Label>
+                <Select
+                  value={selectedSeasonType}
+                  onValueChange={setSelectedSeasonType}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select season type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="REG">REG</SelectItem>
+                    <SelectItem value="POST">POST</SelectItem>
+                    <SelectItem value="PRE">PRE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            
+            <p className="text-sm text-muted-foreground">
+              Actual stats will be imported for the selected week, season, and season type.
+            </p>
 
             {/* Import Button */}
             <Button
               onClick={handleImportFromNFLVerse}
-              disabled={!selectedWeekId || isImporting}
+              disabled={!selectedWeekId || !selectedSeason || isImporting}
               className="w-full"
               size="lg"
             >
