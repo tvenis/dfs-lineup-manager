@@ -269,14 +269,6 @@ export function ProjectionsVsActualsChart({ playerId }: ProjectionsVsActualsChar
                 wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
                 iconType="rect"
               />
-              <ReferenceLine 
-                yAxisId="right"
-                y={3.0}
-                stroke="#ef4444"
-                strokeDasharray="5 5"
-                strokeWidth={2}
-                label={{ value: "Value Target = 3.0", position: "topRight", style: { fontSize: 10, fill: "#ef4444" } }}
-              />
               <Bar 
                 yAxisId="left"
                 dataKey="projection" 
@@ -290,6 +282,14 @@ export function ProjectionsVsActualsChart({ playerId }: ProjectionsVsActualsChar
                 fill="#3b82f6" 
                 name="Actual"
                 r={4}
+              />
+              <ReferenceLine 
+                yAxisId="right"
+                y={3.0}
+                stroke="#ef4444"
+                strokeDasharray="5 5"
+                strokeWidth={2}
+                label={{ value: "Value Target = 3.0", position: "topRight", style: { fontSize: 10, fill: "#ef4444" } }}
               />
               <Line 
                 yAxisId="right"
