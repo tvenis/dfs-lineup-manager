@@ -412,10 +412,13 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                 <span className="font-medium">{playerData.team || 'N/A'}</span>
                 <span>•</span>
                 <span className="font-medium">{playerData.position || 'N/A'}</span>
+                <Badge variant="secondary" className={`${getStatusColor(status)} text-sm`}>
+                  {status}
+                </Badge>
               </div>
               
               {/* Current Week Information */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <div className="text-sm text-muted-foreground mb-1">Salary</div>
                   <div className="text-lg font-semibold text-green-600">${currentWeekSalary.toLocaleString()}</div>
@@ -427,12 +430,6 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <div className="text-sm text-muted-foreground mb-1">Ownership</div>
                   <div className="text-lg font-semibold text-purple-600">{ownership > 0 ? `${ownership.toFixed(1)}%` : 'N/A'}</div>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-sm text-muted-foreground mb-1">Status</div>
-                  <Badge variant="secondary" className={`${getStatusColor(status)} text-sm`}>
-                    {status}
-                  </Badge>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <div className="text-sm text-muted-foreground mb-1">Tier</div>
