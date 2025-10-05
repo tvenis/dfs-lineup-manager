@@ -608,8 +608,17 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                 <div key={lineup.id} className="w-full">
                   <Card className="hover:shadow-md transition-shadow h-full w-fit">
                     <CardHeader className="pb-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{lineup.name}</CardTitle>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <CardTitle className="text-lg truncate">{lineup.name}</CardTitle>
+                          <div className="flex flex-wrap gap-1">
+                            {lineup.tags.map((tag) => (
+                              <Badge key={tag} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
                         <div className="flex gap-1">
                           <Button
                             variant="outline"
@@ -660,13 +669,6 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                             </DialogContent>
                           </Dialog>
                         </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {lineup.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4 w-fit">
