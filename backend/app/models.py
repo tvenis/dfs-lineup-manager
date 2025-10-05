@@ -768,3 +768,47 @@ class TeamStats(Base):
         Index('idx_team_stats_opponent_team_id', 'opponent_team_id'),
         Index('idx_team_stats_unique', 'week_id', 'team_id', unique=True),
     )
+
+class WeeklyPlayerSummary(Base):
+    __tablename__ = "weekly_player_summary"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
+    playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=False)
+    baseline_salary = Column(Integer)
+    consensus_projection = Column(Float)
+    consensus_ownership = Column(Numeric(5, 2))
+    baseline_source = Column(String(100))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    week = relationship("Week")
+    player = relationship("Player")
+    
+    __table_args__ = (
+        Index('idx_weekly_summary_week_player', 'week_id', 'playerDkId', unique=True),
+        Index('idx_weekly_summary_week', 'week_id'),
+    )
+
+class OwnershipEstimate(Base):
+    __tablename__ = "ownership_estimates"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)
+    playerDkId = Column(Integer, ForeignKey("players.playerDkId"), nullable=False)
+    source = Column(String(100), nullable=False)
+    ownership = Column(Numeric(5, 2), nullable=False)
+    draftGroup = Column("draftgroup", String(20))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    week = relationship("Week")
+    player = relationship("Player")
+    
+    __table_args__ = (
+        Index('idx_ownership_week_player_source_draftgroup', 'week_id', 'playerDkId', 'source', 'draftgroup', unique=True),
+        Index('idx_ownership_week_player', 'week_id', 'playerDkId'),
+        Index('idx_ownership_week_draftgroup', 'week_id', 'draftgroup'),
+    )

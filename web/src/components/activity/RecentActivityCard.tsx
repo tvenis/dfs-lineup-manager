@@ -263,7 +263,7 @@ export const RecentActivityCard: React.FC<ActivityCardProps> = ({
               </div>
 
               {/* Error Summary */}
-              {hasErrors && showDetails && errors && (
+              {hasErrors && showDetails && errors && Array.isArray(errors) && (
                 <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
                   <div className="font-medium text-red-800 mb-1">
                     {error_count} error{error_count !== 1 ? 's' : ''}:

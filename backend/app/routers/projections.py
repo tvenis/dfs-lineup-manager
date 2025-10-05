@@ -16,9 +16,10 @@ import logging
 from pathlib import Path
 
 from app.database import get_db
-from app.models import Player, Team, PlayerPoolEntry, Week, Projection, PlayerNameAlias
+from app.models import Player, Team, PlayerPoolEntry, Week, Projection, PlayerNameAlias, OwnershipEstimate
 from app.schemas import ProjectionImportRequest, ProjectionImportResponse, ProjectionCreate
 from app.services.activity_logging import ActivityLoggingService
+from app.services.weekly_summary_service import WeeklySummaryService
 from app.utils.name_normalization import normalize_for_matching
 
 router = APIRouter(prefix="/api/projections", tags=["projections"])
@@ -1106,37 +1107,46 @@ def process_ownership_projections(db: Session, week_id: int, projection_source: 
             if matched_player:
                 successful_matches += 1
                 
-                # Find or create player pool entry for this week
-                pool_entry = db.query(PlayerPoolEntry).filter(
-                    and_(
-                        PlayerPoolEntry.week_id == week_id,
-                        PlayerPoolEntry.playerDkId == matched_player.playerDkId
-                    )
-                ).first()
-                
-                if pool_entry:
-                    # Update existing entry
-                    pool_entry.ownership = player_data['ownership']
-                    pool_entry.updated_at = datetime.utcnow()
-                    ownership_updated += 1
-                    
-                    if i < 3:
-                        print(f"DEBUG: Updated ownership for {matched_player.displayName}: {player_data['ownership']}%")
-                else:
-                    # Create new pool entry (this shouldn't happen in normal flow)
-                    # but we'll handle it gracefully
-                    new_entry = PlayerPoolEntry(
+                try:
+                    # Create ownership estimate instead of updating pool entry
+                    ownership_estimate = OwnershipEstimate(
                         week_id=week_id,
-                        draftGroup='OWNERSHIP_IMPORT',
                         playerDkId=matched_player.playerDkId,
-                        salary=0,  # Default salary
-                        ownership=player_data['ownership']
+                        source=projection_source,
+                        ownership=player_data['ownership'],
+                        draftGroup=None  # Not slate-specific
                     )
-                    db.add(new_entry)
-                    ownership_created += 1
                     
-                    if i < 3:
-                        print(f"DEBUG: Created new pool entry for {matched_player.displayName}: {player_data['ownership']}%")
+                    # Upsert ownership estimate
+                    existing_estimate = db.query(OwnershipEstimate).filter(
+                        and_(
+                            OwnershipEstimate.week_id == week_id,
+                            OwnershipEstimate.playerDkId == matched_player.playerDkId,
+                            OwnershipEstimate.source == projection_source,
+                            OwnershipEstimate.draftGroup.is_(None)
+                        )
+                    ).first()
+                    
+                    if existing_estimate:
+                        existing_estimate.ownership = player_data['ownership']
+                        ownership_updated += 1
+                        
+                        if i < 3:
+                            print(f"DEBUG: Updated ownership estimate for {matched_player.displayName}: {player_data['ownership']}%")
+                    else:
+                        db.add(ownership_estimate)
+                        ownership_created += 1
+                        
+                        if i < 3:
+                            print(f"DEBUG: Created new ownership estimate for {matched_player.displayName}: {player_data['ownership']}%")
+                            
+                except Exception as e:
+                    print(f"DEBUG: Error creating ownership estimate for {matched_player.displayName}: {str(e)}")
+                    # Rollback the current transaction and continue with next record
+                    db.rollback()
+                    failed_matches += 1
+                    errors.append(f"Error processing {player_data['name']}: {str(e)}")
+                    continue
             else:
                 failed_matches += 1
                 unmatched_players.append({
@@ -1161,6 +1171,18 @@ def process_ownership_projections(db: Session, week_id: int, projection_source: 
     try:
         db.commit()
         print(f"DEBUG: Successfully committed ownership updates")
+        
+        # Update weekly summary after ownership changes
+        if successful_matches > 0:
+            print(f"DEBUG: Updating weekly summary for week {week_id}")
+            try:
+                WeeklySummaryService.populate_weekly_summary(db, week_id)
+                print(f"DEBUG: Weekly summary updated")
+            except Exception as e:
+                print(f"DEBUG: Warning - Weekly summary update failed: {str(e)}")
+                # Don't fail the entire import if weekly summary update fails
+                errors.append(f"Weekly summary update failed: {str(e)}")
+            
     except Exception as e:
         db.rollback()
         error_msg = f"Database commit failed: {str(e)}"

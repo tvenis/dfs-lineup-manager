@@ -1,0 +1,121 @@
+from sqlalchemy.orm import Session
+from sqlalchemy import func, and_
+from typing import List, Optional
+from app.models import WeeklyPlayerSummary, PlayerPoolEntry, Projection, OwnershipEstimate
+import logging
+
+logger = logging.getLogger(__name__)
+
+class WeeklySummaryService:
+    """Service to populate and manage weekly player summaries"""
+    
+    @staticmethod
+    def populate_weekly_summary(db: Session, week_id: int, main_draftgroup: str = None) -> int:
+        """
+        Populate weekly summary for a given week
+        Returns number of records created/updated
+        """
+        # Get all players with pool entries for this week
+        players_with_entries = db.query(PlayerPoolEntry.playerDkId).filter(
+            PlayerPoolEntry.week_id == week_id
+        ).distinct().all()
+        
+        updated_count = 0
+        
+        for (playerDkId,) in players_with_entries:
+            # Get baseline salary (main slate first, then min across all slates)
+            baseline_salary = WeeklySummaryService._get_baseline_salary(
+                db, week_id, playerDkId, main_draftgroup
+            )
+            
+            # Get consensus projection from Projection table
+            consensus_projection = WeeklySummaryService._get_consensus_projection(
+                db, week_id, playerDkId
+            )
+            
+            # Get consensus ownership from OwnershipEstimate table
+            consensus_ownership = WeeklySummaryService._get_consensus_ownership(
+                db, week_id, playerDkId
+            )
+            
+            # Upsert weekly summary
+            existing = db.query(WeeklyPlayerSummary).filter(
+                and_(
+                    WeeklyPlayerSummary.week_id == week_id,
+                    WeeklyPlayerSummary.playerDkId == playerDkId
+                )
+            ).first()
+            
+            if existing:
+                existing.baseline_salary = baseline_salary
+                existing.consensus_projection = consensus_projection
+                existing.consensus_ownership = consensus_ownership
+                existing.baseline_source = main_draftgroup or "multi_slate"
+            else:
+                new_summary = WeeklyPlayerSummary(
+                    week_id=week_id,
+                    playerDkId=playerDkId,
+                    baseline_salary=baseline_salary,
+                    consensus_projection=consensus_projection,
+                    consensus_ownership=consensus_ownership,
+                    baseline_source=main_draftgroup or "multi_slate"
+                )
+                db.add(new_summary)
+            
+            updated_count += 1
+        
+        db.commit()
+        return updated_count
+    
+    @staticmethod
+    def _get_baseline_salary(db: Session, week_id: int, playerDkId: int, main_draftgroup: str = None) -> Optional[int]:
+        """Get baseline salary - main slate first, then min across all slates"""
+        if main_draftgroup:
+            # Try main slate first
+            main_entry = db.query(PlayerPoolEntry).filter(
+                and_(
+                    PlayerPoolEntry.week_id == week_id,
+                    PlayerPoolEntry.playerDkId == playerDkId,
+                    PlayerPoolEntry.draftGroup == main_draftgroup
+                )
+            ).first()
+            
+            if main_entry:
+                return main_entry.salary
+        
+        # Fallback to min salary across all slates
+        min_salary = db.query(func.min(PlayerPoolEntry.salary)).filter(
+            and_(
+                PlayerPoolEntry.week_id == week_id,
+                PlayerPoolEntry.playerDkId == playerDkId
+            )
+        ).scalar()
+        
+        return min_salary
+    
+    @staticmethod
+    def _get_consensus_projection(db: Session, week_id: int, playerDkId: int) -> Optional[float]:
+        """Get consensus projection from Projection table"""
+        # Get average of all projections for this player/week
+        avg_projection = db.query(func.avg(Projection.pprProjections)).filter(
+            and_(
+                Projection.week_id == week_id,
+                Projection.playerDkId == playerDkId,
+                Projection.pprProjections.isnot(None)
+            )
+        ).scalar()
+        
+        return round(avg_projection, 2) if avg_projection else None
+    
+    @staticmethod
+    def _get_consensus_ownership(db: Session, week_id: int, playerDkId: int) -> Optional[float]:
+        """Get consensus ownership from OwnershipEstimate table"""
+        # Get average of all ownership estimates for this player/week
+        avg_ownership = db.query(func.avg(OwnershipEstimate.ownership)).filter(
+            and_(
+                OwnershipEstimate.week_id == week_id,
+                OwnershipEstimate.playerDkId == playerDkId
+            )
+        ).scalar()
+        
+        return round(avg_ownership, 2) if avg_ownership else None

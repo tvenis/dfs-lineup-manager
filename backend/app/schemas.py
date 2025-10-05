@@ -1235,3 +1235,52 @@ class TeamStatsListResponse(BaseModel):
     stats: List[TeamStats]
     total: int
     week_id: int
+
+# Weekly Player Summary schemas
+class WeeklyPlayerSummaryBase(BaseModel):
+    week_id: int = Field(..., description="Week ID")
+    playerDkId: int = Field(..., description="DraftKings player ID")
+    baseline_salary: Optional[int] = Field(None, ge=0, description="Baseline salary for the week")
+    consensus_projection: Optional[float] = Field(None, description="Consensus projection")
+    consensus_ownership: Optional[float] = Field(None, ge=0, le=100, description="Consensus ownership percentage")
+    baseline_source: Optional[str] = Field(None, max_length=100, description="Source of baseline data")
+
+class WeeklyPlayerSummaryCreate(WeeklyPlayerSummaryBase):
+    pass
+
+class WeeklyPlayerSummaryUpdate(BaseModel):
+    baseline_salary: Optional[int] = Field(None, ge=0)
+    consensus_projection: Optional[float] = None
+    consensus_ownership: Optional[float] = Field(None, ge=0, le=100)
+    baseline_source: Optional[str] = Field(None, max_length=100)
+
+class WeeklyPlayerSummary(WeeklyPlayerSummaryBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+# Ownership Estimate schemas
+class OwnershipEstimateBase(BaseModel):
+    week_id: int = Field(..., description="Week ID")
+    playerDkId: int = Field(..., description="DraftKings player ID")
+    source: str = Field(..., max_length=100, description="Source of ownership data")
+    ownership: float = Field(..., ge=0, le=100, description="Ownership percentage")
+    draftGroup: Optional[str] = Field(None, max_length=20, description="Draft group (if slate-specific)")
+
+class OwnershipEstimateCreate(OwnershipEstimateBase):
+    pass
+
+class OwnershipEstimateUpdate(BaseModel):
+    ownership: Optional[float] = Field(None, ge=0, le=100)
+    draftGroup: Optional[str] = Field(None, max_length=20)
+
+class OwnershipEstimate(OwnershipEstimateBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
