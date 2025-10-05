@@ -25,6 +25,7 @@ async function fetchPlayerPool(weekId: number): Promise<Map<number, {
   position: string;
   salary: number;
   projectedPoints: number;
+  ownership: number;
 }>> {
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}/api/players/pool/${weekId}?excluded=false&limit=1000`);
@@ -43,13 +44,15 @@ async function fetchPlayerPool(weekId: number): Promise<Map<number, {
       };
       salary: number;
       projectedPoints?: number;
+      ownership?: number;
     }) => {
       playerMap.set(entry.playerDkId, {
         name: entry.player.displayName,
         team: entry.player.team,
         position: entry.player.position,
         salary: entry.salary,
-        projectedPoints: entry.projectedPoints || 0
+        projectedPoints: entry.projectedPoints || 0,
+        ownership: entry.ownership || 0
       });
     });
     
@@ -67,12 +70,14 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
   position: string;
   salary: number;
   projectedPoints: number;
+  ownership: number;
 }>): Array<{
   position: string;
   name: string;
   team: string;
   salary: number;
   projectedPoints: number;
+  ownership: number;
 }> {
   console.log('🎯 populateRosterFromSlots called with slots:', slots, 'playerMap size:', playerMap.size);
   const roster: Array<{
@@ -81,6 +86,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
     team: string;
     salary: number;
     projectedPoints: number;
+    ownership: number;
   }> = [];
   
   // Define the order of positions to display
@@ -98,7 +104,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           name: player.name,
           team: player.team,
           salary: player.salary,
-          projectedPoints: player.projectedPoints
+          projectedPoints: player.projectedPoints,
+          ownership: player.ownership
         });
       } else {
         console.log('🎯 Player data is undefined for', position, 'playerId:', playerId);
@@ -108,7 +115,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           name: "Unknown Player",
           team: "N/A",
           salary: 0,
-          projectedPoints: 0
+          projectedPoints: 0,
+          ownership: 0
         });
       }
     } else {
@@ -119,7 +127,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
         name: "Unknown Player",
         team: "N/A",
         salary: 0,
-        projectedPoints: 0
+          projectedPoints: 0,
+          ownership: 0
       });
     }
   });
@@ -674,7 +683,14 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                       
                       {/* Full Roster Display */}
                       <div className="space-y-3">
-                        <div className="text-sm font-medium">Full Roster</div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium">Full Roster</div>
+                          <div className="flex items-center gap-3 text-xs font-semibold">
+                            <span>Salary</span>
+                            <span>Proj.</span>
+                            <span>Own.</span>
+                          </div>
+                        </div>
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                           {lineup.roster && lineup.roster.length > 0 ? (
                             lineup.roster.map((player, index) => (
@@ -691,6 +707,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                   <span>${player.salary.toLocaleString()}</span>
                                   <span>{player.projectedPoints}pts</span>
+                                  <span>{player.ownership ? `${player.ownership.toFixed(1)}%` : 'N/A'}</span>
                                 </div>
                               </div>
                             ))
