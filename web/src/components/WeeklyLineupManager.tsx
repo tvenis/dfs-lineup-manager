@@ -695,35 +695,35 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                         {/* Header: desktop/tablet */}
                         <div className="hidden sm:grid grid-cols-[minmax(0,0.55fr)_7ch_6ch_6ch_6ch] items-center gap-3">
                           <div className="text-sm font-medium">Full Roster</div>
-                          <span className="text-xs font-semibold text-right">Salary</span>
-                          <span className="text-xs font-semibold text-right">Proj.</span>
-                          <span className="text-xs font-semibold text-right">% Own.</span>
-                          <span className="text-xs font-semibold text-right">Act.</span>
+                          <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Salary</span>
+                          <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Proj.</span>
+                          <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">% Own.</span>
+                          <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Act.</span>
                         </div>
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                           {/* Sticky header inside scroll area for sm+ */}
                           <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur grid-cols-[minmax(0,0.55fr)_7ch_6ch_6ch_6ch] items-center gap-3 py-1">
                             <div className="text-sm font-medium">Full Roster</div>
-                            <span className="text-xs font-semibold text-right">Salary</span>
-                            <span className="text-xs font-semibold text-right">Proj.</span>
-                            <span className="text-xs font-semibold text-right">% Own.</span>
-                            <span className="text-xs font-semibold text-right">Act.</span>
+                            <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Salary</span>
+                            <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Proj.</span>
+                            <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">% Own.</span>
+                            <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Act.</span>
                           </div>
                           {lineup.roster && lineup.roster.length > 0 ? (
                             lineup.roster.map((player, index) => (
-                              <div key={`${player.position}-${index}`} className="text-sm">
+                              <div key={`${player.position}-${index}`} className="text-sm odd:bg-muted/20 hover:bg-muted/30 rounded px-2 sm:px-0 py-1">
                                 {/* Desktop/tablet grid */}
                                 <div className="hidden sm:grid grid-cols-[minmax(0,0.55fr)_7ch_6ch_6ch_6ch] items-center gap-3">
                                   <div className="flex items-center gap-2 min-w-0">
-                                    <span className={getPositionBadgeClasses(player.position)}>
+                                    <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
                                       {player.position}
                                     </span>
                                     <div className="truncate">
                                       <span className="font-medium">{player.name}</span>
-                                      <span className="text-muted-foreground ml-1">({player.team})</span>
+                                      <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
                                     </div>
                                   </div>
-                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>${Math.round(player.salary).toLocaleString()}</span>
+                                  <span className="text-xs text-muted-foreground text-right pl-3 border-l border-muted" style={{ fontVariantNumeric: 'tabular-nums' }}>${Math.round(player.salary).toLocaleString()}</span>
                                   <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
                                   <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
                                   <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.actuals !== undefined ? player.actuals.toFixed(1) : '—'}</span>
@@ -732,16 +732,16 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                 {/* Mobile stacked layout */}
                                 <div className="sm:hidden flex flex-col gap-1">
                                   <div className="flex items-center gap-2 min-w-0">
-                                    <span className={getPositionBadgeClasses(player.position)}>
+                                    <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
                                       {player.position}
                                     </span>
                                     <div className="truncate">
                                       <span className="font-medium">{player.name}</span>
-                                      <span className="text-muted-foreground ml-1">({player.team})</span>
+                                      <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
                                     </div>
                                   </div>
                                   <div className="flex items-center justify-between text-xs text-muted-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                    <span>${Math.round(player.salary).toLocaleString()}</span>
+                                    <span className="pr-3 border-r border-muted">${Math.round(player.salary).toLocaleString()}</span>
                                     <span>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
                                     <span>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
                                     <span>{player.actuals !== undefined ? player.actuals.toFixed(1) : '—'}</span>
