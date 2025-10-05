@@ -157,7 +157,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<{ [key: string]: boolean }>({});
   const [statusUpdating, setStatusUpdating] = useState<{ [key: string]: boolean }>({});
   // Shared grid template to ensure perfect header/row alignment
-  const GRID_TEMPLATE = '22ch 80px 56px 56px 48px';
+  const GRID_TEMPLATE = '22ch 1px 80px 56px 56px 48px';
 
   const STATUS_FLOW: LineupStatus[] = ['created', 'exported', 'uploaded', 'submitted'];
   const getNextStatus = (current: LineupStatus): LineupStatus => {
@@ -705,9 +705,10 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                         {/* Header handled by sticky row inside scroll area for sm+ */}
                         <div className="space-y-2">
                           {/* Sticky header inside scroll area for sm+ */}
-                          <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur items-center gap-3 py-1 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
+                          <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur items-center gap-2 py-1 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
                             <div className="text-sm font-medium">Full Roster</div>
-                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground pl-3 border-l border-muted justify-self-end">Salary</span>
+                            <span className="block h-4 bg-muted justify-self-stretch" />
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground justify-self-end">Salary</span>
                             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground justify-self-end">Proj.</span>
                             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground justify-self-end">% Own.</span>
                             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground justify-self-end">Act.</span>
@@ -716,7 +717,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                             lineup.roster.map((player, index) => (
                               <div key={`${player.position}-${index}`} className="text-sm odd:bg-muted/20 hover:bg-muted/30 rounded px-2 sm:px-0 py-1">
                                 {/* Desktop/tablet grid */}
-                                <div className="hidden sm:grid items-center gap-3 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
+                                <div className="hidden sm:grid items-center gap-2 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
                                       {player.position}
@@ -726,7 +727,8 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                       <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
                                     </div>
                                   </div>
-                                  <span className="text-xs text-muted-foreground text-right pl-3 border-l border-muted" style={{ fontVariantNumeric: 'tabular-nums' }}>${Math.round(player.salary).toLocaleString()}</span>
+                                  <span className="block h-4 bg-muted justify-self-stretch" />
+                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>${Math.round(player.salary).toLocaleString()}</span>
                                   <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
                                   <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
                                   <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.actuals !== undefined ? player.actuals.toFixed(1) : '—'}</span>
