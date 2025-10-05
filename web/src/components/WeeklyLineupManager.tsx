@@ -686,6 +686,10 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                           <span>Projected Points</span>
                           <span>{lineup.projectedPoints.toFixed(1)}</span>
                         </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Actual Points</span>
+                          <span>{(lineup.roster?.reduce((sum, p) => sum + (p.actuals ?? 0), 0) || 0).toFixed(1)}</span>
+                        </div>
                       </div>
                       
                       <Separator />
