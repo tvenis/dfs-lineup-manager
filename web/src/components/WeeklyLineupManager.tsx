@@ -692,7 +692,8 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                       
                       {/* Full Roster Display */}
                       <div className="space-y-3">
-                        <div className="grid grid-cols-[minmax(0,0.6fr)_auto_auto_auto_auto] items-center gap-3">
+                        {/* Header: desktop/tablet */}
+                        <div className="hidden sm:grid grid-cols-[minmax(0,0.55fr)_7ch_6ch_6ch_6ch] items-center gap-3">
                           <div className="text-sm font-medium">Full Roster</div>
                           <span className="text-xs font-semibold text-right">Salary</span>
                           <span className="text-xs font-semibold text-right">Proj.</span>
@@ -700,22 +701,52 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                           <span className="text-xs font-semibold text-right">Act.</span>
                         </div>
                         <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {/* Sticky header inside scroll area for sm+ */}
+                          <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur grid-cols-[minmax(0,0.55fr)_7ch_6ch_6ch_6ch] items-center gap-3 py-1">
+                            <div className="text-sm font-medium">Full Roster</div>
+                            <span className="text-xs font-semibold text-right">Salary</span>
+                            <span className="text-xs font-semibold text-right">Proj.</span>
+                            <span className="text-xs font-semibold text-right">% Own.</span>
+                            <span className="text-xs font-semibold text-right">Act.</span>
+                          </div>
                           {lineup.roster && lineup.roster.length > 0 ? (
                             lineup.roster.map((player, index) => (
-                              <div key={`${player.position}-${index}`} className="grid grid-cols-[minmax(0,0.6fr)_auto_auto_auto_auto] items-center gap-3 text-sm">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className={getPositionBadgeClasses(player.position)}>
-                                    {player.position}
-                                  </span>
-                                  <div className="truncate">
-                                    <span className="font-medium">{player.name}</span>
-                                    <span className="text-muted-foreground ml-1">({player.team})</span>
+                              <div key={`${player.position}-${index}`} className="text-sm">
+                                {/* Desktop/tablet grid */}
+                                <div className="hidden sm:grid grid-cols-[minmax(0,0.55fr)_7ch_6ch_6ch_6ch] items-center gap-3">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className={getPositionBadgeClasses(player.position)}>
+                                      {player.position}
+                                    </span>
+                                    <div className="truncate">
+                                      <span className="font-medium">{player.name}</span>
+                                      <span className="text-muted-foreground ml-1">({player.team})</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>${Math.round(player.salary).toLocaleString()}</span>
+                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
+                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
+                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.actuals !== undefined ? player.actuals.toFixed(1) : '—'}</span>
+                                </div>
+
+                                {/* Mobile stacked layout */}
+                                <div className="sm:hidden flex flex-col gap-1">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className={getPositionBadgeClasses(player.position)}>
+                                      {player.position}
+                                    </span>
+                                    <div className="truncate">
+                                      <span className="font-medium">{player.name}</span>
+                                      <span className="text-muted-foreground ml-1">({player.team})</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                    <span>${Math.round(player.salary).toLocaleString()}</span>
+                                    <span>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
+                                    <span>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
+                                    <span>{player.actuals !== undefined ? player.actuals.toFixed(1) : '—'}</span>
                                   </div>
                                 </div>
-                                <span className="text-xs text-muted-foreground text-right">${player.salary.toLocaleString()}</span>
-                                <span className="text-xs text-muted-foreground text-right">{player.projectedPoints}pts</span>
-                                <span className="text-xs text-muted-foreground text-right">{player.ownership ? `${player.ownership.toFixed(1)}%` : 'N/A'}</span>
-                                <span className="text-xs text-muted-foreground text-right">{player.actuals ? `${player.actuals.toFixed(1)}pts` : 'N/A'}</span>
                               </div>
                             ))
                           ) : (
