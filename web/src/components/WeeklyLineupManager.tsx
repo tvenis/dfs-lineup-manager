@@ -369,7 +369,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
 
   // Filter lineups based on search term and selected tags
   const filteredLineups = useMemo(() => {
-    return lineups.filter(lineup => {
+    const matches = lineups.filter(lineup => {
       // Search term filter (name or tags)
       const matchesSearch = searchTerm === '' || 
         lineup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -381,6 +381,8 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
 
       return matchesSearch && matchesTags;
     });
+    // Sort by projected points descending
+    return matches.sort((a, b) => b.projectedPoints - a.projectedPoints);
   }, [lineups, searchTerm, selectedTags]);
 
   const handleDeleteLineup = async (id: string) => {
