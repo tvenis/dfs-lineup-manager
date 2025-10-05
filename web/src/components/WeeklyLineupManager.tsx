@@ -606,7 +606,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredLineups.map((lineup) => (
                 <div key={lineup.id} className="w-full">
-                  <Card className="hover:shadow-md transition-shadow h-full">
+                  <Card className="hover:shadow-md transition-shadow h-full w-fit">
                     <CardHeader className="pb-4">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">{lineup.name}</CardTitle>
@@ -669,14 +669,14 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                         ))}
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 w-fit">
                       {/* Salary and Projected Points Summary */}
                       <div className="space-y-3">
                         <div className="flex justify-between text-sm">
                           <span>Salary Used</span>
                           <span>${lineup.salaryUsed.toLocaleString()} / $50,000</span>
                         </div>
-                        <div className="w-full bg-muted rounded-full h-2">
+                        <div className="bg-muted rounded-full h-2 sm:w-[41ch] w-full">
                           <div 
                             className="bg-primary h-2 rounded-full" 
                             style={{ width: `${(lineup.salaryUsed / lineup.salaryCap) * 100}%` }}
@@ -697,7 +697,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                       {/* Full Roster Display */}
                       <div className="space-y-3">
                         {/* Header: desktop/tablet */}
-                        <div className="hidden sm:grid grid-cols-[minmax(0,0.55fr)_7ch_6ch_6ch_6ch] items-center gap-3">
+                        <div className="hidden sm:grid grid-cols-[16ch_7ch_6ch_6ch_6ch] items-center gap-3 w-fit">
                           <div className="text-sm font-medium">Full Roster</div>
                           <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Salary</span>
                           <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Proj.</span>
@@ -706,7 +706,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                         </div>
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                           {/* Sticky header inside scroll area for sm+ */}
-                          <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur grid-cols-[minmax(0,0.55fr)_7ch_6ch_6ch_6ch] items-center gap-3 py-1">
+                          <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur grid-cols-[16ch_7ch_6ch_6ch_6ch] items-center gap-3 py-1 w-fit">
                             <div className="text-sm font-medium">Full Roster</div>
                             <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Salary</span>
                             <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Proj.</span>
@@ -717,7 +717,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                             lineup.roster.map((player, index) => (
                               <div key={`${player.position}-${index}`} className="text-sm odd:bg-muted/20 hover:bg-muted/30 rounded px-2 sm:px-0 py-1">
                                 {/* Desktop/tablet grid */}
-                                <div className="hidden sm:grid grid-cols-[minmax(0,0.55fr)_7ch_6ch_6ch_6ch] items-center gap-3">
+                                <div className="hidden sm:grid grid-cols-[16ch_7ch_6ch_6ch_6ch] items-center gap-3 w-fit">
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
                                       {player.position}
