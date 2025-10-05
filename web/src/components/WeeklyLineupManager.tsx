@@ -705,10 +705,10 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                           {/* Sticky header inside scroll area for sm+ */}
                           <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur items-center gap-3 py-1 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
                             <div className="text-sm font-medium">Full Roster</div>
-                            <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground pl-3 border-l border-muted">Salary</span>
-                            <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Proj.</span>
-                            <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">% Own.</span>
-                            <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Act.</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground pl-3 border-l border-muted justify-self-end">Salary</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground justify-self-end">Proj.</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground justify-self-end">% Own.</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground justify-self-end">Act.</span>
                           </div>
                           {lineup.roster && lineup.roster.length > 0 ? (
                             lineup.roster.map((player, index) => (
