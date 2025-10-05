@@ -157,7 +157,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<{ [key: string]: boolean }>({});
   const [statusUpdating, setStatusUpdating] = useState<{ [key: string]: boolean }>({});
   // Shared grid template to ensure perfect header/row alignment
-  const GRID_TEMPLATE = '16ch 80px 56px 56px 48px';
+  const GRID_TEMPLATE = '22ch 80px 56px 56px 48px';
 
   const STATUS_FLOW: LineupStatus[] = ['created', 'exported', 'uploaded', 'submitted'];
   const getNextStatus = (current: LineupStatus): LineupStatus => {
