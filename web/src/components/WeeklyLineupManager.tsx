@@ -697,7 +697,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                           <div className="flex items-center gap-3 text-xs font-semibold">
                             <span>Salary</span>
                             <span>Proj.</span>
-                            <span>% Owned</span>
+                            <span>% Own.</span>
                             <span>Act.</span>
                           </div>
                         </div>
