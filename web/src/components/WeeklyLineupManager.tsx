@@ -607,9 +607,9 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="flex flex-wrap gap-x-3 gap-y-4">
               {filteredLineups.map((lineup) => (
-                <div key={lineup.id} className="w-full">
+                <div key={lineup.id} className="w-fit">
                   <Card className="hover:shadow-md transition-shadow h-full w-fit">
                     <CardHeader className="pb-4">
                       <div className="flex items-center justify-between gap-3">
