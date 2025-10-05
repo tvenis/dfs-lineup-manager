@@ -26,6 +26,7 @@ async function fetchPlayerPool(weekId: number): Promise<Map<number, {
   salary: number;
   projectedPoints: number;
   ownership: number;
+  actuals: number;
 }>> {
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}/api/players/pool/${weekId}?excluded=false&limit=1000`);
@@ -45,6 +46,7 @@ async function fetchPlayerPool(weekId: number): Promise<Map<number, {
       salary: number;
       projectedPoints?: number;
       ownership?: number;
+      actuals?: number;
     }) => {
       playerMap.set(entry.playerDkId, {
         name: entry.player.displayName,
@@ -52,7 +54,8 @@ async function fetchPlayerPool(weekId: number): Promise<Map<number, {
         position: entry.player.position,
         salary: entry.salary,
         projectedPoints: entry.projectedPoints || 0,
-        ownership: entry.ownership || 0
+        ownership: entry.ownership || 0,
+        actuals: entry.actuals || 0
       });
     });
     
@@ -71,6 +74,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
   salary: number;
   projectedPoints: number;
   ownership: number;
+  actuals: number;
 }>): Array<{
   position: string;
   name: string;
@@ -78,6 +82,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
   salary: number;
   projectedPoints: number;
   ownership: number;
+  actuals: number;
 }> {
   console.log('🎯 populateRosterFromSlots called with slots:', slots, 'playerMap size:', playerMap.size);
   const roster: Array<{
@@ -87,6 +92,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
     salary: number;
     projectedPoints: number;
     ownership: number;
+    actuals: number;
   }> = [];
   
   // Define the order of positions to display
@@ -105,7 +111,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           team: player.team,
           salary: player.salary,
           projectedPoints: player.projectedPoints,
-          ownership: player.ownership
+          ownership: player.ownership,
+          actuals: player.actuals
         });
       } else {
         console.log('🎯 Player data is undefined for', position, 'playerId:', playerId);
@@ -116,7 +123,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           team: "N/A",
           salary: 0,
           projectedPoints: 0,
-          ownership: 0
+          ownership: 0,
+          actuals: 0
         });
       }
     } else {
@@ -128,7 +136,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
         team: "N/A",
         salary: 0,
           projectedPoints: 0,
-          ownership: 0
+          ownership: 0,
+          actuals: 0
       });
     }
   });
@@ -688,7 +697,8 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                           <div className="flex items-center gap-3 text-xs font-semibold">
                             <span>Salary</span>
                             <span>Proj.</span>
-                            <span>Own.</span>
+                            <span>% Owned</span>
+                            <span>Act.</span>
                           </div>
                         </div>
                         <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -708,6 +718,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                   <span>${player.salary.toLocaleString()}</span>
                                   <span>{player.projectedPoints}pts</span>
                                   <span>{player.ownership ? `${player.ownership.toFixed(1)}%` : 'N/A'}</span>
+                                  <span>{player.actuals ? `${player.actuals.toFixed(1)}pts` : 'N/A'}</span>
                                 </div>
                               </div>
                             ))

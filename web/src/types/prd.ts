@@ -55,6 +55,8 @@ export interface LineupPlayer {
   team: string;
   salary: number;
   projectedPoints: number;
+  ownership?: number;
+  actuals?: number;
 }
 
 export type RosterConfig = {
