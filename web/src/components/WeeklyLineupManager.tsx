@@ -696,14 +696,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                       
                       {/* Full Roster Display */}
                       <div className="space-y-3">
-                        {/* Header: desktop/tablet */}
-                        <div className="hidden sm:grid grid-cols-[16ch_7ch_6ch_6ch_6ch] items-center gap-3 w-fit">
-                          <div className="text-sm font-medium">Full Roster</div>
-                          <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Salary</span>
-                          <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Proj.</span>
-                          <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">% Own.</span>
-                          <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Act.</span>
-                        </div>
+                        {/* Header handled by sticky row inside scroll area for sm+ */}
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                           {/* Sticky header inside scroll area for sm+ */}
                           <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur grid-cols-[16ch_7ch_6ch_6ch_6ch] items-center gap-3 py-1 w-fit">
