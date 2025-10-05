@@ -156,6 +156,8 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
   const [currentWeekId, setCurrentWeekId] = useState<number | null>(1); // Default to week 1
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<{ [key: string]: boolean }>({});
   const [statusUpdating, setStatusUpdating] = useState<{ [key: string]: boolean }>({});
+  // Shared grid template to ensure perfect header/row alignment
+  const GRID_TEMPLATE = '16ch 80px 56px 56px 48px';
 
   const STATUS_FLOW: LineupStatus[] = ['created', 'exported', 'uploaded', 'submitted'];
   const getNextStatus = (current: LineupStatus): LineupStatus => {
@@ -701,7 +703,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                         {/* Header handled by sticky row inside scroll area for sm+ */}
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                           {/* Sticky header inside scroll area for sm+ */}
-                          <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur grid-cols-[16ch_7ch_6ch_6ch_6ch] items-center gap-3 py-1 w-fit">
+                          <div className="hidden sm:grid sticky top-0 z-10 bg-white/80 backdrop-blur items-center gap-3 py-1 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
                             <div className="text-sm font-medium">Full Roster</div>
                             <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground pl-3 border-l border-muted">Salary</span>
                             <span className="text-[10px] font-semibold text-right uppercase tracking-wide text-muted-foreground">Proj.</span>
@@ -712,7 +714,7 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                             lineup.roster.map((player, index) => (
                               <div key={`${player.position}-${index}`} className="text-sm odd:bg-muted/20 hover:bg-muted/30 rounded px-2 sm:px-0 py-1">
                                 {/* Desktop/tablet grid */}
-                                <div className="hidden sm:grid grid-cols-[16ch_7ch_6ch_6ch_6ch] items-center gap-3 w-fit">
+                                <div className="hidden sm:grid items-center gap-3 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
                                       {player.position}
