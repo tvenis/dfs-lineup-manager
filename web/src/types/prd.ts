@@ -65,6 +65,8 @@ export interface LineupPlayer {
   defTds?: number;
   specialTeamsTds?: number;
   defSafeties?: number;
+  opponentAbbr?: string;
+  homeOrAway?: 'H' | 'A';
 }
 
 export type RosterConfig = {
