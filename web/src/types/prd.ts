@@ -65,6 +65,7 @@ export interface LineupPlayer {
   defTds?: number;
   specialTeamsTds?: number;
   defSafeties?: number;
+  blocked_kicks?: number;
   opponentAbbr?: string;
   homeOrAway?: 'H' | 'A';
 }

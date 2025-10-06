@@ -882,6 +882,8 @@ def get_player_props(
                 outcome_point=prop_row.outcome_point,
                 probability=prop_row.outcome_likelihood,
                 updated=prop_row.last_prop_update,
+                result_status=prop_row.result_status,
+                actual_value=prop_row.actual_value,
             )
         )
 

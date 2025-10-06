@@ -767,6 +767,11 @@ class PlayerPropBetBase(BaseModel):
     outcome_price: Optional[int] = None
     outcome_point: Optional[float] = None
     outcome_likelihood: Optional[float] = Field(None, ge=0, le=100, description="Percentage 0-100")
+    
+    # Props scoring fields
+    result_status: Optional[str] = Field(None, max_length=20, description="Prop bet result: HIT, MISS, PUSH, or NULL if not yet scored")
+    actual_value: Optional[float] = Field(None, description="Actual stat value from player_actuals used for scoring")
+    
     updated_by: Optional[str] = Field("API", max_length=100)
     last_prop_update: Optional[datetime] = None
 
@@ -781,6 +786,11 @@ class PlayerPropBetUpdate(BaseModel):
     outcome_price: Optional[int] = None
     outcome_point: Optional[float] = None
     outcome_likelihood: Optional[float] = Field(None, ge=0, le=100)
+    
+    # Props scoring fields
+    result_status: Optional[str] = Field(None, max_length=20, description="Prop bet result: HIT, MISS, PUSH, or NULL if not yet scored")
+    actual_value: Optional[float] = Field(None, description="Actual stat value from player_actuals used for scoring")
+    
     updated_by: Optional[str] = Field(None, max_length=100)
     last_prop_update: Optional[datetime] = None
 
@@ -804,6 +814,10 @@ class PlayerPropBetWithMeta(BaseModel):
     outcome_point: Optional[float] = None
     probability: Optional[float] = None
     updated: Optional[datetime] = None
+    
+    # Props scoring results
+    result_status: Optional[str] = None  # 'HIT', 'MISS', 'PUSH', or None if not yet scored
+    actual_value: Optional[float] = None  # Actual stat value used for scoring
 
 class PlayerPropsResponse(BaseModel):
     props: List[PlayerPropBetWithMeta]

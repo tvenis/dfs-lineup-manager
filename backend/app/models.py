@@ -407,6 +407,11 @@ class PlayerPropBet(Base):
     outcome_price = Column(Integer)
     outcome_point = Column(Float)
     outcome_likelihood = Column(Float)  # percentage value (e.g., 62.5 for 62.5%)
+    
+    # Props scoring columns
+    result_status = Column(String(20))  # 'HIT', 'MISS', 'PUSH', or NULL if not yet scored
+    actual_value = Column(Float)  # Actual stat value from player_actuals used for scoring
+    
     updated_by = Column(String(100), default="API")
     last_prop_update = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())

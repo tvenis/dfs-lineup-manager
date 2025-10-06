@@ -53,7 +53,7 @@ async function fetchPlayerPool(weekId: number, draftGroup?: string): Promise<Map
   specialTeamsTds?: number;
   defSafeties?: number;
   opponentAbbr?: string;
-  homeOrAway?: string;
+  homeOrAway?: 'H' | 'A';
 }>> {
   try {
     // Get default draft group if not provided
@@ -145,7 +145,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
   specialTeamsTds?: number;
   defSafeties?: number;
   opponentAbbr?: string;
-  homeOrAway?: string;
+  homeOrAway?: 'H' | 'A';
 }>): Array<{
   position: string;
   name: string;
@@ -163,7 +163,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
   specialTeamsTds?: number;
   defSafeties?: number;
   opponentAbbr?: string;
-  homeOrAway?: string;
+  homeOrAway?: 'H' | 'A';
 }> {
   console.log('🎯 populateRosterFromSlots called with slots:', slots, 'playerMap size:', playerMap.size);
   const roster: Array<{
@@ -182,6 +182,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
     defTds?: number;
     specialTeamsTds?: number;
     defSafeties?: number;
+    blocked_kicks?: number;
     opponentAbbr?: string;
     homeOrAway?: 'H' | 'A';
   }> = [];
@@ -212,6 +213,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           defTds: player.defTds,
           specialTeamsTds: player.specialTeamsTds,
           defSafeties: player.defSafeties,
+          blocked_kicks: (player as any).blocked_kicks,
           opponentAbbr: player.opponentAbbr,
           homeOrAway: player.homeOrAway as 'H' | 'A' | undefined,
         });
