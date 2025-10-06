@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Check, X, Minus, Trophy } from "lucide-react";
 import { buildApiUrl } from "@/config/api";
+import { WeekService } from "@/lib/weekService";
+import type { Week } from "@/types/prd";
 
 interface PlayerPropsData {
   week_number: number;
@@ -41,49 +43,49 @@ const MARKET_OPTIONS = [
 export function PlayerPropsTable({}: PlayerPropsTableProps) {
   const [propsData, setPropsData] = useState<PlayerPropsData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedWeek, setSelectedWeek] = useState<string>("active");
+  const [weeks, setWeeks] = useState<Week[]>([]);
+  const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
+  const [activeWeekId, setActiveWeekId] = useState<number | null>(null);
   const [selectedBookmaker, setSelectedBookmaker] = useState<string>("all");
   const [selectedMarket, setSelectedMarket] = useState<string>("player_tds_over");
-  const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
   const [availableBookmakers, setAvailableBookmakers] = useState<string[]>([]);
+
+  // Fetch weeks on component mount (battle-tested pattern)
+  useEffect(() => {
+    const fetchWeeks = async () => {
+      try {
+        const weeksData = await WeekService.getWeeks();
+        setWeeks(weeksData.weeks || []);
+        
+        // Auto-select active week or first week
+        const activeWeek = weeksData.weeks?.find((w: Week) => w.status === 'Active');
+        if (activeWeek) {
+          setActiveWeekId(activeWeek.id);
+          setSelectedWeekId(activeWeek.id);
+        } else if (weeksData.weeks?.length > 0) {
+          setSelectedWeekId(weeksData.weeks[0].id);
+        }
+      } catch (err) {
+        console.error('Error fetching weeks:', err);
+      }
+    };
+
+    fetchWeeks();
+  }, []);
 
   // Fetch data when filters change
   useEffect(() => {
-    fetchPlayerProps();
-  }, [selectedWeek, selectedBookmaker, selectedMarket]);
-
-  // Fetch available weeks and bookmakers on component mount
-  useEffect(() => {
-    fetchFilterOptions();
-  }, []);
-
-  const fetchFilterOptions = async () => {
-    try {
-      // Fetch weeks
-      const weeksResponse = await fetch(buildApiUrl("/weeks"));
-      if (weeksResponse.ok) {
-        const weeksData = await weeksResponse.json();
-        const weeks = weeksData.map((w: any) => w.week_number).sort((a: number, b: number) => a - b);
-        setAvailableWeeks(weeks);
-      }
-
-      // Fetch bookmakers (we'll get this from props data)
-      const propsResponse = await fetch(buildApiUrl("/api/leaderboard/player-props"));
-      if (propsResponse.ok) {
-        const propsData = await propsResponse.json();
-        const bookmakers = [...new Set(propsData.map((p: any) => p.bookmaker).filter(Boolean))].sort() as string[];
-        setAvailableBookmakers(bookmakers);
-      }
-    } catch (error) {
-      console.error("Error fetching filter options:", error);
+    if (selectedWeekId) {
+      fetchPlayerProps();
     }
-  };
+  }, [selectedWeekId, selectedBookmaker, selectedMarket]);
+
 
   const fetchPlayerProps = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        week: selectedWeek,
+        week: selectedWeekId ? selectedWeekId.toString() : "active",
         bookmaker: selectedBookmaker,
         market: selectedMarket,
       });
@@ -92,6 +94,10 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
       if (response.ok) {
         const data = await response.json();
         setPropsData(data);
+        
+        // Extract unique bookmakers from the data
+        const bookmakers = [...new Set(data.map((p: any) => p.bookmaker).filter(Boolean))].sort() as string[];
+        setAvailableBookmakers(bookmakers);
       } else {
         console.error("Failed to fetch player props");
         setPropsData([]);
@@ -135,20 +141,28 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex gap-4 items-center">
-        <Select value={selectedWeek} onValueChange={setSelectedWeek}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Week" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="all">All Weeks</SelectItem>
-            {availableWeeks.map((week) => (
-              <SelectItem key={week} value={week.toString()}>
-                Week {week}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex-shrink-0">
+          <label htmlFor="week-select" className="block text-sm font-medium text-gray-700 mb-2">
+            Select Week:
+          </label>
+          <select
+            id="week-select"
+            value={selectedWeekId || ''}
+            onChange={(e) => setSelectedWeekId(Number(e.target.value))}
+            className="block w-auto min-w-[200px] px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            disabled={weeks.length === 0}
+          >
+            {weeks.length === 0 ? (
+              <option value="">Loading weeks...</option>
+            ) : (
+              weeks.map((week) => (
+                <option key={week.id} value={week.id}>
+                  Week {week.week_number} - {week.year}{week.id === activeWeekId ? ' (Active)' : ''}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
 
         <Select value={selectedBookmaker} onValueChange={setSelectedBookmaker}>
           <SelectTrigger className="w-40">
