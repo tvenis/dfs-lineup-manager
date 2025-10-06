@@ -68,9 +68,13 @@ class DKDefenseScoringService:
             score += team_stats.fumble_recovery_opp * 2
         
         # Touchdowns +6 Pts each
-        # def_tds covers: Interception Return TD, Fumble Recovery TD
+        # def_tds covers: Interception Return TD
+        # fumble_recovery_tds covers: Fumble Recovery TD
         if team_stats.def_tds:
             score += team_stats.def_tds * 6
+        
+        if team_stats.fumble_recovery_tds:
+            score += team_stats.fumble_recovery_tds * 6
         
         # Special Teams TDs +6 Pts each
         # special_teams_tds covers: Punt/Kickoff/FG Return for TD
@@ -115,6 +119,7 @@ class DKDefenseScoringService:
         score += (team_stats_dict.get('def_interceptions', 0) or 0) * 2
         score += (team_stats_dict.get('fumble_recovery_opp', 0) or 0) * 2
         score += (team_stats_dict.get('def_tds', 0) or 0) * 6
+        score += (team_stats_dict.get('fumble_recovery_tds', 0) or 0) * 6
         score += (team_stats_dict.get('special_teams_tds', 0) or 0) * 6
         score += (team_stats_dict.get('def_safeties', 0) or 0) * 2
         
@@ -144,6 +149,7 @@ class DKDefenseScoringService:
             'interceptions': (team_stats.def_interceptions or 0) * 2,
             'fumble_recoveries': (team_stats.fumble_recovery_opp or 0) * 2,
             'defensive_tds': (team_stats.def_tds or 0) * 6,
+            'fumble_recovery_tds': (team_stats.fumble_recovery_tds or 0) * 6,
             'special_teams_tds': (team_stats.special_teams_tds or 0) * 6,
             'safeties': (team_stats.def_safeties or 0) * 2,
             'blocked_kicks': (getattr(team_stats, 'blocked_kicks', 0) or 0) * 2,

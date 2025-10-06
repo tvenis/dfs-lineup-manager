@@ -32,6 +32,7 @@ interface TeamStats {
   def_interceptions: number;
   fumble_recovery_opp?: number; // optional for compatibility
   def_tds: number;
+  fumble_recovery_tds?: number; // optional for compatibility
   special_teams_tds: number;
   def_safeties: number;
   blocked_kicks?: number; // optional for compatibility
