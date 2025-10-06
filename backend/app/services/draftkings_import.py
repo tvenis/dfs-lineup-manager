@@ -283,7 +283,7 @@ class DraftKingsImportService:
             
             draft_stat_attributes = draftable.get('draftStatAttributes', [])
             # Don't take just the first element - preserve the full array for all attributes
-            # This ensures we keep projectedPoints (id: 90), opponentRank (id: -2), and any other attributes
+            # This ensures we keep opponentRank (id: -2) and any other attributes
             
             player_attributes = draftable.get('playerAttributes', [])
             if isinstance(player_attributes, list) and len(player_attributes) > 0:
@@ -344,7 +344,7 @@ class DraftKingsImportService:
             # Extract pool entry data (fields that belong to PlayerPoolEntry model)
             pool_entry_data = {
                 'draftableId': draftable.get('draftableId'),  # DraftKings draftable ID
-                'projectedPoints': self._extract_projected_points(draft_stat_attributes),  # Extract projection value
+                'projectedPoints': None,  # No longer importing season average as projection
                 'salary': draftable.get('salary'),
                 'status': draftable.get('status'),
                 'isDisabled': draftable.get('isDisabled', False),
@@ -784,50 +784,3 @@ class DraftKingsImportService:
             logger.error(f"Error in _upsert_player_pool_entry_individually: {str(e)}")
             return "skipped", False
 
-    def _extract_projected_points(self, draft_stat_attributes: Optional[Union[Dict, List]]) -> Optional[float]:
-        """
-        Extract projected points from draftStatAttributes where id=90
-        
-        Args:
-            draft_stat_attributes: The draftStatAttributes from DraftKings API
-            
-        Returns:
-            Projected points value as float, or None if not found
-        """
-        if not draft_stat_attributes:
-            return None
-        
-        def _to_float_or_none(v: Optional[Union[str, int, float]]) -> Optional[float]:
-            if v is None:
-                return None
-            # Common DK placeholders for missing values
-            if isinstance(v, str) and v.strip() in {"", "-", "—", "N/A", "None"}:
-                return None
-            try:
-                return float(v)
-            except (ValueError, TypeError):
-                return None
-
-        # Handle both dict and list formats
-        if isinstance(draft_stat_attributes, list):
-            for attr in draft_stat_attributes:
-                if isinstance(attr, dict) and attr.get('id') == 90:
-                    # Prefer 'value'; fall back to 'sortValue' if needed
-                    val = _to_float_or_none(attr.get('value'))
-                    if val is not None:
-                        return val
-                    sort_val = _to_float_or_none(attr.get('sortValue'))
-                    if sort_val is not None:
-                        return sort_val
-            return None
-        elif isinstance(draft_stat_attributes, dict):
-            if draft_stat_attributes.get('id') == 90:
-                val = _to_float_or_none(draft_stat_attributes.get('value'))
-                if val is not None:
-                    return val
-                sort_val = _to_float_or_none(draft_stat_attributes.get('sortValue'))
-                if sort_val is not None:
-                    return sort_val
-            return None
-        else:
-            return None

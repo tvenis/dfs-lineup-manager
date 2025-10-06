@@ -303,19 +303,9 @@ export class PlayerService {
     skip?: number;
     limit?: number;
     show_hidden?: boolean;
-    draft_group?: string;
   } = {}): Promise<PlayerListResponse> {
     try {
       const params = new URLSearchParams();
-      
-      // Draft group is required
-      if (filters.draft_group) {
-        params.append('draft_group', filters.draft_group);
-      } else {
-        // Get default draft group for this week
-        const defaultDraftGroup = await PlayerService.getDefaultDraftGroup(weekId);
-        params.append('draft_group', defaultDraftGroup);
-      }
       
       if (filters.position) params.append('position', filters.position);
       if (filters.team_id) params.append('team_id', filters.team_id);

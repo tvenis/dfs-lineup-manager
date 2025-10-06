@@ -207,7 +207,7 @@ def get_player_profiles_with_pool_data(
 
 @router.get("/profiles-with-pool-data-optimized", response_model=PlayerListWithPoolDataResponse)
 def get_player_profiles_with_pool_data_optimized(
-    draft_group: str = Query(..., description="Draft group ID"),
+    draft_group: Optional[str] = Query(None, description="Draft group ID"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     position: Optional[str] = Query(None),
@@ -224,6 +224,14 @@ def get_player_profiles_with_pool_data_optimized(
         week_id = current_week.id
     except Exception:
         return PlayerListWithPoolDataResponse(players=[], total=0, page=1, size=limit)
+    
+    # If no draft_group provided, get the default draft group for this week
+    if not draft_group:
+        from app.services.draft_group_service import DraftGroupService
+        default_draft_group = DraftGroupService.get_default_draft_group(db, week_id)
+        if not default_draft_group:
+            return PlayerListWithPoolDataResponse(players=[], total=0, page=1, size=limit)
+        draft_group = str(default_draft_group.draftGroup)
     
     # Build the main query with consistency calculation in a single SQL query
     # This uses a subquery to calculate YTD totals for each player

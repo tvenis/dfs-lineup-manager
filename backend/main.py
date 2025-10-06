@@ -23,7 +23,7 @@ except Exception as e:
 
 # Import routers conditionally to avoid database import errors
 try:
-    from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments, recent_activity, player_aliases, team_stats, game_results, weekly_summary, ownership_estimates
+    from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments, recent_activity, player_aliases, team_stats, game_results, weekly_summary, ownership_estimates, players_optimized
     ROUTERS_AVAILABLE = True
 except Exception as e:
     print(f"⚠️ Router imports failed: {e}")
@@ -32,6 +32,7 @@ except Exception as e:
     players = lineups = csv_import = teams = weeks = None
     draftkings_import = projections = odds_api = games = contests = None
     actuals = draftgroups = players_batch = tips = firecrawl = None
+    players_optimized = None
     import_opponent_roster = comments = recent_activity = player_aliases = None
     team_stats = game_results = weekly_summary = ownership_estimates = None
 
@@ -65,6 +66,7 @@ app.add_middleware(
 # Include routers conditionally
 if ROUTERS_AVAILABLE:
     if players: app.include_router(players.router, prefix="/api/players", tags=["players"])
+    if players_optimized: app.include_router(players_optimized.router, prefix="/api/players", tags=["players-optimized"])
     if lineups: app.include_router(lineups.router, prefix="/api/lineups", tags=["lineups"])
     if csv_import: app.include_router(csv_import.router, prefix="/api/csv", tags=["csv"])
     if teams: app.include_router(teams.router, prefix="/api/teams", tags=["teams"])
