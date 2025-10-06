@@ -753,6 +753,7 @@ class TeamStats(Base):
     
     # Calculated fields
     dk_defense_score = Column(Numeric, default=0)
+    points_allowed = Column(Integer, default=0)  # Points scored against this team's defense
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
