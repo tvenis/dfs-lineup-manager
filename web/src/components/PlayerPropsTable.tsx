@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Check, X, Minus, Trophy } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Check, X, Minus, Trophy, Target, Clock } from "lucide-react";
 import { buildApiUrl } from "@/config/api";
 import { WeekService } from "@/lib/weekService";
 import type { Week } from "@/types/prd";
@@ -49,6 +50,37 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
   const [selectedBookmaker, setSelectedBookmaker] = useState<string>("all");
   const [selectedMarket, setSelectedMarket] = useState<string>("player_tds_over");
   const [availableBookmakers, setAvailableBookmakers] = useState<string[]>([]);
+
+  // Calculate summary statistics from filtered props data
+  const summaryStats = useMemo(() => {
+    let totalProps = propsData.length;
+    let oversHits = 0;
+    let pushes = 0;
+    let undersMisses = 0;
+    let notGraded = 0;
+
+    propsData.forEach(prop => {
+      const outcomeLower = prop.outcome_name?.toLowerCase() || '';
+      
+      if (prop.result_status === 'HIT' && outcomeLower.includes('over')) {
+        oversHits++;
+      } else if (prop.result_status === 'MISS' && outcomeLower.includes('under')) {
+        undersMisses++;
+      } else if (prop.result_status === 'PUSH') {
+        pushes++;
+      } else if (prop.result_status === null) {
+        notGraded++;
+      }
+    });
+
+    return {
+      totalProps,
+      oversHits,
+      pushes,
+      undersMisses,
+      notGraded,
+    };
+  }, [propsData]);
 
   // Fetch weeks on component mount (battle-tested pattern)
   useEffect(() => {
@@ -139,6 +171,59 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
 
   return (
     <div className="space-y-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="bg-blue-50 border-blue-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-700">Total Props</CardTitle>
+            <Target className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-900">{summaryStats.totalProps}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-green-50 border-green-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-700">Overs → Hits</CardTitle>
+            <Check className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-900">{summaryStats.oversHits}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-yellow-50 border-yellow-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-700">Pushes</CardTitle>
+            <Minus className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-900">{summaryStats.pushes}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-red-50 border-red-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-red-700">Unders → Misses</CardTitle>
+            <X className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-900">{summaryStats.undersMisses}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gray-50 border-gray-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Not Graded</CardTitle>
+            <Clock className="h-4 w-4 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900">{summaryStats.notGraded}</div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters */}
       <div className="flex gap-4 items-center">
         <div className="flex-shrink-0">

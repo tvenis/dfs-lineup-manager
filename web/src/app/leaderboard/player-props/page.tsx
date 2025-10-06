@@ -17,6 +17,11 @@ export default function PlayerPropsPage() {
 
       {/* Player Props Table */}
       <PlayerPropsTable />
+      
+      {/* Future components can be added here */}
+      {/* Example: <PlayerPropsAnalytics /> */}
+      {/* Example: <PlayerPropsTrends /> */}
+      {/* Example: <PlayerPropsSummary /> */}
     </div>
   );
 }
