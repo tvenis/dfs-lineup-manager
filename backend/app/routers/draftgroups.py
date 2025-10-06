@@ -50,6 +50,15 @@ def create_draftgroup(draftgroup: DraftGroupCreate, db: Session = Depends(get_db
             detail=f"Draft group {draftgroup.draftGroup} already exists for week {draftgroup.week_id}"
         )
     
+    # If setting as default, unset any existing default for this week
+    if draftgroup.is_default:
+        db.query(DraftGroup).filter(
+            and_(
+                DraftGroup.week_id == draftgroup.week_id,
+                DraftGroup.is_default == True
+            )
+        ).update({"is_default": False})
+    
     db_draftgroup = DraftGroup(**draftgroup.dict())
     db.add(db_draftgroup)
     db.commit()
@@ -85,6 +94,16 @@ def update_draftgroup(
                 status_code=400,
                 detail=f"Draft group {new_draft_group} already exists for week {new_week_id}"
             )
+    
+    # If setting as default, unset any existing default for this week
+    if draftgroup.is_default:
+        db.query(DraftGroup).filter(
+            and_(
+                DraftGroup.week_id == db_draftgroup.week_id,
+                DraftGroup.is_default == True,
+                DraftGroup.id != draftgroup_id
+            )
+        ).update({"is_default": False})
     
     # Update fields
     for field, value in draftgroup.dict(exclude_unset=True).items():

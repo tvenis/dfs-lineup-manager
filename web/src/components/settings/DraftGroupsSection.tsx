@@ -32,6 +32,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 import { Edit, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,6 +46,7 @@ const draftGroupSchema = z.object({
   week_id: z.number().min(1, "Week is required"),
   draftGroup_description: z.string().optional(),
   games: z.number().min(0, "Games must be 0 or more").optional(),
+  is_default: z.boolean().optional(),
 });
 
 type DraftGroupFormData = z.infer<typeof draftGroupSchema>;
@@ -65,6 +67,7 @@ export function DraftGroupsSection() {
       week_id: 0,
       draftGroup_description: "",
       games: 0,
+      is_default: false,
     },
   });
 
@@ -75,6 +78,7 @@ export function DraftGroupsSection() {
       week_id: 0,
       draftGroup_description: "",
       games: 0,
+      is_default: false,
     },
   });
 
@@ -113,6 +117,7 @@ export function DraftGroupsSection() {
         week_id: data.week_id,
         draftGroup_description: data.draftGroup_description || "",
         games: data.games || 0,
+        is_default: data.is_default || false,
       });
       
       setDraftGroups(prev => [...prev, newDraftGroup].sort((a, b) => a.draftGroup - b.draftGroup));
@@ -131,6 +136,7 @@ export function DraftGroupsSection() {
       week_id: draftGroup.week_id,
       draftGroup_description: draftGroup.draftGroup_description || "",
       games: draftGroup.games,
+      is_default: draftGroup.is_default || false,
     });
     setIsEditDialogOpen(true);
   };
@@ -144,6 +150,7 @@ export function DraftGroupsSection() {
         week_id: data.week_id,
         draftGroup_description: data.draftGroup_description,
         games: data.games,
+        is_default: data.is_default,
       });
       
       setDraftGroups(prev => 
@@ -234,6 +241,7 @@ export function DraftGroupsSection() {
                   <th className="text-left py-2 px-3 font-medium text-gray-700">Week</th>
                   <th className="text-left py-2 px-3 font-medium text-gray-700">Description</th>
                   <th className="text-left py-2 px-3 font-medium text-gray-700">Games</th>
+                  <th className="text-center py-2 px-3 font-medium text-gray-700">Default</th>
                   <th className="text-right py-2 px-3 font-medium text-gray-700 w-20">Actions</th>
                 </tr>
               </thead>
@@ -244,6 +252,17 @@ export function DraftGroupsSection() {
                     <td className="py-2 px-3 text-gray-700">{getWeekDisplay(draftGroup.week_id)}</td>
                     <td className="py-2 px-3 text-gray-700">{draftGroup.draftGroup_description || '-'}</td>
                     <td className="py-2 px-3 text-gray-700">{draftGroup.games}</td>
+                    <td className="py-2 px-3 text-center">
+                      {draftGroup.is_default ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Yes
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          No
+                        </span>
+                      )}
+                    </td>
                     <td className="py-2 px-3 text-right">
                       <Button
                         variant="ghost"
@@ -353,6 +372,26 @@ export function DraftGroupsSection() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={createForm.control}
+                name="is_default"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Is Default</FormLabel>
+                      <FormDescription>
+                        Mark this as the default draft group for this week. Only one draft group can be default per week.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
@@ -455,6 +494,26 @@ export function DraftGroupsSection() {
                       Number of games in this draft group
                     </FormDescription>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="is_default"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Is Default</FormLabel>
+                      <FormDescription>
+                        Mark this as the default draft group for this week. Only one draft group can be default per week.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

@@ -6,6 +6,7 @@ export interface DraftGroup {
   week_id: number;
   draftGroup_description?: string;
   games: number;
+  is_default?: boolean;
   created_at: string;
   updated_at?: string;
 }
@@ -15,6 +16,7 @@ export interface DraftGroupCreate {
   week_id: number;
   draftGroup_description?: string;
   games: number;
+  is_default?: boolean;
 }
 
 export interface DraftGroupUpdate {
@@ -22,6 +24,7 @@ export interface DraftGroupUpdate {
   week_id?: number;
   draftGroup_description?: string;
   games?: number;
+  is_default?: boolean;
 }
 
 export class DraftGroupService {

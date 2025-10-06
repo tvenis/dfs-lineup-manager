@@ -240,3 +240,28 @@ def update_week_status(week_id: int, status: str, db: Session = Depends(get_db))
     db.commit()
     db.refresh(db_week)
     return db_week
+
+@router.get("/{week_id}/default-draft-group")
+def get_default_draft_group(week_id: int, db: Session = Depends(get_db)):
+    """Get the default draft group for a specific week"""
+    from app.services.draft_group_service import DraftGroupService
+    
+    # Check if week exists
+    week = db.query(Week).filter(Week.id == week_id).first()
+    if not week:
+        raise HTTPException(status_code=404, detail="Week not found")
+    
+    # Get default draft group
+    default_draft_group = DraftGroupService.get_default_draft_group(db, week_id)
+    
+    if not default_draft_group:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No default draft group found for week {week_id}"
+        )
+    
+    return {
+        "week_id": week_id,
+        "draft_group_id": default_draft_group.draftGroup,
+        "draft_group_description": default_draft_group.draftGroup_description
+    }

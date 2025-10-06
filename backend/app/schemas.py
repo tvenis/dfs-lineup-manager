@@ -127,6 +127,7 @@ class DraftGroupBase(BaseModel):
     week_id: int = Field(..., description="Week ID from weeks table")
     draftGroup_description: Optional[str] = Field(None, max_length=255, description="Description of the draft group")
     games: int = Field(default=0, ge=0, description="Number of games in this draft group")
+    is_default: Optional[bool] = Field(False, description="Whether this is the default draft group for the week")
 
 class DraftGroupCreate(DraftGroupBase):
     pass
@@ -136,6 +137,7 @@ class DraftGroupUpdate(BaseModel):
     week_id: Optional[int] = Field(None, description="Week ID from weeks table")
     draftGroup_description: Optional[str] = Field(None, max_length=255, description="Description of the draft group")
     games: Optional[int] = Field(None, ge=0, description="Number of games in this draft group")
+    is_default: Optional[bool] = Field(None, description="Whether this is the default draft group for the week")
 
 class DraftGroup(DraftGroupBase):
     id: int

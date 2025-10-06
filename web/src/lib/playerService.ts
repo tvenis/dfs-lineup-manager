@@ -8,6 +8,7 @@ export interface PlayerPoolFilters {
   search?: string;
   skip?: number;
   limit?: number;
+  draft_group?: string;
 }
 
 export interface PlayerPoolResponse {
@@ -104,12 +105,39 @@ export class PlayerService {
     }
   }
 
+  static async getDefaultDraftGroup(weekId: number): Promise<string> {
+    try {
+      const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS);
+      const url = `${baseUrl}/${weekId}/default-draft-group`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.draft_group_id.toString();
+    } catch (error) {
+      console.error('Error fetching default draft group:', error);
+      // Fallback to a known working draft group ID
+      return '134675';
+    }
+  }
+
   static async getPlayerPool(
     weekId: number,  // Updated to Integer
     filters: PlayerPoolFilters = {}
   ): Promise<PlayerPoolResponse> {
     try {
       const params = new URLSearchParams();
+      
+      // Draft group is required
+      if (filters.draft_group) {
+        params.append('draft_group', filters.draft_group);
+      } else {
+        // Get default draft group for this week
+        const defaultDraftGroup = await PlayerService.getDefaultDraftGroup(weekId);
+        params.append('draft_group', defaultDraftGroup);
+      }
       
       if (filters.position) params.append('position', filters.position);
       if (filters.team_id) params.append('team_id', filters.team_id);
@@ -136,9 +164,10 @@ export class PlayerService {
     }
   }
 
-  static async getPlayerPoolWithAnalysis(weekId: number): Promise<PlayerPoolAnalysisResponseDto> {
+  static async getPlayerPoolWithAnalysis(weekId: number, draftGroup?: string): Promise<PlayerPoolAnalysisResponseDto> {
     const baseUrl = buildApiUrl(API_CONFIG.ENDPOINTS.PLAYERS);
-    const url = `${baseUrl}/pool/${weekId}/analysis`;
+    const draftGroupToUse = draftGroup || await PlayerService.getDefaultDraftGroup(weekId);
+    const url = `${baseUrl}/pool/${weekId}/analysis?draft_group=${encodeURIComponent(draftGroupToUse)}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -274,9 +303,19 @@ export class PlayerService {
     skip?: number;
     limit?: number;
     show_hidden?: boolean;
+    draft_group?: string;
   } = {}): Promise<PlayerListResponse> {
     try {
       const params = new URLSearchParams();
+      
+      // Draft group is required
+      if (filters.draft_group) {
+        params.append('draft_group', filters.draft_group);
+      } else {
+        // Get default draft group for this week
+        const defaultDraftGroup = await PlayerService.getDefaultDraftGroup(weekId);
+        params.append('draft_group', defaultDraftGroup);
+      }
       
       if (filters.position) params.append('position', filters.position);
       if (filters.team_id) params.append('team_id', filters.team_id);
@@ -386,6 +425,15 @@ export class PlayerService {
   }> {
     try {
       const params = new URLSearchParams();
+      
+      // Draft group is required
+      if (filters.draft_group) {
+        params.append('draft_group', filters.draft_group);
+      } else {
+        // Get default draft group for this week
+        const defaultDraftGroup = await PlayerService.getDefaultDraftGroup(weekId);
+        params.append('draft_group', defaultDraftGroup);
+      }
       
       if (filters.position) params.append('position', filters.position);
       if (filters.team_id) params.append('team_id', filters.team_id);

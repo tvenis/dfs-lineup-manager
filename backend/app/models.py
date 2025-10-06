@@ -160,6 +160,7 @@ class DraftGroup(Base):
     week_id = Column(Integer, ForeignKey("weeks.id"), nullable=False)  # Foreign key to weeks table
     draftGroup_description = Column(String(255))  # Description of the draft group
     games = Column(Integer, default=0)  # Number of games in this draft group
+    is_default = Column(Boolean, default=False)  # Whether this is the default draft group for the week
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

@@ -17,9 +17,25 @@ import { LineupDisplayData, LineupStatus } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
 import { getPositionBadgeClasses } from "@/lib/positionColors";
 
+// Helper function to get default draft group for a week
+async function getDefaultDraftGroup(weekId: number): Promise<string> {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/weeks/${weekId}/default-draft-group`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.draft_group_id.toString();
+  } catch (error) {
+    console.error('Error fetching default draft group:', error);
+    // Fallback to a known working draft group ID
+    return '134675';
+  }
+}
+
 // Helper function to populate roster from lineup slots
 // Function to fetch player pool data and create a lookup map
-async function fetchPlayerPool(weekId: number): Promise<Map<number, {
+async function fetchPlayerPool(weekId: number, draftGroup?: string): Promise<Map<number, {
   name: string;
   team: string;
   position: string;
@@ -29,7 +45,9 @@ async function fetchPlayerPool(weekId: number): Promise<Map<number, {
   actuals: number;
 }>> {
   try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/players/pool/${weekId}?excluded=false&limit=1000`);
+    // Get default draft group if not provided
+    const draftGroupToUse = draftGroup || await getDefaultDraftGroup(weekId);
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/players/pool/${weekId}?excluded=false&limit=1000&draft_group=${encodeURIComponent(draftGroupToUse)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch player pool: ${response.status}`);
     }
