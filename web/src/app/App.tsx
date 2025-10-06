@@ -132,6 +132,13 @@ export default function App({ children }: { children: React.ReactNode }) {
 
   const importSubItems = [
     {
+      id: "games",
+      label: "Games",
+      description: "Import game results from NFLVerse",
+      icon: Trophy,
+      href: "/import/games",
+    },
+    {
       id: "player-pool",
       label: "Player Pool",
       description: "Import player pool data from DraftKings API",
@@ -179,13 +186,6 @@ export default function App({ children }: { children: React.ReactNode }) {
       description: "Import team statistics from NFLVerse",
       icon: Shield,
       href: "/import/team-stats",
-    },
-    {
-      id: "games",
-      label: "Games",
-      description: "Import game results from NFLVerse",
-      icon: Trophy,
-      href: "/import/games",
     },
   ];
 
