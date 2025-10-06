@@ -10,7 +10,7 @@ import { Input } from "./ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
 // import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "./ui/carousel";
-import { PlusCircle, Download, Edit, Trash2, Search, Filter, X } from "lucide-react";
+import { PlusCircle, Download, Edit, Trash2, Search, Filter, X, Shield } from "lucide-react";
 import { WeekService } from "@/lib/weekService";
 import { LineupService } from "@/lib/lineupService";
 import { LineupDisplayData, LineupStatus } from "@/types/prd";
@@ -828,13 +828,21 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                             lineup.roster.map((player, index) => {
                               const isDST = player.position === 'DST';
                               const displayActuals = isDST && player.dkDefenseScore !== undefined ? player.dkDefenseScore : player.actuals;
+                              const getPaBandClass = () => {
+                                const pa = player.pointsAllowed ?? undefined;
+                                if (pa === undefined) return '';
+                                if (pa <= 6) return 'border-l-4 border-green-300';
+                                if (pa <= 20) return 'border-l-4 border-yellow-300';
+                                return 'border-l-4 border-red-300';
+                              };
                               
                               return (
-                                <div key={`${player.position}-${index}`} className="text-sm odd:bg-muted/20 hover:bg-muted/30 rounded px-2 sm:px-0 py-1">
+                                <div key={`${player.position}-${index}`} className={`text-sm odd:bg-muted/20 hover:bg-muted/30 rounded px-2 sm:px-0 py-1 ${isDST ? getPaBandClass() : ''}`}>
                                   {/* Desktop/tablet grid */}
                                   <div className="hidden sm:grid items-center gap-2 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
                                     <div className="flex items-center gap-2 min-w-0">
-                                      <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
+                                      <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center flex items-center gap-1`}>
+                                        {isDST && <Shield className="w-3 h-3 opacity-80" />}
                                         {player.position}
                                       </span>
                                       <div className="truncate">
@@ -850,35 +858,67 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                     <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
                                     <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
                                     <span 
-                                      className={`text-xs text-right ${isDST ? 'font-semibold text-blue-600' : 'text-muted-foreground'}`} 
+                                      className={`text-xs text-right ${isDST ? 'font-semibold text-blue-600' : 'text-muted-foreground'} flex items-center justify-end gap-1`} 
                                       style={{ fontVariantNumeric: 'tabular-nums' }}
-                                      title={isDST ? 'DK Defense Score' : 'Actual Points'}
+                                      title={isDST ? `DK Defense Score${player.pointsAllowed !== undefined ? ` • ${player.pointsAllowed} pts allowed` : ''}` : 'Actual Points'}
                                     >
-                                      {displayActuals !== undefined ? displayActuals.toFixed(1) : '—'}
+                                      {isDST && (() => {
+                                        const pa = player.pointsAllowed;
+                                        const score = displayActuals;
+                                        const indicatorClass = pa !== undefined && pa <= 6 ? 'text-green-600' : pa !== undefined && pa <= 20 ? 'text-yellow-600' : 'text-red-600';
+                                        const indicator = pa === undefined ? null : (
+                                          <span className={`text-[10px] ${indicatorClass}`} aria-label="performance-indicator">{
+                                            pa <= 6 ? '▲' : pa <= 20 ? '△' : '▼'
+                                          }</span>
+                                        );
+                                        return <>
+                                          {score !== undefined ? score.toFixed(1) : '—'}
+                                          {indicator}
+                                        </>;
+                                      })()}
+                                      {!isDST && (displayActuals !== undefined ? displayActuals.toFixed(1) : '—')}
                                     </span>
                                   </div>
 
                                   {/* Mobile stacked layout */}
-                                  <div className="sm:hidden flex flex-col gap-1">
+                                    <div className="sm:hidden flex flex-col gap-1">
                                     <div className="flex items-center gap-2 min-w-0">
-                                      <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
+                                      <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center flex items-center gap-1`}>
+                                        {isDST && <Shield className="w-3 h-3 opacity-80" />}
                                         {player.position}
                                       </span>
                                       <div className="truncate">
                                         <span className="font-medium">{player.name}</span>
                                         <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
+                                        {isDST && player.opponentAbbr && (
+                                          <span className="text-muted-foreground ml-1">{player.homeOrAway === 'H' ? 'vs' : '@'} {player.opponentAbbr}</span>
+                                        )}
                                       </div>
                                     </div>
                                     <div className="flex items-center justify-between text-xs text-muted-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>
                                       <span className="pr-3 border-r border-muted">${Math.round(player.salary).toLocaleString()}</span>
                                       <span>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
                                       <span>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
-                                      <span 
-                                        className={isDST ? 'font-semibold text-blue-600' : ''}
-                                        title={isDST ? 'DK Defense Score' : 'Actual Points'}
-                                      >
-                                        {displayActuals !== undefined ? displayActuals.toFixed(1) : '—'}
-                                      </span>
+                                        <span 
+                                          className={`${isDST ? 'font-semibold text-blue-600' : ''} flex items-center gap-1`}
+                                          title={isDST ? 'DK Defense Score' : 'Actual Points'}
+                                        >
+                                          {isDST ? (
+                                            (() => {
+                                              const pa = player.pointsAllowed;
+                                              const score = displayActuals;
+                                              const indicatorClass = pa !== undefined && pa <= 6 ? 'text-green-600' : pa !== undefined && pa <= 20 ? 'text-yellow-600' : 'text-red-600';
+                                              const indicator = pa === undefined ? null : (
+                                                <span className={`text-[10px] ${indicatorClass}`}>{pa <= 6 ? '▲' : pa <= 20 ? '△' : '▼'}</span>
+                                              );
+                                              return <>
+                                                {score !== undefined ? score.toFixed(1) : '—'} {indicator}
+                                              </>;
+                                            })()
+                                          ) : (
+                                            displayActuals !== undefined ? displayActuals.toFixed(1) : '—'
+                                          )}
+                                        </span>
                                     </div>
                                   </div>
 
