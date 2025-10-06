@@ -20,6 +20,7 @@ from datetime import datetime
 from app.models import Player, Team, PlayerPoolEntry
 from app.schemas import DraftKingsImportRequest, DraftKingsImportResponse
 from app.services.activity_logging import ActivityLoggingService
+from app.services.weekly_summary_service import WeeklySummaryService
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +201,16 @@ class DraftKingsImportService:
                 logger.info(f"Players auto-excluded due to zero/null projections: {auto_excluded_count}")
                 logger.info("This is normal for players who are injured, suspended, or otherwise not expected to play")
             logger.info(f"Processed {len(processed_players)} unique players across {len(draftables)} draftables")
+            
+            # Update weekly summary after successful import
+            try:
+                logger.info(f"Updating weekly summary for week {week_id}")
+                summary_count = WeeklySummaryService.populate_weekly_summary(self.db, week_id, main_draftgroup=draft_group)
+                logger.info(f"Successfully updated {summary_count} weekly summary records")
+            except Exception as e:
+                logger.error(f"Failed to update weekly summary: {str(e)}")
+                # Don't fail the import if weekly summary update fails
+                # The import was successful, weekly summary is supplementary
             
             # Log details about duplicate handling
             if len(draftables) > len(processed_players):

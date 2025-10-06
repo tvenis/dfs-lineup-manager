@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from typing import List, Optional
 import uuid
 import csv
@@ -11,7 +12,7 @@ import tempfile
 import os
 
 from app.database import get_db
-from app.models import Lineup, Week, PlayerPoolEntry, Player
+from app.models import Lineup, Week, PlayerPoolEntry, Player, WeeklyPlayerSummary
 from app.schemas import (
     LineupCreate, LineupUpdate, Lineup as LineupSchema,
     LineupListResponse, LineupValidationRequest, LineupValidationResponse,
@@ -22,7 +23,7 @@ router = APIRouter()
 
 # Lineup CRUD operations
 @router.post("", response_model=LineupSchema)
-def create_lineup(lineup: LineupCreate, db: Session = Depends(get_db)):
+def create_lineup(lineup: LineupCreate, draftGroup: str = Query(..., description="Draft group for salary calculation"), db: Session = Depends(get_db)):
     """Create a new lineup"""
     # Check if week exists
     week = db.query(Week).filter(Week.id == lineup.week_id).first()
@@ -38,7 +39,7 @@ def create_lineup(lineup: LineupCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"Invalid lineup: {', '.join(validation_result['errors'])}")
     
     # Calculate salary used
-    salary_used = calculate_lineup_salary(lineup.slots, lineup.week_id, db)
+    salary_used = calculate_lineup_salary(lineup.slots, lineup.week_id, draftGroup, db)
     
     db_lineup = Lineup(
         id=lineup_id,
@@ -94,7 +95,7 @@ def get_lineup(lineup_id: str, db: Session = Depends(get_db)):
     return lineup
 
 @router.put("/{lineup_id}", response_model=LineupSchema)
-def update_lineup(lineup_id: str, lineup_update: LineupUpdate, db: Session = Depends(get_db)):
+def update_lineup(lineup_id: str, lineup_update: LineupUpdate, draftGroup: str = Query(..., description="Draft group for salary calculation"), db: Session = Depends(get_db)):
     """Update a lineup"""
     db_lineup = db.query(Lineup).filter(Lineup.id == lineup_id).first()
     if not db_lineup:
@@ -107,7 +108,7 @@ def update_lineup(lineup_id: str, lineup_update: LineupUpdate, db: Session = Dep
             raise HTTPException(status_code=400, detail=f"Invalid lineup: {', '.join(validation_result['errors'])}")
         
         # Recalculate salary used
-        salary_used = calculate_lineup_salary(lineup_update.slots, db_lineup.week_id, db)
+        salary_used = calculate_lineup_salary(lineup_update.slots, db_lineup.week_id, draftGroup, db)
         lineup_update.salary_used = salary_used
     
     for field, value in lineup_update.dict(exclude_unset=True).items():
@@ -398,12 +399,12 @@ def export_all_lineups_csv(
 
 # Lineup validation
 @router.post("/validate", response_model=LineupValidationResponse)
-def validate_lineup(lineup_request: LineupValidationRequest, db: Session = Depends(get_db)):
+def validate_lineup(lineup_request: LineupValidationRequest, draftGroup: str = Query(..., description="Draft group for salary calculation"), db: Session = Depends(get_db)):
     """Validate a lineup configuration"""
     validation_result = validate_lineup_slots(lineup_request.week_id, lineup_request.slots, db)
     
     if validation_result["valid"]:
-        salary_used = calculate_lineup_salary(lineup_request.slots, lineup_request.week_id, db)
+        salary_used = calculate_lineup_salary(lineup_request.slots, lineup_request.week_id, draftGroup, db)
         salary_remaining = 50000 - salary_used
         
         return LineupValidationResponse(
@@ -514,8 +515,8 @@ def is_player_eligible_for_position(pool_entry: PlayerPoolEntry, position: str) 
     
     return False
 
-def calculate_lineup_salary(slots: dict, week_id: int, db: Session) -> int:
-    """Calculate total salary used by a lineup"""
+def calculate_lineup_salary(slots: dict, week_id: int, draftGroup: str, db: Session) -> int:
+    """Calculate total salary used by a lineup for a specific draft group"""
     total_salary = 0
     
     for player_id in slots.values():
@@ -523,12 +524,26 @@ def calculate_lineup_salary(slots: dict, week_id: int, db: Session) -> int:
             continue
         
         pool_entry = db.query(PlayerPoolEntry).filter(
-            PlayerPoolEntry.week_id == week_id,
-            PlayerPoolEntry.playerDkId == player_id
+            and_(
+                PlayerPoolEntry.week_id == week_id,
+                PlayerPoolEntry.playerDkId == player_id,
+                PlayerPoolEntry.draftGroup == draftGroup  # Require draftGroup
+            )
         ).first()
         
         if pool_entry:
             total_salary += pool_entry.salary
+        else:
+            # Fallback to weekly summary if no pool entry for this draftgroup
+            summary = db.query(WeeklyPlayerSummary).filter(
+                and_(
+                    WeeklyPlayerSummary.week_id == week_id,
+                    WeeklyPlayerSummary.playerDkId == player_id
+                )
+            ).first()
+            
+            if summary and summary.baseline_salary:
+                total_salary += summary.baseline_salary
     
     return total_salary
 
