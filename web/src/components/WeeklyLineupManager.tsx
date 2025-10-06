@@ -213,7 +213,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           specialTeamsTds: player.specialTeamsTds,
           defSafeties: player.defSafeties,
           opponentAbbr: player.opponentAbbr,
-          homeOrAway: player.homeOrAway,
+          homeOrAway: player.homeOrAway as 'H' | 'A' | undefined,
         });
       } else {
         console.log('🎯 Player data is undefined for', position, 'playerId:', playerId);
