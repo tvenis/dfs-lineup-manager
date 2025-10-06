@@ -32,7 +32,13 @@ export const API_CONFIG = {
     GAME_RESULTS_IMPORT_MATCHED: '/api/game-results/import-matched',
     // Team Stats endpoints
     TEAM_STATS_WEEKS: '/api/team-stats/weeks',
-    TEAM_STATS_WEEK: '/api/team-stats/week'
+    TEAM_STATS_WEEK: '/api/team-stats/week',
+    // DST endpoints
+    DST_LINEUP_ACTUALS: '/api/dst/lineup',
+    DST_PLAYER_ACTUALS: '/api/dst/player',
+    DST_WEEK_ACTUALS: '/api/dst/week',
+    DST_LINEUP_PERFORMANCE: '/api/dst/lineups/week',
+    DST_PLAYER_HISTORY: '/api/dst/player'
   }
 };
 

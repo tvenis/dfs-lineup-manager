@@ -85,12 +85,6 @@ export default function App({ children }: { children: React.ReactNode }) {
       href: "/team-stats",
     },
     {
-      id: "historical-data",
-      label: "Historical Data",
-      icon: Database,
-      href: "/historical-data",
-    },
-    {
       id: "import",
       label: "Import",
       icon: Upload,
@@ -198,6 +192,13 @@ export default function App({ children }: { children: React.ReactNode }) {
       description: "Import team statistics from NFLVerse",
       icon: Shield,
       href: "/import/team-stats",
+    },
+    {
+      id: "historical-data",
+      label: "Historical Data",
+      description: "Bulk processing and historical data management",
+      icon: Database,
+      href: "/historical-data",
     },
   ];
 

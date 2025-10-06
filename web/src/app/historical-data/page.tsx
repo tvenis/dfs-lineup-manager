@@ -17,6 +17,7 @@ import {
   BarChart3,
   Settings
 } from 'lucide-react';
+import { buildApiUrl, API_CONFIG } from '@/config/api';
 
 interface Week {
   id: number;
@@ -57,7 +58,7 @@ export default function HistoricalDataPage() {
   useEffect(() => {
     const fetchWeeks = async () => {
       try {
-        const response = await fetch('/api/team-stats/weeks');
+        const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.TEAM_STATS_WEEKS));
         if (!response.ok) throw new Error('Failed to fetch weeks');
         const data = await response.json();
         setWeeks(data);

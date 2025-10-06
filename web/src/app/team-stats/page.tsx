@@ -12,9 +12,9 @@ import { buildApiUrl, API_CONFIG } from '@/config/api';
 interface Week {
   id: number;
   week_number: number;
-  season: number;
-  season_type: string;
+  year: number;
   status: string;
+  label: string;
 }
 
 interface TeamStats {
@@ -135,7 +135,7 @@ export default function TeamStatsPage() {
             <SelectContent>
               {weeks.map((week) => (
                 <SelectItem key={week.id} value={week.id.toString()}>
-                  Week {week.week_number} ({week.season})
+                  Week {week.week_number} ({week.year})
                 </SelectItem>
               ))}
             </SelectContent>
