@@ -12,7 +12,7 @@ from app.schemas import (
 from app.services.nflverse_service import NFLVerseService
 from app.services.activity_logging import ActivityLoggingService
 from app.services.dk_defense_scoring_service import DKDefenseScoringService
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 import time
 
 router = APIRouter(prefix="/api/team-stats", tags=["team-stats"])
@@ -434,3 +434,118 @@ async def recalculate_dk_defense_scores(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error recalculating DK scores: {str(e)}")
+
+@router.post("/bulk-recalculate-dk-scores")
+async def bulk_recalculate_dk_defense_scores(
+    request_data: Dict[str, Any],
+    db: Session = Depends(get_db)
+):
+    """
+    Bulk recalculate DK defense scores for multiple weeks or all weeks.
+    
+    Request body:
+    {
+        "week_ids": [1, 2, 3],  // Optional: specific week IDs
+        "all_weeks": true,      // Optional: process all weeks
+        "dry_run": false        // Optional: preview without changes
+    }
+    """
+    try:
+        week_ids = request_data.get('week_ids')
+        all_weeks = request_data.get('all_weeks', False)
+        dry_run = request_data.get('dry_run', False)
+        
+        if not week_ids and not all_weeks:
+            raise HTTPException(status_code=400, detail="Must specify either week_ids or all_weeks=true")
+        
+        results = []
+        total_updated = 0
+        total_errors = 0
+        
+        if all_weeks:
+            # Get all weeks with team stats data
+            weeks_query = db.query(
+                TeamStats.week_id,
+                func.count(TeamStats.id).label('team_count')
+            ).group_by(TeamStats.week_id).all()
+            
+            week_ids = [week_id for week_id, _ in weeks_query]
+        
+        for week_id in week_ids:
+            # Get all team stats for this week
+            team_stats_list = db.query(TeamStats).filter(TeamStats.week_id == week_id).all()
+            
+            if not team_stats_list:
+                results.append({
+                    'week_id': week_id,
+                    'total_teams': 0,
+                    'updated_count': 0,
+                    'errors': [],
+                    'status': 'no_data'
+                })
+                continue
+            
+            week_updated = 0
+            week_errors = []
+            
+            for team_stats in team_stats_list:
+                try:
+                    # Get points allowed from games table
+                    points_allowed = NFLVerseService.get_points_allowed_for_team(
+                        db, team_stats.team_id, week_id
+                    )
+                    
+                    # Create stats dictionary for scoring calculation
+                    stats_dict = {
+                        'def_sacks': float(team_stats.def_sacks or 0),
+                        'def_interceptions': float(team_stats.def_interceptions or 0),
+                        'fumble_recovery_opp': float(team_stats.fumble_recovery_opp or 0),
+                        'def_tds': float(team_stats.def_tds or 0),
+                        'special_teams_tds': float(team_stats.special_teams_tds or 0),
+                        'def_safeties': float(team_stats.def_safeties or 0),
+                    }
+                    
+                    # Calculate new DK defense score
+                    new_score = DKDefenseScoringService.calculate_defense_score_from_dict(
+                        stats_dict, points_allowed
+                    )
+                    
+                    if not dry_run:
+                        # Update the team stats record
+                        team_stats.dk_defense_score = new_score
+                        team_stats.points_allowed = points_allowed
+                    
+                    week_updated += 1
+                    
+                except Exception as e:
+                    week_errors.append(f"Team {team_stats.team_id}: {str(e)}")
+                    continue
+            
+            results.append({
+                'week_id': week_id,
+                'total_teams': len(team_stats_list),
+                'updated_count': week_updated,
+                'errors': week_errors,
+                'status': 'success' if not week_errors else 'partial_success'
+            })
+            
+            total_updated += week_updated
+            total_errors += len(week_errors)
+        
+        if not dry_run:
+            # Commit all changes
+            db.commit()
+        
+        return {
+            "status": "success",
+            "dry_run": dry_run,
+            "total_weeks": len(week_ids),
+            "total_teams_updated": total_updated,
+            "total_errors": total_errors,
+            "results": results,
+            "message": f"{'Would update' if dry_run else 'Updated'} {total_updated} teams across {len(week_ids)} weeks"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error in bulk recalculation: {str(e)}")
