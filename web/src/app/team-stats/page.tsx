@@ -235,7 +235,7 @@ export default function TeamStatsPage() {
                           <TableCell>{stats.def_sacks || 0}</TableCell>
                           <TableCell>{stats.def_interceptions || 0}</TableCell>
                           <TableCell>{stats.fumble_recovery_opp || 0}</TableCell>
-                          <TableCell>{stats.def_tds || 0}</TableCell>
+                          <TableCell>{(stats.def_tds || 0) + (stats.fumble_recovery_tds || 0)}</TableCell>
                           <TableCell>{stats.special_teams_tds || 0}</TableCell>
                           <TableCell>{stats.def_safeties || 0}</TableCell>
                           <TableCell>{stats.blocked_kicks || 0}</TableCell>
