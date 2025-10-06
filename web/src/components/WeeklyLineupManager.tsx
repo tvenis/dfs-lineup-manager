@@ -807,46 +807,105 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground justify-self-end">Act.</span>
                           </div>
                           {lineup.roster && lineup.roster.length > 0 ? (
-                            lineup.roster.map((player, index) => (
-                              <div key={`${player.position}-${index}`} className="text-sm odd:bg-muted/20 hover:bg-muted/30 rounded px-2 sm:px-0 py-1">
-                                {/* Desktop/tablet grid */}
-                                <div className="hidden sm:grid items-center gap-2 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
-                                      {player.position}
-                                    </span>
-                                    <div className="truncate">
-                                      <span className="font-medium">{player.name}</span>
-                                      <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
+                            lineup.roster.map((player, index) => {
+                              const isDST = player.position === 'DST';
+                              const displayActuals = isDST && player.dkDefenseScore !== undefined ? player.dkDefenseScore : player.actuals;
+                              
+                              return (
+                                <div key={`${player.position}-${index}`} className="text-sm odd:bg-muted/20 hover:bg-muted/30 rounded px-2 sm:px-0 py-1">
+                                  {/* Desktop/tablet grid */}
+                                  <div className="hidden sm:grid items-center gap-2 w-fit" style={{ gridTemplateColumns: GRID_TEMPLATE }}>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
+                                        {player.position}
+                                      </span>
+                                      <div className="truncate">
+                                        <span className="font-medium">{player.name}</span>
+                                        <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
+                                        {isDST && player.pointsAllowed !== undefined && (
+                                          <span className="text-xs text-muted-foreground ml-1">
+                                            ({player.pointsAllowed} pts allowed)
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
+                                    <span className="block h-4 bg-muted justify-self-stretch" />
+                                    <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>${Math.round(player.salary).toLocaleString()}</span>
+                                    <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
+                                    <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
+                                    <span 
+                                      className={`text-xs text-right ${isDST ? 'font-semibold text-blue-600' : 'text-muted-foreground'}`} 
+                                      style={{ fontVariantNumeric: 'tabular-nums' }}
+                                      title={isDST ? 'DK Defense Score' : 'Actual Points'}
+                                    >
+                                      {displayActuals !== undefined ? displayActuals.toFixed(1) : '—'}
+                                    </span>
                                   </div>
-                                  <span className="block h-4 bg-muted justify-self-stretch" />
-                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>${Math.round(player.salary).toLocaleString()}</span>
-                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
-                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
-                                  <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.actuals !== undefined ? player.actuals.toFixed(1) : '—'}</span>
-                                </div>
 
-                                {/* Mobile stacked layout */}
-                                <div className="sm:hidden flex flex-col gap-1">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
-                                      {player.position}
-                                    </span>
-                                    <div className="truncate">
-                                      <span className="font-medium">{player.name}</span>
-                                      <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
+                                  {/* Mobile stacked layout */}
+                                  <div className="sm:hidden flex flex-col gap-1">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className={`${getPositionBadgeClasses(player.position)} min-w-[2.25rem] text-center`}>
+                                        {player.position}
+                                      </span>
+                                      <div className="truncate">
+                                        <span className="font-medium">{player.name}</span>
+                                        <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
+                                        {isDST && player.pointsAllowed !== undefined && (
+                                          <span className="text-xs text-muted-foreground ml-1">
+                                            ({player.pointsAllowed} pts allowed)
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                      <span className="pr-3 border-r border-muted">${Math.round(player.salary).toLocaleString()}</span>
+                                      <span>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
+                                      <span>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
+                                      <span 
+                                        className={isDST ? 'font-semibold text-blue-600' : ''}
+                                        title={isDST ? 'DK Defense Score' : 'Actual Points'}
+                                      >
+                                        {displayActuals !== undefined ? displayActuals.toFixed(1) : '—'}
+                                      </span>
                                     </div>
                                   </div>
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                    <span className="pr-3 border-r border-muted">${Math.round(player.salary).toLocaleString()}</span>
-                                    <span>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
-                                    <span>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
-                                    <span>{player.actuals !== undefined ? player.actuals.toFixed(1) : '—'}</span>
-                                  </div>
+
+                                  {/* DST Defensive Stats Breakdown */}
+                                  {isDST && (player.defSacks !== undefined || player.defInterceptions !== undefined || player.defTds !== undefined) && (
+                                    <div className="mt-1 text-xs text-muted-foreground">
+                                      <div className="flex flex-wrap gap-2">
+                                        {player.defSacks !== undefined && player.defSacks > 0 && (
+                                          <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">
+                                            {player.defSacks} sack{player.defSacks !== 1 ? 's' : ''}
+                                          </span>
+                                        )}
+                                        {player.defInterceptions !== undefined && player.defInterceptions > 0 && (
+                                          <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs">
+                                            {player.defInterceptions} INT{player.defInterceptions !== 1 ? 's' : ''}
+                                          </span>
+                                        )}
+                                        {player.defTds !== undefined && player.defTds > 0 && (
+                                          <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-xs">
+                                            {player.defTds} TD{player.defTds !== 1 ? 's' : ''}
+                                          </span>
+                                        )}
+                                        {player.specialTeamsTds !== undefined && player.specialTeamsTds > 0 && (
+                                          <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-xs">
+                                            {player.specialTeamsTds} ST TD{player.specialTeamsTds !== 1 ? 's' : ''}
+                                          </span>
+                                        )}
+                                        {player.defSafeties !== undefined && player.defSafeties > 0 && (
+                                          <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-xs">
+                                            {player.defSafeties} safet{player.defSafeties !== 1 ? 'ies' : 'y'}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            ))
+                              );
+                            })
                           ) : (
                             <div className="text-sm text-muted-foreground text-center py-4">
                               No roster data available
