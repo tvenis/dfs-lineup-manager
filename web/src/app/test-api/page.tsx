@@ -1,54 +1,108 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { PlayerService } from '@/lib/playerService';
+import { buildApiUrl, API_CONFIG } from '@/config/api';
 
 export default function TestApiPage() {
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const testApiCall = async () => {
+  const testApiCalls = async () => {
     setLoading(true);
     setError(null);
+    const testResults: any = {};
+
     try {
-      console.log('Testing API call...');
-      const data = await PlayerService.getPlayerProfilesWithPoolData({ limit: 2 });
-      console.log('API call successful:', data);
-      setResult(data);
+      // Test 1: Basic API health
+      console.log('Testing API health...');
+      const healthResponse = await fetch(buildApiUrl('/health'));
+      testResults.health = {
+        status: healthResponse.status,
+        ok: healthResponse.ok,
+        data: await healthResponse.json()
+      };
+
+      // Test 2: Default draft group
+      console.log('Testing default draft group...');
+      const draftGroupResponse = await fetch(buildApiUrl('/api/weeks/1/default-draft-group'));
+      testResults.draftGroup = {
+        status: draftGroupResponse.status,
+        ok: draftGroupResponse.ok,
+        data: await draftGroupResponse.json()
+      };
+
+      // Test 3: Player pool
+      console.log('Testing player pool...');
+      const playerPoolResponse = await fetch(buildApiUrl('/api/players/pool/1?excluded=false&limit=10&draft_group=131064'));
+      testResults.playerPool = {
+        status: playerPoolResponse.status,
+        ok: playerPoolResponse.ok,
+        data: await playerPoolResponse.json()
+      };
+
+      // Test 4: Player profiles
+      console.log('Testing player profiles...');
+      const profilesResponse = await fetch(buildApiUrl('/api/players/profiles-with-pool-data-optimized?limit=5'));
+      testResults.profiles = {
+        status: profilesResponse.status,
+        ok: profilesResponse.ok,
+        data: await profilesResponse.json()
+      };
+
+      setResults(testResults);
     } catch (err) {
-      console.error('API call failed:', err);
+      console.error('API test error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    testApiCalls();
+  }, []);
+
   return (
-    <div className="p-6">
+    <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">API Test Page</h1>
       
-      <button 
-        onClick={testApiCall}
-        disabled={loading}
-        className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
-      >
-        {loading ? 'Testing...' : 'Test API Call'}
-      </button>
+      <div className="mb-4">
+        <p className="text-sm text-muted-foreground">
+          API Base URL: {API_CONFIG.BASE_URL}
+        </p>
+      </div>
 
-      {error && (
-        <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-          <h3 className="font-bold">Error:</h3>
-          <p>{error}</p>
+      {loading && (
+        <div className="text-center py-4">
+          <p>Testing API endpoints...</p>
         </div>
       )}
 
-      {result && (
-        <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-          <h3 className="font-bold">Success:</h3>
-          <pre className="mt-2 text-sm overflow-auto">
-            {JSON.stringify(result, null, 2)}
-          </pre>
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
+          <h3 className="font-semibold text-red-800">Error:</h3>
+          <p className="text-red-600">{error}</p>
+        </div>
+      )}
+
+      {results && (
+        <div className="space-y-4">
+          {Object.entries(results).map(([key, result]: [string, any]) => (
+            <div key={key} className="border rounded p-4">
+              <h3 className="font-semibold mb-2 capitalize">{key}</h3>
+              <div className="space-y-2">
+                <p><strong>Status:</strong> {result.status}</p>
+                <p><strong>OK:</strong> {result.ok ? '✅' : '❌'}</p>
+                <div>
+                  <strong>Data:</strong>
+                  <pre className="bg-gray-100 p-2 rounded mt-1 text-xs overflow-auto max-h-40">
+                    {JSON.stringify(result.data, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -79,6 +79,18 @@ export default function App({ children }: { children: React.ReactNode }) {
       href: "/profile",
     },
     {
+      id: "team-stats",
+      label: "Team Defense",
+      icon: Shield,
+      href: "/team-stats",
+    },
+    {
+      id: "historical-data",
+      label: "Historical Data",
+      icon: Database,
+      href: "/historical-data",
+    },
+    {
       id: "import",
       label: "Import",
       icon: Upload,

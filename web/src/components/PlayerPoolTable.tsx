@@ -206,6 +206,18 @@ export function PlayerPoolTable({
           aValue = aGameInfoImplied?.implied_team_total || 0;
           bValue = bGameInfoImplied?.implied_team_total || 0;
           break;
+        case 'dk_defense_score':
+          const aAnalysis = 'analysis' in a ? a.analysis : null;
+          const bAnalysis = 'analysis' in b ? b.analysis : null;
+          aValue = aAnalysis?.dk_defense_score || 0;
+          bValue = bAnalysis?.dk_defense_score || 0;
+          break;
+        case 'points_allowed':
+          const aAnalysisPA = 'analysis' in a ? a.analysis : null;
+          const bAnalysisPA = 'analysis' in b ? b.analysis : null;
+          aValue = aAnalysisPA?.points_allowed || 0;
+          bValue = bAnalysisPA?.points_allowed || 0;
+          break;
         default:
           aValue = aEntry.projectedPoints || 0;
           bValue = bEntry.projectedPoints || 0;
@@ -411,6 +423,30 @@ export function PlayerPoolTable({
                   {getSortIcon('implied_total')}
                 </div>
               </TableHead>
+              {/* DK Defense Scoring Columns - only show for DST position */}
+              {position === 'DST' && (
+                <>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleSort('dk_defense_score')}
+                  >
+                    <div className="flex items-center gap-2">
+                      DK Score
+                      {getSortIcon('dk_defense_score')}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleSort('points_allowed')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Pts Allowed
+                      {getSortIcon('points_allowed')}
+                    </div>
+                  </TableHead>
+                  <TableHead>Def Stats</TableHead>
+                </>
+              )}
               <TableHead 
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('projection')}
@@ -609,6 +645,76 @@ export function PlayerPoolTable({
                       })()}
                     </div>
                   </TableCell>
+                  {/* DK Defense Scoring Cells - only show for DST position */}
+                  {position === 'DST' && (
+                    <>
+                      <TableCell>
+                        <div className="font-mono text-sm">
+                          {(() => {
+                            const analysis = 'analysis' in player ? player.analysis : null;
+                            const dkScore = analysis?.dk_defense_score;
+                            if (dkScore === null || dkScore === undefined) return 'N/A';
+                            
+                            // Color code based on DK score
+                            let color = 'text-gray-600';
+                            if (dkScore >= 10) color = 'text-green-600 font-semibold';
+                            else if (dkScore >= 5) color = 'text-yellow-600';
+                            else if (dkScore >= 0) color = 'text-orange-600';
+                            else color = 'text-red-600';
+                            
+                            return (
+                              <span className={color}>
+                                {dkScore.toFixed(1)}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-mono text-sm">
+                          {(() => {
+                            const analysis = 'analysis' in player ? player.analysis : null;
+                            const pointsAllowed = analysis?.points_allowed;
+                            if (pointsAllowed === null || pointsAllowed === undefined) return 'N/A';
+                            
+                            // Color code based on points allowed (lower is better for defense)
+                            let color = 'text-gray-600';
+                            if (pointsAllowed <= 6) color = 'text-green-600 font-semibold';
+                            else if (pointsAllowed <= 13) color = 'text-yellow-600';
+                            else if (pointsAllowed <= 20) color = 'text-orange-600';
+                            else color = 'text-red-600';
+                            
+                            return (
+                              <span className={color}>
+                                {pointsAllowed}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs">
+                          {(() => {
+                            const analysis = 'analysis' in player ? player.analysis : null;
+                            const sacks = analysis?.def_sacks || 0;
+                            const ints = analysis?.def_interceptions || 0;
+                            const tds = analysis?.def_tds || 0;
+                            const stTds = analysis?.special_teams_tds || 0;
+                            const safeties = analysis?.def_safeties || 0;
+                            
+                            const stats = [];
+                            if (sacks > 0) stats.push(`${sacks}S`);
+                            if (ints > 0) stats.push(`${ints}INT`);
+                            if (tds > 0) stats.push(`${tds}TD`);
+                            if (stTds > 0) stats.push(`${stTds}ST`);
+                            if (safeties > 0) stats.push(`${safeties}SF`);
+                            
+                            return stats.length > 0 ? stats.join(', ') : '-';
+                          })()}
+                        </div>
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell>
                     <div className="font-mono text-sm">
                       {entry.projectedPoints?.toFixed(2) || 'N/A'}

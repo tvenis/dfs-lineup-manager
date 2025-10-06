@@ -29,7 +29,10 @@ export const API_CONFIG = {
     // Game Results endpoints
     GAME_RESULTS_WEEKS: '/api/game-results/weeks',
     GAME_RESULTS_IMPORT_NFLVERSE: '/api/game-results/import-nflverse',
-    GAME_RESULTS_IMPORT_MATCHED: '/api/game-results/import-matched'
+    GAME_RESULTS_IMPORT_MATCHED: '/api/game-results/import-matched',
+    // Team Stats endpoints
+    TEAM_STATS_WEEKS: '/api/team-stats/weeks',
+    TEAM_STATS_WEEK: '/api/team-stats/week'
   }
 };
 

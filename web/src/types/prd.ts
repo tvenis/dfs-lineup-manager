@@ -57,6 +57,14 @@ export interface LineupPlayer {
   projectedPoints: number;
   ownership?: number;
   actuals?: number;
+  // DST-specific fields
+  dkDefenseScore?: number;
+  pointsAllowed?: number;
+  defSacks?: number;
+  defInterceptions?: number;
+  defTds?: number;
+  specialTeamsTds?: number;
+  defSafeties?: number;
 }
 
 export type RosterConfig = {

@@ -23,6 +23,14 @@ export interface WeekAnalysisDataDto {
   proj_spread?: number | null;
   proj_total?: number | null;
   implied_team_total?: number | null;
+  // DK Defense Scoring Data (for DST players)
+  dk_defense_score?: number | null;
+  points_allowed?: number | null;
+  def_sacks?: number | null;
+  def_interceptions?: number | null;
+  def_tds?: number | null;
+  special_teams_tds?: number | null;
+  def_safeties?: number | null;
 }
 
 export interface PlayerPoolEntryWithAnalysisDto {

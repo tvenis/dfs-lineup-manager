@@ -43,11 +43,21 @@ async function fetchPlayerPool(weekId: number, draftGroup?: string): Promise<Map
   projectedPoints: number;
   ownership: number;
   actuals: number;
+  // DST-specific fields
+  dkDefenseScore?: number;
+  pointsAllowed?: number;
+  defSacks?: number;
+  defInterceptions?: number;
+  defTds?: number;
+  specialTeamsTds?: number;
+  defSafeties?: number;
 }>> {
   try {
     // Get default draft group if not provided
     const draftGroupToUse = draftGroup || await getDefaultDraftGroup(weekId);
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/players/pool/${weekId}?excluded=false&limit=1000&draft_group=${encodeURIComponent(draftGroupToUse)}`);
+    
+    // Use the complete endpoint to get team stats data for DST players
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/players/pool/${weekId}/complete?excluded=false&limit=1000&draft_group=${encodeURIComponent(draftGroupToUse)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch player pool: ${response.status}`);
     }
@@ -55,25 +65,50 @@ async function fetchPlayerPool(weekId: number, draftGroup?: string): Promise<Map
     
     const playerMap = new Map();
     data.entries.forEach((entry: {
-      playerDkId: number;
-      player: {
-        displayName: string;
-        team: string;
-        position: string;
+      entry: {
+        playerDkId: number;
+        player: {
+          displayName: string;
+          team: string;
+          position: string;
+        };
+        salary: number;
+        projectedPoints?: number;
+        ownership?: number;
+        actuals?: number;
       };
-      salary: number;
-      projectedPoints?: number;
-      ownership?: number;
-      actuals?: number;
+      analysis?: {
+        dk_defense_score?: number;
+        points_allowed?: number;
+        def_sacks?: number;
+        def_interceptions?: number;
+        def_tds?: number;
+        special_teams_tds?: number;
+        def_safeties?: number;
+      };
     }) => {
-      playerMap.set(entry.playerDkId, {
-        name: entry.player.displayName,
-        team: entry.player.team,
-        position: entry.player.position,
-        salary: entry.salary,
-        projectedPoints: entry.projectedPoints || 0,
-        ownership: entry.ownership || 0,
-        actuals: entry.actuals || 0
+      const player = entry.entry.player;
+      const isDST = player.position === 'DST';
+      
+      playerMap.set(entry.entry.playerDkId, {
+        name: player.displayName,
+        team: player.team,
+        position: player.position,
+        salary: entry.entry.salary,
+        projectedPoints: entry.entry.projectedPoints || 0,
+        ownership: entry.entry.ownership || 0,
+        // For DST players, use DK defense score as actuals; for others use traditional actuals
+        actuals: isDST && entry.analysis?.dk_defense_score !== undefined 
+          ? entry.analysis.dk_defense_score 
+          : (entry.entry.actuals || 0),
+        // DST-specific fields
+        dkDefenseScore: entry.analysis?.dk_defense_score,
+        pointsAllowed: entry.analysis?.points_allowed,
+        defSacks: entry.analysis?.def_sacks,
+        defInterceptions: entry.analysis?.def_interceptions,
+        defTds: entry.analysis?.def_tds,
+        specialTeamsTds: entry.analysis?.special_teams_tds,
+        defSafeties: entry.analysis?.def_safeties,
       });
     });
     
@@ -93,6 +128,14 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
   projectedPoints: number;
   ownership: number;
   actuals: number;
+  // DST-specific fields
+  dkDefenseScore?: number;
+  pointsAllowed?: number;
+  defSacks?: number;
+  defInterceptions?: number;
+  defTds?: number;
+  specialTeamsTds?: number;
+  defSafeties?: number;
 }>): Array<{
   position: string;
   name: string;
@@ -101,6 +144,14 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
   projectedPoints: number;
   ownership: number;
   actuals: number;
+  // DST-specific fields
+  dkDefenseScore?: number;
+  pointsAllowed?: number;
+  defSacks?: number;
+  defInterceptions?: number;
+  defTds?: number;
+  specialTeamsTds?: number;
+  defSafeties?: number;
 }> {
   console.log('🎯 populateRosterFromSlots called with slots:', slots, 'playerMap size:', playerMap.size);
   const roster: Array<{
@@ -130,7 +181,15 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           salary: player.salary,
           projectedPoints: player.projectedPoints,
           ownership: player.ownership,
-          actuals: player.actuals
+          actuals: player.actuals,
+          // DST-specific fields
+          dkDefenseScore: player.dkDefenseScore,
+          pointsAllowed: player.pointsAllowed,
+          defSacks: player.defSacks,
+          defInterceptions: player.defInterceptions,
+          defTds: player.defTds,
+          specialTeamsTds: player.specialTeamsTds,
+          defSafeties: player.defSafeties,
         });
       } else {
         console.log('🎯 Player data is undefined for', position, 'playerId:', playerId);
@@ -142,7 +201,15 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           salary: 0,
           projectedPoints: 0,
           ownership: 0,
-          actuals: 0
+          actuals: 0,
+          // DST-specific fields
+          dkDefenseScore: undefined,
+          pointsAllowed: undefined,
+          defSacks: undefined,
+          defInterceptions: undefined,
+          defTds: undefined,
+          specialTeamsTds: undefined,
+          defSafeties: undefined,
         });
       }
     } else {
@@ -153,9 +220,17 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
         name: "Unknown Player",
         team: "N/A",
         salary: 0,
-          projectedPoints: 0,
-          ownership: 0,
-          actuals: 0
+        projectedPoints: 0,
+        ownership: 0,
+        actuals: 0,
+        // DST-specific fields
+        dkDefenseScore: undefined,
+        pointsAllowed: undefined,
+        defSacks: undefined,
+        defInterceptions: undefined,
+        defTds: undefined,
+        specialTeamsTds: undefined,
+        defSafeties: undefined,
       });
     }
   });
