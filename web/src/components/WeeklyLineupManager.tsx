@@ -183,7 +183,7 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
     specialTeamsTds?: number;
     defSafeties?: number;
     opponentAbbr?: string;
-    homeOrAway?: string;
+    homeOrAway?: 'H' | 'A';
   }> = [];
   
   // Define the order of positions to display
