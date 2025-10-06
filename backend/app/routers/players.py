@@ -5,7 +5,7 @@ from typing import List, Optional
 import uuid
 
 from app.database import get_db
-from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet, PlayerActuals, Projection
+from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet, PlayerActuals, Projection, TeamStats
 from sqlalchemy.orm import aliased
 from app.schemas import (
     PlayerCreate, PlayerUpdate, Player as PlayerSchema,
@@ -466,11 +466,15 @@ def get_player_pool_with_analysis(
     # Build query with joins
     # Note: support both team_id on Player (preferred) and fallback by Team abbreviation if needed.
     query = (
-        db.query(PlayerPoolEntry, Player, Game)
+        db.query(PlayerPoolEntry, Player, Game, TeamStats)
         .join(Player, PlayerPoolEntry.playerDkId == Player.playerDkId)
         .outerjoin(
             Game,
             (Game.week_id == PlayerPoolEntry.week_id) & (Game.team_id == Player.team_id)
+        )
+        .outerjoin(
+            TeamStats,
+            (TeamStats.week_id == PlayerPoolEntry.week_id) & (TeamStats.team_id == Player.team_id)
         )
         .filter(
             and_(
@@ -484,13 +488,21 @@ def get_player_pool_with_analysis(
 
     entries: list[PlayerPoolEntryWithAnalysis] = []
     for row in rows:
-        entry, player, game = row
+        entry, player, game, team_stats = row
         analysis = WeekAnalysisData(
             opponent_abbr=(game.opponent_team.abbreviation if getattr(game, 'opponent_team', None) else None) if game else None,
             homeoraway=game.homeoraway if game else None,
             proj_spread=game.proj_spread if game else None,
             proj_total=game.proj_total if game else None,
             implied_team_total=game.implied_team_total if game else None,
+            # DK Defense Scoring Data (for DST players)
+            dk_defense_score=float(team_stats.dk_defense_score) if team_stats and team_stats.dk_defense_score else None,
+            points_allowed=int(team_stats.points_allowed) if team_stats and team_stats.points_allowed else None,
+            def_sacks=float(team_stats.def_sacks) if team_stats and team_stats.def_sacks else None,
+            def_interceptions=float(team_stats.def_interceptions) if team_stats and team_stats.def_interceptions else None,
+            def_tds=float(team_stats.def_tds) if team_stats and team_stats.def_tds else None,
+            special_teams_tds=float(team_stats.special_teams_tds) if team_stats and team_stats.special_teams_tds else None,
+            def_safeties=float(team_stats.def_safeties) if team_stats and team_stats.def_safeties else None,
         )
         # Reattach ORM objects: FastAPI will transform via Pydantic models
         entry.player = player
@@ -528,11 +540,15 @@ def get_player_pool_complete(
     
     # Build optimized query with all necessary joins
     query = (
-        db.query(PlayerPoolEntry, Player, Game)
+        db.query(PlayerPoolEntry, Player, Game, TeamStats)
         .join(Player, PlayerPoolEntry.playerDkId == Player.playerDkId)
         .outerjoin(
             Game,
             (Game.week_id == PlayerPoolEntry.week_id) & (Game.team_id == Player.team_id)
+        )
+        .outerjoin(
+            TeamStats,
+            (TeamStats.week_id == PlayerPoolEntry.week_id) & (TeamStats.team_id == Player.team_id)
         )
         .filter(
             and_(
@@ -567,7 +583,7 @@ def get_player_pool_complete(
     player_ids = []
     
     for row in rows:
-        entry, player, game = row
+        entry, player, game, team_stats = row
         
         # Attach player to entry
         entry.player = player
@@ -579,6 +595,14 @@ def get_player_pool_complete(
             proj_spread=game.proj_spread if game else None,
             proj_total=game.proj_total if game else None,
             implied_team_total=game.implied_team_total if game else None,
+            # DK Defense Scoring Data (for DST players)
+            dk_defense_score=float(team_stats.dk_defense_score) if team_stats and team_stats.dk_defense_score else None,
+            points_allowed=int(team_stats.points_allowed) if team_stats and team_stats.points_allowed else None,
+            def_sacks=float(team_stats.def_sacks) if team_stats and team_stats.def_sacks else None,
+            def_interceptions=float(team_stats.def_interceptions) if team_stats and team_stats.def_interceptions else None,
+            def_tds=float(team_stats.def_tds) if team_stats and team_stats.def_tds else None,
+            special_teams_tds=float(team_stats.special_teams_tds) if team_stats and team_stats.special_teams_tds else None,
+            def_safeties=float(team_stats.def_safeties) if team_stats and team_stats.def_safeties else None,
         )
         
         # Create entry with analysis

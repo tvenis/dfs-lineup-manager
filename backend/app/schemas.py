@@ -736,6 +736,15 @@ class WeekAnalysisData(BaseModel):
     proj_spread: Optional[float] = None
     proj_total: Optional[float] = None
     implied_team_total: Optional[float] = None
+    
+    # DK Defense Scoring Data (for DST players)
+    dk_defense_score: Optional[float] = None
+    points_allowed: Optional[int] = None
+    def_sacks: Optional[float] = None
+    def_interceptions: Optional[float] = None
+    def_tds: Optional[float] = None
+    special_teams_tds: Optional[float] = None
+    def_safeties: Optional[float] = None
 
 class PlayerPoolEntryWithAnalysis(BaseModel):
     entry: PlayerPoolEntry
