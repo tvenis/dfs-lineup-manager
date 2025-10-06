@@ -23,7 +23,7 @@ except Exception as e:
 
 # Import routers conditionally to avoid database import errors
 try:
-    from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments, recent_activity, player_aliases, team_stats, game_results, weekly_summary, ownership_estimates, players_optimized, dst, admin
+    from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments, recent_activity, player_aliases, team_stats, game_results, weekly_summary, ownership_estimates, players_optimized, dst, admin, leaderboard
     ROUTERS_AVAILABLE = True
 except Exception as e:
     print(f"⚠️ Router imports failed: {e}")
@@ -32,7 +32,7 @@ except Exception as e:
     players = lineups = csv_import = teams = weeks = None
     draftkings_import = projections = odds_api = games = contests = None
     actuals = draftgroups = players_batch = tips = firecrawl = None
-    players_optimized = admin = None
+    players_optimized = admin = leaderboard = None
     import_opponent_roster = comments = recent_activity = player_aliases = None
     team_stats = game_results = weekly_summary = ownership_estimates = dst = None
 
@@ -91,6 +91,7 @@ if ROUTERS_AVAILABLE:
     if ownership_estimates: app.include_router(ownership_estimates.router, prefix="", tags=["ownership-estimates"])
     if dst: app.include_router(dst.router, prefix="", tags=["dst"])
     if admin: app.include_router(admin.router, prefix="/api", tags=["admin"])
+    if leaderboard: app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["leaderboard"])
 else:
     print("⚠️ Skipping router registration due to import failures") 
 
