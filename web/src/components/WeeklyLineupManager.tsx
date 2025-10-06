@@ -174,6 +174,16 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
     projectedPoints: number;
     ownership: number;
     actuals: number;
+    // DST-specific fields
+    dkDefenseScore?: number;
+    pointsAllowed?: number;
+    defSacks?: number;
+    defInterceptions?: number;
+    defTds?: number;
+    specialTeamsTds?: number;
+    defSafeties?: number;
+    opponentAbbr?: string;
+    homeOrAway?: string;
   }> = [];
   
   // Define the order of positions to display
