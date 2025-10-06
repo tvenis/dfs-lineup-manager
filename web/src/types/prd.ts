@@ -171,6 +171,10 @@ export interface PlayerPropBetWithMeta {
   outcome_point?: number | null;
   probability?: number | null; // percentage 0-100 if provided
   updated?: string | null; // ISO date
+  
+  // Props scoring results
+  result_status?: string | null; // 'HIT', 'MISS', 'PUSH', or null if not yet scored
+  actual_value?: number | null; // Actual stat value used for scoring
 }
 
 export interface PlayerPropsResponse {

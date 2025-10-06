@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from app.database import get_db
@@ -35,6 +35,7 @@ async def get_weeks_for_actuals(db: Session = Depends(get_db)):
 async def import_matched_actuals(
     request_data: Dict[str, Any],
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """Import player actuals data with matched players"""
@@ -214,6 +215,15 @@ async def import_matched_actuals(
             print(f"⚠️ Failed to log import activity: {str(log_error)}")
             # Don't raise - logging failure shouldn't break the import
         
+        # Trigger props scoring in background if actuals were imported successfully
+        if actuals_created > 0 or actuals_updated > 0:
+            background_tasks.add_task(
+                score_props_after_actuals_import_background, 
+                week_id, 
+                actuals_created + actuals_updated
+            )
+            print(f"🚀 Started background props scoring for week {week_id} ({actuals_created + actuals_updated} actuals imported)")
+        
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -345,3 +355,80 @@ async def import_from_nflverse(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error importing from NFLVerse: {str(e)}")
+
+
+# Background task function for scoring props after actuals import
+async def score_props_after_actuals_import_background(week_id: int, actuals_count: int):
+    """
+    Background task to score props after actuals import completes.
+    
+    This function runs asynchronously after the actuals import is complete,
+    automatically scoring all props for the week that now have actuals data.
+    
+    Args:
+        week_id: Week ID that was imported
+        actuals_count: Number of actuals records imported
+    """
+    from app.database import SessionLocal
+    from app.services.player_props_scoring_service import PlayerPropsScoringService
+    from app.services.activity_logging import ActivityLoggingService
+    
+    print(f"🎯 Starting background props scoring for week {week_id} ({actuals_count} actuals imported)")
+    
+    # Create a new database session for the background task
+    db = SessionLocal()
+    
+    try:
+        # Initialize services
+        scoring_service = PlayerPropsScoringService(db)
+        activity_service = ActivityLoggingService(db)
+        
+        # Score all props for the week
+        stats = scoring_service.score_week_props(week_id)
+        
+        # Log the scoring activity
+        activity_service.log_activity(
+            action="props-scoring-auto",
+            file_type="API",
+            week_id=week_id,
+            records_updated=stats['scored_props'],
+            records_failed=stats['players_missing_actuals'],
+            operation_status="completed",
+            details={
+                "total_props": stats['total_props'],
+                "scored_props": stats['scored_props'],
+                "hits": stats['hits'],
+                "misses": stats['misses'],
+                "pushes": stats['pushes'],
+                "players_with_actuals": stats['players_with_actuals'],
+                "players_missing_actuals": stats['players_missing_actuals'],
+                "triggered_by": "actuals-import",
+                "actuals_imported": actuals_count
+            }
+        )
+        
+        print(f"✅ Background props scoring completed for week {week_id}: {stats}")
+        
+    except Exception as e:
+        print(f"❌ Background props scoring failed for week {week_id}: {e}")
+        
+        # Log the error
+        try:
+            activity_service = ActivityLoggingService(db)
+            activity_service.log_activity(
+                action="props-scoring-auto",
+                file_type="API",
+                week_id=week_id,
+                records_failed=1,
+                operation_status="failed",
+                errors={"error": str(e)},
+                details={
+                    "triggered_by": "actuals-import",
+                    "actuals_imported": actuals_count
+                }
+            )
+        except:
+            pass  # Don't fail on logging errors
+            
+    finally:
+        db.close()

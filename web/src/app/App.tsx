@@ -23,7 +23,6 @@ import {
   PlusCircle,
   Trophy,
   Upload,
-  Download,
   Settings,
   User,
   ChevronDown,
@@ -35,6 +34,7 @@ import {
   FileText,
   Database,
   Globe,
+  BarChart3,
 } from "lucide-react";
 import { Toaster } from "sonner";
 
@@ -43,22 +43,23 @@ export default function App({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   
   console.log('🎯 App component rendering, pathname:', pathname);
   console.log('🎯 App children:', children);
 
   const navigationItems = [
     {
+      id: "scoreboard",
+      label: "Scoreboard",
+      icon: Trophy,
+      href: "/scoreboard",
+    },
+    {
       id: "home",
       label: "Lineup Manager",
       icon: Home,
       href: "/",
-    },
-    {
-      id: "players",
-      label: "Player Pool",
-      icon: Users,
-      href: "/players",
     },
     {
       id: "builder",
@@ -67,10 +68,10 @@ export default function App({ children }: { children: React.ReactNode }) {
       href: "/builder",
     },
     {
-      id: "scoreboard",
-      label: "Scoreboard",
-      icon: Trophy,
-      href: "/scoreboard",
+      id: "players",
+      label: "Player Pool",
+      icon: Users,
+      href: "/players",
     },
     {
       id: "profile",
@@ -79,10 +80,10 @@ export default function App({ children }: { children: React.ReactNode }) {
       href: "/profile",
     },
     {
-      id: "team-stats",
-      label: "Team Defense",
-      icon: Shield,
-      href: "/team-stats",
+      id: "leaderboard",
+      label: "Leaderboard",
+      icon: BarChart3,
+      href: "/leaderboard",
     },
     {
       id: "import",
@@ -90,12 +91,24 @@ export default function App({ children }: { children: React.ReactNode }) {
       icon: Upload,
       href: "/import",
     },
+  ];
+
+  const leaderboardSubItems = [
     {
-      id: "export",
-      label: "Export",
-      icon: Download,
-      href: "/export",
+      id: "team-defense",
+      label: "Team Defense",
+      description: "Team defense statistics and scoring",
+      icon: Shield,
+      href: "/team-stats",
     },
+    // Future leaderboard items can be added here
+    // {
+    //   id: "player-performance",
+    //   label: "Player Performance",
+    //   description: "Player prop bet performance metrics",
+    //   icon: BarChart3,
+    //   href: "/leaderboard/player-performance",
+    // },
   ];
 
   const settingsSubItems = [
@@ -216,12 +229,11 @@ export default function App({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {navigationItems.map((item) => {
-                    // Skip import and settings as they have special handling
-                    if (item.id === 'import' || item.id === 'settings') {
+                    // Skip import, settings, and leaderboard as they have special handling
+                    if (item.id === 'import' || item.id === 'settings' || item.id === 'leaderboard') {
                       return null;
                     }
                     
@@ -247,6 +259,59 @@ export default function App({ children }: { children: React.ReactNode }) {
                       </SidebarMenuItem>
                     );
                   })}
+                  
+                  {/* Leaderboard with submenu */}
+                  <SidebarMenuItem>
+                    <button
+                      onClick={() => setIsLeaderboardOpen(!isLeaderboardOpen)}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] ${
+                        pathname?.startsWith('/team-stats') || pathname?.startsWith('/leaderboard')
+                          ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]" 
+                          : "text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      Leaderboard
+                      {isLeaderboardOpen ? (
+                        <ChevronDown className="h-4 w-4 ml-auto" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 ml-auto" />
+                      )}
+                    </button>
+                  </SidebarMenuItem>
+                  
+                  {/* Leaderboard submenu */}
+                  {isLeaderboardOpen && (
+                    <div className="ml-4 space-y-1">
+                      {leaderboardSubItems.map((subItem) => {
+                        const SubIcon = subItem.icon;
+                        const isSubActive = pathname === subItem.href || 
+                          (pathname?.startsWith('/leaderboard') && new URLSearchParams(window.location.search).get('section') === subItem.id);
+                        
+                        console.log(`🎯 Leaderboard sub-item ${subItem.label}: isSubActive=${isSubActive}, pathname=${pathname}, href=${subItem.href}`);
+                        
+                        return (
+                          <SidebarMenuItem key={subItem.id}>
+                            <Link 
+                              href={subItem.href} 
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 ${
+                                isSubActive 
+                                  ? "bg-gray-200 text-gray-900 font-semibold" 
+                                  : "text-gray-600"
+                              }`}
+                              onClick={() => console.log(`🎯 Clicked leaderboard sub-item: ${subItem.label} -> ${subItem.href}`)}
+                            >
+                              <SubIcon className="h-4 w-4" />
+                              <div className="flex flex-col">
+                                <span>{subItem.label}</span>
+                                <span className="text-xs opacity-75">{subItem.description}</span>
+                              </div>
+                            </Link>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </div>
+                  )}
                   
                   {/* Import with submenu */}
                   <SidebarMenuItem>
