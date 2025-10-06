@@ -52,6 +52,8 @@ async function fetchPlayerPool(weekId: number, draftGroup?: string): Promise<Map
   defTds?: number;
   specialTeamsTds?: number;
   defSafeties?: number;
+  opponentAbbr?: string;
+  homeOrAway?: string;
 }>> {
   try {
     // Get default draft group if not provided
@@ -86,6 +88,8 @@ async function fetchPlayerPool(weekId: number, draftGroup?: string): Promise<Map
         def_tds?: number;
         special_teams_tds?: number;
         def_safeties?: number;
+        opponent_abbr?: string;
+        homeoraway?: string;
       };
     }) => {
       const player = entry.entry.player;
@@ -111,6 +115,8 @@ async function fetchPlayerPool(weekId: number, draftGroup?: string): Promise<Map
         defTds: entry.analysis?.def_tds,
         specialTeamsTds: entry.analysis?.special_teams_tds,
         defSafeties: entry.analysis?.def_safeties,
+        opponentAbbr: entry.analysis?.opponent_abbr,
+        homeOrAway: entry.analysis?.homeoraway,
       });
     });
     
@@ -138,6 +144,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
   defTds?: number;
   specialTeamsTds?: number;
   defSafeties?: number;
+  opponentAbbr?: string;
+  homeOrAway?: string;
 }>): Array<{
   position: string;
   name: string;
@@ -154,6 +162,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
   defTds?: number;
   specialTeamsTds?: number;
   defSafeties?: number;
+  opponentAbbr?: string;
+  homeOrAway?: string;
 }> {
   console.log('🎯 populateRosterFromSlots called with slots:', slots, 'playerMap size:', playerMap.size);
   const roster: Array<{
@@ -192,6 +202,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           defTds: player.defTds,
           specialTeamsTds: player.specialTeamsTds,
           defSafeties: player.defSafeties,
+          opponentAbbr: player.opponentAbbr,
+          homeOrAway: player.homeOrAway,
         });
       } else {
         console.log('🎯 Player data is undefined for', position, 'playerId:', playerId);
@@ -212,6 +224,8 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
           defTds: undefined,
           specialTeamsTds: undefined,
           defSafeties: undefined,
+          opponentAbbr: undefined,
+          homeOrAway: undefined,
         });
       }
     } else {
@@ -232,7 +246,9 @@ function populateRosterFromSlots(slots: Record<string, number>, playerMap: Map<n
         defInterceptions: undefined,
         defTds: undefined,
         specialTeamsTds: undefined,
-        defSafeties: undefined,
+          defSafeties: undefined,
+          opponentAbbr: undefined,
+          homeOrAway: undefined,
       });
     }
   });
@@ -824,6 +840,9 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                       <div className="truncate">
                                         <span className="font-medium">{player.name}</span>
                                         <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
+                                        {isDST && player.opponentAbbr && (
+                                          <span className="text-muted-foreground ml-1">{player.homeOrAway === 'H' ? 'vs' : '@'} {player.opponentAbbr}</span>
+                                        )}
                                       </div>
                                     </div>
                                     <span className="block h-4 bg-muted justify-self-stretch" />
