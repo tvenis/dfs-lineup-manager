@@ -38,9 +38,33 @@ export const DefensiveStatsBadges: React.FC<DefensiveStatsProps> = ({
 
   const items: React.ReactNode[] = [];
 
+  const getDKPointsForPointsAllowed = (pa: number): number => {
+    if (pa === 0) return 10.0;
+    if (pa >= 1 && pa <= 6) return 7.0;
+    if (pa >= 7 && pa <= 13) return 4.0;
+    if (pa >= 14 && pa <= 20) return 1.0;
+    if (pa >= 21 && pa <= 27) return 0.0;
+    if (pa >= 28 && pa <= 34) return -1.0;
+    return -4.0; // 35+
+  };
+
+  const getPointsAllowedClasses = (pa: number): string => {
+    if (pa === 0) return "bg-green-200 text-green-900";
+    if (pa >= 1 && pa <= 6) return "bg-green-100 text-green-700";
+    if (pa >= 7 && pa <= 13) return "bg-green-50 text-green-700";
+    if (pa >= 14 && pa <= 20) return "bg-yellow-100 text-yellow-800";
+    if (pa >= 21 && pa <= 27) return "bg-gray-100 text-gray-700";
+    if (pa >= 28 && pa <= 34) return "bg-orange-100 text-orange-700";
+    return "bg-red-100 text-red-700"; // 35+
+  };
+
   if (pointsAllowed !== undefined && pointsAllowed !== null) {
     items.push(
-      <Badge key="pts" className="bg-gray-100 text-gray-700" title={`${teamAbbr ? teamAbbr + ' ' : ''}${pointsAllowed} points allowed`}>
+      <Badge
+        key="pts"
+        className={getPointsAllowedClasses(pointsAllowed)}
+        title={`${teamAbbr ? teamAbbr + ' ' : ''}${pointsAllowed} points allowed • DK ${getDKPointsForPointsAllowed(pointsAllowed) >= 0 ? '+' : ''}${getDKPointsForPointsAllowed(pointsAllowed)} pts`}
+      >
         {pointsAllowed} pts allowed
       </Badge>
     );
