@@ -101,6 +101,13 @@ export default function App({ children }: { children: React.ReactNode }) {
       icon: Shield,
       href: "/team-stats",
     },
+    {
+      id: "player-props",
+      label: "Player Props",
+      description: "Player prop betting results and analytics",
+      icon: Trophy,
+      href: "/leaderboard/player-props",
+    },
     // Future leaderboard items can be added here
     // {
     //   id: "player-performance",
