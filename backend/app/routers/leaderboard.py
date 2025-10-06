@@ -12,6 +12,8 @@ def get_player_props_for_leaderboard(
     week: str = Query("active", description="Week ID number, 'active', or 'all'"),
     bookmaker: str = Query("all", description="Bookmaker name or 'all'"),
     market: str = Query("player_tds_over", description="Market type"),
+    player_name: str = Query("all", description="Player name or 'all'"),
+    result_status: str = Query("all", description="Result status: 'HIT', 'MISS', 'PUSH', 'NULL', or 'all'"),
     db: Session = Depends(get_db)
 ):
     """
@@ -49,6 +51,15 @@ def get_player_props_for_leaderboard(
         
         if market:
             query = query.filter(PlayerPropBet.market == market)
+        
+        if player_name != "all":
+            query = query.filter(Player.displayName.ilike(f"%{player_name}%"))
+        
+        if result_status != "all":
+            if result_status == "NULL":
+                query = query.filter(PlayerPropBet.result_status.is_(None))
+            else:
+                query = query.filter(PlayerPropBet.result_status == result_status)
         
         # Order by week (desc), then by player name
         query = query.order_by(Week.week_number.desc(), Player.displayName)

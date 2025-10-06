@@ -67,7 +67,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
       
       if (prop.result_status === 'HIT' && outcomeLower.includes('over')) {
         oversHits++;
-      } else if (prop.result_status === 'MISS' && outcomeLower.includes('under')) {
+      } else if (prop.result_status === 'MISS' && outcomeLower.includes('over')) {
         undersMisses++;
       } else if (prop.result_status === 'PUSH') {
         pushes++;
@@ -123,6 +123,8 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
         week: selectedWeekId ? selectedWeekId.toString() : "active",
         bookmaker: selectedBookmaker,
         market: selectedMarket,
+        player_name: selectedPlayer !== "all" ? selectedPlayer : "all",
+        result_status: selectedResult !== "all" ? selectedResult : "all",
       });
 
       const response = await fetch(buildApiUrl(`/api/leaderboard/player-props?${params}`));
@@ -231,54 +233,65 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 items-center">
-        <div className="flex-shrink-0">
-          <label htmlFor="week-select" className="block text-sm font-medium text-gray-700 mb-2">
-            Select Week:
-          </label>
-          <select
-            id="week-select"
-            value={selectedWeekId || ''}
-            onChange={(e) => setSelectedWeekId(Number(e.target.value))}
-            className="block w-auto min-w-[200px] px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            disabled={weeks.length === 0}
-          >
-            {weeks.length === 0 ? (
-              <option value="">Loading weeks...</option>
-            ) : (
-              weeks.map((week) => (
-                <option key={week.id} value={week.id}>
-                  Week {week.week_number} - {week.year}{week.id === activeWeekId ? ' (Active)' : ''}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-
-        <Select value={selectedBookmaker} onValueChange={setSelectedBookmaker}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Bookmaker" />
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <Select value={selectedWeekId?.toString() || "all"} onValueChange={handleWeekChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Weeks" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Bookmakers</SelectItem>
-            {availableBookmakers.map((bookmaker) => (
-              <SelectItem key={bookmaker} value={bookmaker}>
-                {bookmaker}
-              </SelectItem>
+            {activeWeekId && <SelectItem value={activeWeekId.toString()}>Week {weeks.find(w => w.id === activeWeekId)?.week_number} (Active)</SelectItem>}
+            <SelectItem value="all">All Weeks</SelectItem>
+            {weeks.map((week) => (
+              <SelectItem key={week.id} value={week.id.toString()}>Week {week.week_number}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Select value={selectedMarket} onValueChange={setSelectedMarket}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Market" />
+        <Select value={selectedBookmaker} onValueChange={handleBookmakerChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Bookmakers" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Bookmakers</SelectItem>
+            {availableBookmakers.map((bookmaker) => (
+              <SelectItem key={bookmaker} value={bookmaker}>{bookmaker}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={selectedMarket} onValueChange={handleMarketChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Markets" />
           </SelectTrigger>
           <SelectContent>
             {MARKET_OPTIONS.map((market) => (
-              <SelectItem key={market.value} value={market.value}>
-                {market.label}
-              </SelectItem>
+              <SelectItem key={market.value} value={market.value}>{market.label}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={selectedPlayer} onValueChange={handlePlayerChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Players" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Players</SelectItem>
+            {availablePlayers.map((player) => (
+              <SelectItem key={player} value={player}>{player}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={selectedResult} onValueChange={handleResultChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Results" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Results</SelectItem>
+            <SelectItem value="HIT">HIT</SelectItem>
+            <SelectItem value="MISS">MISS</SelectItem>
+            <SelectItem value="PUSH">PUSH</SelectItem>
+            <SelectItem value="NULL">NOT GRADED</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -293,16 +306,16 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50">
-                <th className="text-center p-2 font-medium">Week</th>
-                <th className="text-left p-2 font-medium">Player Name</th>
-                <th className="text-center p-2 font-medium">Opponent</th>
-                <th className="text-center p-2 font-medium">Bookmaker</th>
-                <th className="text-center p-2 font-medium">Market</th>
-                <th className="text-right p-2 font-medium">Price</th>
-                <th className="text-right p-2 font-medium">Point</th>
-                <th className="text-right p-2 font-medium">Probability</th>
-                <th className="text-right p-2 font-medium">Actual Result</th>
-                <th className="text-center p-2 font-medium">Result</th>
+                <th className="text-center p-2 font-medium w-16">Week</th>
+                <th className="text-left p-2 font-medium w-32">Player Name</th>
+                <th className="text-center p-2 font-medium w-20">Opponent</th>
+                <th className="text-center p-2 font-medium w-24">Bookmaker</th>
+                <th className="text-center p-2 font-medium w-32">Market</th>
+                <th className="text-right p-2 font-medium w-16">Price</th>
+                <th className="text-right p-2 font-medium w-16">Point</th>
+                <th className="text-right p-2 font-medium w-20">Probability</th>
+                <th className="text-right p-2 font-medium w-20">Actual Result</th>
+                <th className="text-center p-2 font-medium w-20">Result</th>
               </tr>
             </thead>
             <tbody>
