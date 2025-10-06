@@ -16,6 +16,7 @@ import { LineupService } from "@/lib/lineupService";
 import { LineupDisplayData, LineupStatus } from "@/types/prd";
 import { buildApiUrl, API_CONFIG } from "@/config/api";
 import { getPositionBadgeClasses } from "@/lib/positionColors";
+import DefensiveStatsBadges from "./DefensiveStatsBadges";
 
 // Helper function to get default draft group for a week
 async function getDefaultDraftGroup(weekId: number): Promise<string> {
@@ -863,40 +864,19 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                   </div>
 
                                   {/* DST Defensive Stats Breakdown */}
-                                  {isDST && (player.defSacks !== undefined || player.defInterceptions !== undefined || player.defTds !== undefined || player.pointsAllowed !== undefined) && (
+                                  {isDST && (
                                     <div className="mt-1 text-xs text-muted-foreground">
-                                      <div className="flex flex-wrap gap-2">
-                                        {player.pointsAllowed !== undefined && (
-                                          <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-xs">
-                                            {player.pointsAllowed} pts allowed
-                                          </span>
-                                        )}
-                                        {player.defSacks !== undefined && player.defSacks > 0 && (
-                                          <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">
-                                            {player.defSacks} sack{player.defSacks !== 1 ? 's' : ''}
-                                          </span>
-                                        )}
-                                        {player.defInterceptions !== undefined && player.defInterceptions > 0 && (
-                                          <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs">
-                                            {player.defInterceptions} INT{player.defInterceptions !== 1 ? 's' : ''}
-                                          </span>
-                                        )}
-                                        {player.defTds !== undefined && player.defTds > 0 && (
-                                          <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded text-xs">
-                                            {player.defTds} TD{player.defTds !== 1 ? 's' : ''}
-                                          </span>
-                                        )}
-                                        {player.specialTeamsTds !== undefined && player.specialTeamsTds > 0 && (
-                                          <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded text-xs">
-                                            {player.specialTeamsTds} ST TD{player.specialTeamsTds !== 1 ? 's' : ''}
-                                          </span>
-                                        )}
-                                        {player.defSafeties !== undefined && player.defSafeties > 0 && (
-                                          <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-xs">
-                                            {player.defSafeties} safet{player.defSafeties !== 1 ? 'ies' : 'y'}
-                                          </span>
-                                        )}
-                                      </div>
+                                      <DefensiveStatsBadges
+                                        teamAbbr={player.team}
+                                        pointsAllowed={player.pointsAllowed}
+                                        defSacks={player.defSacks}
+                                        defInterceptions={player.defInterceptions as number | undefined}
+                                        defTds={player.defTds}
+                                        specialTeamsTds={player.specialTeamsTds}
+                                        defSafeties={player.defSafeties}
+                                        blockedKicks={player.blocked_kicks as number | undefined}
+                                        dense
+                                      />
                                     </div>
                                   )}
                                 </div>
