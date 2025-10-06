@@ -90,15 +90,6 @@ async function fetchPlayerPool(weekId: number, draftGroup?: string): Promise<Map
       const player = entry.entry.player;
       const isDST = player.position === 'DST';
       
-      // Debug logging for DST players
-      if (isDST) {
-        console.log('🎯 DST Player found:', {
-          name: player.displayName,
-          team: player.team,
-          analysis: entry.analysis,
-          pointsAllowed: entry.analysis?.points_allowed
-        });
-      }
       
       playerMap.set(entry.entry.playerDkId, {
         name: player.displayName,
@@ -878,12 +869,6 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                         {player.pointsAllowed !== undefined && (
                                           <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-xs">
                                             {player.pointsAllowed} pts allowed
-                                          </span>
-                                        )}
-                                        {/* Debug: Show when pointsAllowed is undefined */}
-                                        {isDST && player.pointsAllowed === undefined && (
-                                          <span className="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded text-xs">
-                                            No pts data
                                           </span>
                                         )}
                                         {player.defSacks !== undefined && player.defSacks > 0 && (

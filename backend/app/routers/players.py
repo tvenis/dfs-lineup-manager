@@ -506,6 +506,11 @@ def get_player_pool_with_analysis(
         )
         # Reattach ORM objects: FastAPI will transform via Pydantic models
         entry.player = player
+        
+        # Update actuals for DST players from TeamStats
+        if player.position == 'DST' and team_stats and team_stats.dk_defense_score is not None:
+            entry.actuals = float(team_stats.dk_defense_score)
+        
         entries.append(PlayerPoolEntryWithAnalysis(entry=entry, analysis=analysis))
 
     return PlayerPoolAnalysisResponse(entries=entries, total=len(entries), week_id=week_id)
@@ -587,6 +592,10 @@ def get_player_pool_complete(
         
         # Attach player to entry
         entry.player = player
+        
+        # Update actuals for DST players from TeamStats
+        if player.position == 'DST' and team_stats and team_stats.dk_defense_score is not None:
+            entry.actuals = float(team_stats.dk_defense_score)
         
         # Build analysis data
         analysis = WeekAnalysisData(
