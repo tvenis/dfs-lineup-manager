@@ -822,11 +822,6 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                       <div className="truncate">
                                         <span className="font-medium">{player.name}</span>
                                         <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
-                                        {isDST && player.pointsAllowed !== undefined && (
-                                          <span className="text-xs text-muted-foreground ml-1">
-                                            ({player.pointsAllowed} pts allowed)
-                                          </span>
-                                        )}
                                       </div>
                                     </div>
                                     <span className="block h-4 bg-muted justify-self-stretch" />
@@ -851,11 +846,6 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                       <div className="truncate">
                                         <span className="font-medium">{player.name}</span>
                                         <span className="text-muted-foreground ml-1">· {player.team?.toUpperCase?.()}</span>
-                                        {isDST && player.pointsAllowed !== undefined && (
-                                          <span className="text-xs text-muted-foreground ml-1">
-                                            ({player.pointsAllowed} pts allowed)
-                                          </span>
-                                        )}
                                       </div>
                                     </div>
                                     <div className="flex items-center justify-between text-xs text-muted-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -872,9 +862,14 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                   </div>
 
                                   {/* DST Defensive Stats Breakdown */}
-                                  {isDST && (player.defSacks !== undefined || player.defInterceptions !== undefined || player.defTds !== undefined) && (
+                                  {isDST && (player.defSacks !== undefined || player.defInterceptions !== undefined || player.defTds !== undefined || player.pointsAllowed !== undefined) && (
                                     <div className="mt-1 text-xs text-muted-foreground">
                                       <div className="flex flex-wrap gap-2">
+                                        {player.pointsAllowed !== undefined && (
+                                          <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-xs">
+                                            {player.pointsAllowed} pts allowed
+                                          </span>
+                                        )}
                                         {player.defSacks !== undefined && player.defSacks > 0 && (
                                           <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">
                                             {player.defSacks} sack{player.defSacks !== 1 ? 's' : ''}
