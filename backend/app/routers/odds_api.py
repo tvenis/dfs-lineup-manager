@@ -931,6 +931,13 @@ async def import_player_props(
                                 if outcome_name and outcome_name.lower() == "under":
                                     continue
 
+                                # Add bookmaker-specific outcome_point filtering for player_tds_over
+                                if market == "player_tds_over" and outcome_name == "Over":
+                                    if bookmaker == "betonlineag" and outcome_point != 0.5:
+                                        continue
+                                    elif bookmaker == "draftkings" and outcome_point != 1.5:
+                                        continue
+
                                 player_obj = find_player_by_name(outcome_description) if outcome_description else None
 
                                 if not player_obj:
@@ -946,7 +953,7 @@ async def import_player_props(
                                     errors.append(f"No game row found for event {eid} (player {outcome_description})")
                                     continue
 
-                                # Upsert: unique on (week_id, game_id, bookmaker, market, outcome_name, playerDkId, outcome_point)
+                                # Upsert: unique on (week_id, game_id, bookmaker, market, outcome_name, playerDkId)
                                 existing = db.query(PlayerPropBet).filter(
                                     and_(
                                         PlayerPropBet.week_id == week_id,
@@ -955,7 +962,6 @@ async def import_player_props(
                                         PlayerPropBet.market == mk_key,
                                         PlayerPropBet.outcome_name == outcome_name,
                                         PlayerPropBet.playerDkId == player_obj.playerDkId,
-                                        PlayerPropBet.outcome_point == outcome_point,
                                     )
                                 ).first()
 
