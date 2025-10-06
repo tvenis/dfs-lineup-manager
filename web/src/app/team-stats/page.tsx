@@ -30,9 +30,11 @@ interface TeamStats {
   points_allowed: number;
   def_sacks: number;
   def_interceptions: number;
+  fumble_recovery_opp?: number; // optional for compatibility
   def_tds: number;
   special_teams_tds: number;
   def_safeties: number;
+  blocked_kicks?: number; // optional for compatibility
   week: {
     week_number: number;
     season: number;

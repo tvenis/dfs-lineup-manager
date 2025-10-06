@@ -233,8 +233,8 @@ export default function ScoreboardPage() {
     const roi = totalFeesEntered > 0 ? (totalProfit / totalFeesEntered) * 100 : 0;
     const winRate = totalEntries > 0 ? (filteredContests.filter(c => (c.winnings_non_ticket || 0) + (c.winnings_ticket || 0) > 0).length / totalEntries) * 100 : 0;
     const wins = filteredContests.reduce((sum, c) => sum + (c.result ? 1 : 0), 0);
-    const avgPlace = totalEntries > 0 ? filteredContests.reduce((sum, c) => sum + (c.contest_place || 0), 0) / totalEntries : 0;
-    return { totalEntries, totalFeesEntered, totalWinnings, totalProfit, roi, winRate, wins, avgPlace };
+    const avgPoints = totalEntries > 0 ? filteredContests.reduce((sum, c) => sum + (c.contest_points || 0), 0) / totalEntries : 0;
+    return { totalEntries, totalFeesEntered, totalWinnings, totalProfit, roi, winRate, wins, avgPoints };
   }, [filteredContests]);
 
   const profitChartData = useMemo(() => {
@@ -457,8 +457,8 @@ export default function ScoreboardPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Avg Placement</CardDescription>
-            <CardTitle className="text-2xl">#{metrics.avgPlace.toFixed(0)}</CardTitle>
+            <CardDescription>Average Points Scored</CardDescription>
+            <CardTitle className="text-2xl">{metrics.avgPoints.toFixed(2)}</CardTitle>
           </CardHeader>
         </Card>
       </div>
