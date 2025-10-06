@@ -120,6 +120,14 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
 
   const getResultColor = (result: string | null) => {
     if (!result) return 'bg-gray-100';
+    
+    // Handle new format with scores: "W 26-23", "L 17-31", "T 14-14", "NA"
+    if (result.startsWith('W ')) return 'bg-green-100 text-green-800';
+    if (result.startsWith('L ')) return 'bg-red-100 text-red-800';
+    if (result.startsWith('T ')) return 'bg-yellow-100 text-yellow-800';
+    if (result === 'NA') return 'bg-gray-100 text-gray-600';
+    
+    // Handle legacy single character format
     switch (result) {
       case 'W': return 'bg-green-100 text-green-800';
       case 'L': return 'bg-red-100 text-red-800';

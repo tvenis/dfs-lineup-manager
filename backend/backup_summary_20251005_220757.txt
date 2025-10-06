@@ -1,0 +1,30 @@
+Player Prop Bets Backup Summary
+================================
+Backup Date: 2025-10-05 22:07:59.241408
+Total Records: 35,218
+CSV File: player_prop_bets_backup_20251005_220757.csv
+SQL File: player_prop_bets_backup_20251005_220757.sql
+
+Table Structure:
+  - id: integer
+  - week_id: integer
+  - game_id: integer
+  - bookmaker: character varying
+  - market: character varying
+  - outcome_name: character varying
+  - outcome_description: character varying
+  - playerDkId: integer
+  - outcome_price: integer
+  - outcome_point: double precision
+  - outcome_likelihood: double precision
+  - updated_by: character varying
+  - last_prop_update: timestamp with time zone
+  - created_at: timestamp with time zone
+  - updated_at: timestamp with time zone
+
+Statistics:
+  - Unique Players: 520
+  - Unique Weeks: 5
+  - Unique Bookmakers: 8
+  - Unique Markets: 9
+  - Date Range: 2025-09-05 23:16:53+00:00 to 2025-10-06 01:42:11.923830+00:00

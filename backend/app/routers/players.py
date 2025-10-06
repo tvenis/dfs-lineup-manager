@@ -947,9 +947,34 @@ async def get_player_game_log(
             game_log_entry["opponent"] = opponent.abbreviation if opponent else "BYE"
             game_log_entry["home_or_away"] = game_obj.homeoraway
             
-            # Determine result (simplified - would need actual game results)
-            # For now, we'll use a placeholder
-            game_log_entry["result"] = "W"  # This would need actual game result logic
+            # Determine result based on actual game scores
+            if game_obj.away_score is not None and game_obj.home_score is not None:
+                # Determine if this team won or lost
+                if game_obj.homeoraway == 'H':
+                    # Home team
+                    team_score = game_obj.home_score
+                    opponent_score = game_obj.away_score
+                elif game_obj.homeoraway == 'A':
+                    # Away team
+                    team_score = game_obj.away_score
+                    opponent_score = game_obj.home_score
+                else:
+                    # Neutral site - use the scores as they are stored
+                    team_score = game_obj.home_score if game_obj.homeoraway == 'H' else game_obj.away_score
+                    opponent_score = game_obj.away_score if game_obj.homeoraway == 'H' else game_obj.home_score
+                
+                # Determine win/loss and format result
+                if team_score > opponent_score:
+                    result = f"W {team_score}-{opponent_score}"
+                elif team_score < opponent_score:
+                    result = f"L {team_score}-{opponent_score}"
+                else:
+                    result = f"T {team_score}-{opponent_score}"
+                
+                game_log_entry["result"] = result
+            else:
+                # No score data available yet
+                game_log_entry["result"] = "NA"
         
         # Add actuals data if available
         if actuals:

@@ -419,7 +419,7 @@ class PlayerPropBet(Base):
     
     # Indexes for common lookup patterns
     __table_args__ = (
-        Index('ux_prop_bets_unique', 'week_id', 'game_id', 'bookmaker', 'market', 'outcome_name', 'playerDkId', 'outcome_point', unique=True),
+        Index('ux_prop_bets_unique_new', 'week_id', 'game_id', 'bookmaker', 'market', 'outcome_name', 'playerDkId', unique=True),
     )
 
 class DKContestDetail(Base):
