@@ -11,6 +11,7 @@ from app.schemas import (
 )
 from app.services.nflverse_service import NFLVerseService
 from app.services.activity_logging import ActivityLoggingService
+from app.services.dk_defense_scoring_service import DKDefenseScoringService
 from sqlalchemy import and_
 import time
 
@@ -169,6 +170,7 @@ async def import_matched_team_stats(
                 
                 # Calculated fields
                 "dk_defense_score": float(team_data.get('dk_defense_score', 0)) if team_data.get('dk_defense_score') is not None else 0,
+                "points_allowed": int(team_data.get('points_allowed', 0)) if team_data.get('points_allowed') is not None else 0,
             }
             
             if existing_stats:
@@ -364,3 +366,71 @@ async def import_team_stats_from_nflverse(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error importing from NFLVerse: {str(e)}")
+
+@router.post("/recalculate-dk-scores/{week_id}")
+async def recalculate_dk_defense_scores(
+    week_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Recalculate DK defense scores for all teams in a specific week.
+    This is useful for backfilling historical data with the new scoring system.
+    """
+    try:
+        # Get all team stats for the week
+        team_stats_list = db.query(TeamStats).filter(TeamStats.week_id == week_id).all()
+        
+        if not team_stats_list:
+            raise HTTPException(status_code=404, detail=f"No team stats found for week {week_id}")
+        
+        updated_count = 0
+        errors = []
+        
+        for team_stats in team_stats_list:
+            try:
+                # Get points allowed from games table
+                points_allowed = NFLVerseService.get_points_allowed_for_team(
+                    db, team_stats.team_id, week_id
+                )
+                
+                # Create stats dictionary for scoring calculation
+                # Convert Decimal fields to float for compatibility
+                stats_dict = {
+                    'def_sacks': float(team_stats.def_sacks or 0),
+                    'def_interceptions': float(team_stats.def_interceptions or 0),
+                    'fumble_recovery_opp': float(team_stats.fumble_recovery_opp or 0),
+                    'def_tds': float(team_stats.def_tds or 0),
+                    'special_teams_tds': float(team_stats.special_teams_tds or 0),
+                    'def_safeties': float(team_stats.def_safeties or 0),
+                }
+                
+                # Calculate new DK defense score
+                new_score = DKDefenseScoringService.calculate_defense_score_from_dict(
+                    stats_dict, points_allowed
+                )
+                
+                # Update the team stats record
+                team_stats.dk_defense_score = new_score
+                team_stats.points_allowed = points_allowed
+                
+                updated_count += 1
+                
+            except Exception as e:
+                errors.append(f"Error updating team {team_stats.team_id}: {str(e)}")
+                continue
+        
+        # Commit all changes
+        db.commit()
+        
+        return {
+            "status": "success",
+            "week_id": week_id,
+            "total_teams": len(team_stats_list),
+            "updated_count": updated_count,
+            "errors": errors,
+            "message": f"Successfully recalculated DK defense scores for {updated_count} teams"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error recalculating DK scores: {str(e)}")

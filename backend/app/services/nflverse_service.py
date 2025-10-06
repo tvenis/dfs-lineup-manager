@@ -7,7 +7,8 @@ import nflreadpy as nfl
 import polars as pl
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
-from app.models import Player, Week, Team, TeamStats
+from app.models import Player, Week, Team, TeamStats, Game
+from app.services.dk_defense_scoring_service import DKDefenseScoringService
 
 
 class NFLVerseService:
@@ -495,42 +496,91 @@ class NFLVerseService:
         return defense_data
     
     @staticmethod
-    def calculate_dk_defense_score(stats: Dict[str, Any]) -> float:
+    def calculate_dk_defense_score(stats: Dict[str, Any], db: Session = None, team_id: int = None, week_id: int = None) -> float:
         """
         Calculate DraftKings fantasy points for defense based on stats
-        DraftKings Defense scoring:
-        - Sacks: +1 point each
-        - Interceptions: +2 points each
-        - Fumble Recoveries: +2 points each
-        - Safeties: +2 points each
-        - Defensive TDs: +6 points each
-        - Points Allowed: Variable (to be implemented later)
+        
+        Args:
+            stats: Dictionary containing team defensive statistics
+            db: Database session (optional, for getting points allowed)
+            team_id: Team ID (optional, for getting points allowed from games table)
+            week_id: Week ID (optional, for getting points allowed from games table)
+        
+        Returns:
+            Total DraftKings fantasy points for defense
         """
-        points = 0.0
+        # Calculate basic stats using our dedicated service
+        points_allowed = 0
         
-        # Sacks: +1 point each
-        if stats.get("def_sacks"):
-            points += stats["def_sacks"] * 1
+        # Try to get points allowed from games table if database session is provided
+        if db and team_id and week_id:
+            try:
+                # Get the game record for this team and week
+                game = db.query(Game).filter(
+                    and_(
+                        Game.team_id == team_id,
+                        Game.week_id == week_id
+                    )
+                ).first()
+                
+                if game and game.away_score is not None and game.home_score is not None:
+                    # Determine points allowed based on home/away
+                    if game.homeoraway == 'H':
+                        # Home team, so away team scored against them
+                        points_allowed = game.away_score
+                    elif game.homeoraway == 'A':
+                        # Away team, so home team scored against them
+                        points_allowed = game.home_score
+                    else:
+                        # Neutral site, use the appropriate score
+                        points_allowed = game.away_score if game.homeoraway == 'A' else game.home_score
+                        
+            except Exception as e:
+                print(f"Warning: Could not get points allowed for team {team_id}, week {week_id}: {e}")
+                points_allowed = 0
         
-        # Interceptions: +2 points each
-        if stats.get("def_interceptions"):
-            points += stats["def_interceptions"] * 2
+        # Use our dedicated DK Defense Scoring Service
+        return DKDefenseScoringService.calculate_defense_score_from_dict(stats, points_allowed)
+    
+    @staticmethod
+    def get_points_allowed_for_team(db: Session, team_id: int, week_id: int) -> int:
+        """
+        Get points allowed for a team from the games table.
         
-        # Fumble Recoveries: +2 points each
-        if stats.get("fumble_recovery_opp"):
-            points += stats["fumble_recovery_opp"] * 2
-        
-        # Safeties: +2 points each
-        if stats.get("def_safeties"):
-            points += stats["def_safeties"] * 2
-        
-        # Defensive TDs: +6 points each
-        if stats.get("def_tds"):
-            points += stats["def_tds"] * 6
-        
-        # Points Allowed scoring will be implemented later when we have a better source
-        
-        return round(points, 2)
+        Args:
+            db: Database session
+            team_id: Team ID
+            week_id: Week ID
+            
+        Returns:
+            Points scored against the team's defense
+        """
+        try:
+            # Get the game record for this team and week
+            game = db.query(Game).filter(
+                and_(
+                    Game.team_id == team_id,
+                    Game.week_id == week_id
+                )
+            ).first()
+            
+            if game and game.away_score is not None and game.home_score is not None:
+                # Determine points allowed based on home/away
+                if game.homeoraway == 'H':
+                    # Home team, so away team scored against them
+                    return game.away_score
+                elif game.homeoraway == 'A':
+                    # Away team, so home team scored against them
+                    return game.home_score
+                else:
+                    # Neutral site, use the appropriate score
+                    return game.away_score if game.homeoraway == 'A' else game.home_score
+            
+            return 0
+            
+        except Exception as e:
+            print(f"Warning: Could not get points allowed for team {team_id}, week {week_id}: {e}")
+            return 0
     
     @staticmethod
     def match_team(
@@ -607,10 +657,7 @@ class NFLVerseService:
             # Map stats
             defense_data = NFLVerseService.map_team_stats_to_defense(nfl_team)
             
-            # Calculate DK defense score
-            defense_data["dk_defense_score"] = NFLVerseService.calculate_dk_defense_score(defense_data)
-            
-            # Try to match team
+            # Try to match team first (needed for points allowed calculation)
             team_abbr = nfl_team.get("team", "")
             opponent_abbr = nfl_team.get("opponent_team", "")
             
@@ -632,6 +679,19 @@ class NFLVerseService:
                 else:
                     defense_data["opponent_team_id"] = None
                     defense_data["opponent_name"] = opponent_abbr
+                
+                # Calculate DK defense score with points allowed from games table
+                defense_data["dk_defense_score"] = NFLVerseService.calculate_dk_defense_score(
+                    defense_data, 
+                    db=db, 
+                    team_id=matched_team.id, 
+                    week_id=week_id
+                )
+                
+                # Also store points_allowed for future reference
+                defense_data["points_allowed"] = NFLVerseService.get_points_allowed_for_team(
+                    db, matched_team.id, week_id
+                )
                 
                 matched_teams.append(defense_data)
             else:

@@ -1142,6 +1142,7 @@ class TeamStatsBase(BaseModel):
     
     # Calculated fields
     dk_defense_score: Optional[float] = Field(default=0)
+    points_allowed: Optional[int] = Field(default=0, description="Points scored against this team's defense")
 
 class TeamStatsCreate(TeamStatsBase):
     pass
@@ -1207,6 +1208,7 @@ class TeamStatsUpdate(BaseModel):
     penalties: Optional[float] = None
     penalty_yards: Optional[float] = None
     dk_defense_score: Optional[float] = None
+    points_allowed: Optional[int] = None
 
 class TeamStats(TeamStatsBase):
     id: int
