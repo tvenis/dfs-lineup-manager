@@ -36,6 +36,7 @@ interface TeamStats {
   special_teams_tds: number;
   def_safeties: number;
   blocked_kicks?: number; // optional for compatibility
+  salary: number;
   week: {
     week_number: number;
     season: number;
@@ -173,6 +174,7 @@ export default function TeamStatsPage() {
                     <TableRow>
                       <TableHead>Rank</TableHead>
                       <TableHead>Team</TableHead>
+                      <TableHead>Salary</TableHead>
                       <TableHead>DK Score</TableHead>
                       <TableHead>Pts Allowed</TableHead>
                       <TableHead>DK Points</TableHead>
@@ -203,6 +205,11 @@ export default function TeamStatsPage() {
                               <span className="text-sm text-muted-foreground">
                                 {stats.team.full_name}
                               </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm font-medium">
+                              ${stats.salary?.toLocaleString() || 'N/A'}
                             </div>
                           </TableCell>
                           <TableCell>

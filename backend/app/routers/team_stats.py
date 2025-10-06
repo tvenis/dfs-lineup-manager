@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from app.database import get_db
-from app.models import TeamStats, Team, Week
+from app.models import TeamStats, Team, Week, PlayerPoolEntry, Player
 from app.schemas import (
     TeamStatsImportRequest, 
     TeamStatsImportResponse,
@@ -260,6 +260,22 @@ async def get_team_stats_for_week(week_id: int, db: Session = Depends(get_db)):
     
     stats = db.query(TeamStats).filter(TeamStats.week_id == week_id).all()
     
+    # Fetch salary data for each team from PlayerPoolEntry (DST players)
+    for stat in stats:
+        # Find DST player for this team in the current week
+        dst_player = db.query(PlayerPoolEntry).join(Player).filter(
+            and_(
+                PlayerPoolEntry.week_id == week_id,
+                Player.position == 'DST',
+                Player.team_id == stat.team_id
+            )
+        ).first()
+        
+        if dst_player:
+            stat.salary = dst_player.salary
+        else:
+            stat.salary = 0  # Default to 0 if no DST player found
+    
     return TeamStatsListResponse(
         stats=stats,
         total=len(stats),
@@ -279,6 +295,20 @@ async def get_team_stats_for_team_and_week(team_id: int, week_id: int, db: Sessi
     
     if not stats:
         raise HTTPException(status_code=404, detail="Team defense stats not found for this week")
+    
+    # Fetch salary data from PlayerPoolEntry (DST player)
+    dst_player = db.query(PlayerPoolEntry).join(Player).filter(
+        and_(
+            PlayerPoolEntry.week_id == week_id,
+            Player.position == 'DST',
+            Player.team_id == team_id
+        )
+    ).first()
+    
+    if dst_player:
+        stats.salary = dst_player.salary
+    else:
+        stats.salary = 0  # Default to 0 if no DST player found
     
     return stats
 

@@ -1166,6 +1166,7 @@ class TeamStatsBase(BaseModel):
     # Calculated fields
     dk_defense_score: Optional[float] = Field(default=0)
     points_allowed: Optional[int] = Field(default=0, description="Points scored against this team's defense")
+    salary: Optional[int] = Field(default=0, description="DraftKings salary for this team's defense")
 
 class TeamStatsCreate(TeamStatsBase):
     pass
