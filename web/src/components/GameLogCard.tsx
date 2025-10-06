@@ -118,21 +118,44 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
     }
   };
 
-  const getResultColor = (result: string | null) => {
-    if (!result) return 'bg-gray-100';
+  const formatGameResult = (result: string | null) => {
+    if (!result) return null;
     
-    // Handle new format with scores: "W 26-23", "L 17-31", "T 14-14", "NA"
-    if (result.startsWith('W ')) return 'bg-green-100 text-green-800';
-    if (result.startsWith('L ')) return 'bg-red-100 text-red-800';
-    if (result.startsWith('T ')) return 'bg-yellow-100 text-yellow-800';
-    if (result === 'NA') return 'bg-gray-100 text-gray-600';
+    // Handle new format with scores: "W 26-23", "L 17-31", "T 14-14"
+    if (result.startsWith('W ')) {
+      const score = result.substring(2); // Get everything after "W "
+      return (
+        <>
+          <span className="text-green-600 font-semibold">W</span> {score}
+        </>
+      );
+    }
+    if (result.startsWith('L ')) {
+      const score = result.substring(2); // Get everything after "L "
+      return (
+        <>
+          <span className="text-red-600 font-semibold">L</span> {score}
+        </>
+      );
+    }
+    if (result.startsWith('T ')) {
+      const score = result.substring(2); // Get everything after "T "
+      return (
+        <>
+          <span className="text-yellow-600 font-semibold">T</span> {score}
+        </>
+      );
+    }
+    if (result === 'NA') {
+      return <span className="text-gray-600">NA</span>;
+    }
     
     // Handle legacy single character format
     switch (result) {
-      case 'W': return 'bg-green-100 text-green-800';
-      case 'L': return 'bg-red-100 text-red-800';
-      case 'T': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100';
+      case 'W': return <span className="text-green-600 font-semibold">W</span>;
+      case 'L': return <span className="text-red-600 font-semibold">L</span>;
+      case 'T': return <span className="text-yellow-600 font-semibold">T</span>;
+      default: return <span className="text-gray-600">{result}</span>;
     }
   };
 
@@ -251,9 +274,9 @@ export function GameLogCard({ playerId, playerPosition }: GameLogCardProps) {
                     <td className="p-2 text-center">{formatHomeOrAway(game.home_or_away)}</td>
                     <td className="p-2 text-center">
                       {game.result ? (
-                        <Badge className={`text-xs ${getResultColor(game.result)}`}>
-                          {game.result}
-                        </Badge>
+                        <span className="text-xs">
+                          {formatGameResult(game.result)}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
