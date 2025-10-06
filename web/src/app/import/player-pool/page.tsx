@@ -319,6 +319,13 @@ export default function PlayerPoolImportPage() {
                 Player data will be fetched from DraftKings API using the Draft Group number for the selected week.
               </AlertDescription>
             </Alert>
+            
+            <Alert className="mt-4">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                Import a draftgroup with all games for the week first, followed by the Main Slate. Then set the Main Slate as the default group. This will add all players to the system while maintaining the Main Slate as the default.
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
       </div>
