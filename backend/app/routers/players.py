@@ -107,6 +107,7 @@ def get_player_profiles(
 
 @router.get("/profiles-with-pool-data", response_model=PlayerListWithPoolDataResponse)
 def get_player_profiles_with_pool_data(
+    draft_group: str = Query(..., description="Draft group ID"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     position: Optional[str] = Query(None),
@@ -130,7 +131,8 @@ def get_player_profiles_with_pool_data(
         db.query(Player, PlayerPoolEntry)
         .join(PlayerPoolEntry, 
               and_(PlayerPoolEntry.playerDkId == Player.playerDkId,
-                   PlayerPoolEntry.week_id == week_id))
+                   PlayerPoolEntry.week_id == week_id,
+                   PlayerPoolEntry.draftGroup == draft_group))
     )
     
     if position and position != "All":
@@ -205,6 +207,7 @@ def get_player_profiles_with_pool_data(
 
 @router.get("/profiles-with-pool-data-optimized", response_model=PlayerListWithPoolDataResponse)
 def get_player_profiles_with_pool_data_optimized(
+    draft_group: str = Query(..., description="Draft group ID"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     position: Optional[str] = Query(None),
@@ -252,7 +255,8 @@ def get_player_profiles_with_pool_data_optimized(
         )
         .outerjoin(PlayerPoolEntry, 
               and_(PlayerPoolEntry.playerDkId == Player.playerDkId,
-                   PlayerPoolEntry.week_id == week_id))
+                   PlayerPoolEntry.week_id == week_id,
+                   PlayerPoolEntry.draftGroup == draft_group))
         .outerjoin(consistency_subquery, 
                   consistency_subquery.c.playerDkId == Player.playerDkId)
     )
@@ -383,6 +387,7 @@ def create_player_pool_entry(entry: PlayerPoolEntryCreate, db: Session = Depends
 @router.get("/pool/{week_id}", response_model=PlayerPoolResponse)
 def get_player_pool(
     week_id: int,
+    draft_group: str = Query(..., description="Draft group ID"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     position: Optional[str] = Query(None),
@@ -391,14 +396,19 @@ def get_player_pool(
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    """Get player pool for a specific week with filtering and pagination"""
+    """Get player pool for a specific week and draft group with filtering and pagination"""
     # Check if week exists
     week = db.query(Week).filter(Week.id == week_id).first()
     if not week:
         raise HTTPException(status_code=404, detail="Week not found")
     
     # Start with base query and always join Player to ensure relationships are loaded
-    query = db.query(PlayerPoolEntry).join(Player).filter(PlayerPoolEntry.week_id == week_id)
+    query = db.query(PlayerPoolEntry).join(Player).filter(
+        and_(
+            PlayerPoolEntry.week_id == week_id,
+            PlayerPoolEntry.draftGroup == draft_group
+        )
+    )
     
     if position:
         query = query.filter(func.upper(Player.position) == position.upper())
@@ -429,6 +439,7 @@ def get_player_pool(
 @router.get("/pool/{week_id}/analysis", response_model=PlayerPoolAnalysisResponse)
 def get_player_pool_with_analysis(
     week_id: int,
+    draft_group: str = Query(..., description="Draft group ID"),
     db: Session = Depends(get_db)
 ):
     """Return player pool entries joined with Players and Games for the Active (or specified) week.
@@ -453,7 +464,12 @@ def get_player_pool_with_analysis(
             Game,
             (Game.week_id == PlayerPoolEntry.week_id) & (Game.team_id == Player.team_id)
         )
-        .filter(PlayerPoolEntry.week_id == week_id)
+        .filter(
+            and_(
+                PlayerPoolEntry.week_id == week_id,
+                PlayerPoolEntry.draftGroup == draft_group
+            )
+        )
     )
 
     rows = query.all()
@@ -477,6 +493,7 @@ def get_player_pool_with_analysis(
 @router.get("/pool/{week_id}/complete")
 def get_player_pool_complete(
     week_id: int,
+    draft_group: str = Query(..., description="Draft group ID"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     position: Optional[str] = Query(None),
@@ -509,7 +526,12 @@ def get_player_pool_complete(
             Game,
             (Game.week_id == PlayerPoolEntry.week_id) & (Game.team_id == Player.team_id)
         )
-        .filter(PlayerPoolEntry.week_id == week_id)
+        .filter(
+            and_(
+                PlayerPoolEntry.week_id == week_id,
+                PlayerPoolEntry.draftGroup == draft_group
+            )
+        )
     )
     
     # Apply filters
