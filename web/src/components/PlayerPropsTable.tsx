@@ -49,7 +49,10 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
   const [activeWeekId, setActiveWeekId] = useState<number | null>(null);
   const [selectedBookmaker, setSelectedBookmaker] = useState<string>("all");
   const [selectedMarket, setSelectedMarket] = useState<string>("player_tds_over");
+  const [selectedPlayer, setSelectedPlayer] = useState<string>("all");
+  const [selectedResult, setSelectedResult] = useState<string>("all");
   const [availableBookmakers, setAvailableBookmakers] = useState<string[]>([]);
+  const [availablePlayers, setAvailablePlayers] = useState<string[]>([]);
 
   // Calculate summary statistics from filtered props data
   const summaryStats = useMemo(() => {
@@ -110,7 +113,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     if (selectedWeekId) {
       fetchPlayerProps();
     }
-  }, [selectedWeekId, selectedBookmaker, selectedMarket]);
+  }, [selectedWeekId, selectedBookmaker, selectedMarket, selectedPlayer, selectedResult]);
 
 
   const fetchPlayerProps = async () => {
@@ -127,9 +130,12 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
         const data = await response.json();
         setPropsData(data);
         
-        // Extract unique bookmakers from the data
-        const bookmakers = [...new Set(data.map((p: any) => p.bookmaker).filter(Boolean))].sort() as string[];
-        setAvailableBookmakers(bookmakers);
+      // Extract unique bookmakers and players from the data
+      const bookmakers = [...new Set(data.map((p: any) => p.bookmaker).filter(Boolean))].sort() as string[];
+      setAvailableBookmakers(bookmakers);
+      
+      const players = [...new Set(data.map((p: any) => p.player_name).filter(Boolean))].sort() as string[];
+      setAvailablePlayers(players);
       } else {
         console.error("Failed to fetch player props");
         setPropsData([]);
@@ -170,7 +176,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-1/2">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="bg-blue-50 border-blue-200">
@@ -185,7 +191,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
 
         <Card className="bg-green-50 border-green-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Overs → Hits</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-700">Overs</CardTitle>
             <Check className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -205,7 +211,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
 
         <Card className="bg-red-50 border-red-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-700">Unders → Misses</CardTitle>
+            <CardTitle className="text-sm font-medium text-red-700">Unders</CardTitle>
             <X className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
