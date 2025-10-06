@@ -23,7 +23,7 @@ except Exception as e:
 
 # Import routers conditionally to avoid database import errors
 try:
-    from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments, recent_activity, player_aliases, team_stats, game_results, weekly_summary, ownership_estimates, players_optimized
+    from app.routers import players, lineups, csv_import, teams, weeks, draftkings_import, projections, odds_api, games, contests, actuals, draftgroups, players_batch, tips, firecrawl, import_opponent_roster, comments, recent_activity, player_aliases, team_stats, game_results, weekly_summary, ownership_estimates, players_optimized, dst
     ROUTERS_AVAILABLE = True
 except Exception as e:
     print(f"⚠️ Router imports failed: {e}")
@@ -34,7 +34,7 @@ except Exception as e:
     actuals = draftgroups = players_batch = tips = firecrawl = None
     players_optimized = None
     import_opponent_roster = comments = recent_activity = player_aliases = None
-    team_stats = game_results = weekly_summary = ownership_estimates = None
+    team_stats = game_results = weekly_summary = ownership_estimates = dst = None
 
 # Create database tables - moved to startup event
 
@@ -89,6 +89,7 @@ if ROUTERS_AVAILABLE:
     if game_results: app.include_router(game_results.router, prefix="", tags=["game-results"])
     if weekly_summary: app.include_router(weekly_summary.router, prefix="", tags=["weekly-summary"])
     if ownership_estimates: app.include_router(ownership_estimates.router, prefix="", tags=["ownership-estimates"])
+    if dst: app.include_router(dst.router, prefix="", tags=["dst"])
 else:
     print("⚠️ Skipping router registration due to import failures") 
 
