@@ -98,6 +98,19 @@ export default function TeamStatsPage() {
     return { icon: TrendingDown, color: 'text-red-600', label: 'Poor' };
   };
 
+  // Calculate DK points awarded for points allowed
+  const getDKPointsForPointsAllowed = (pointsAllowed: number | null): number => {
+    if (pointsAllowed === null || pointsAllowed === undefined) return 0;
+    
+    if (pointsAllowed === 0) return 10.0;
+    else if (1 <= pointsAllowed && pointsAllowed <= 6) return 7.0;
+    else if (7 <= pointsAllowed && pointsAllowed <= 13) return 4.0;
+    else if (14 <= pointsAllowed && pointsAllowed <= 20) return 1.0;
+    else if (21 <= pointsAllowed && pointsAllowed <= 27) return 0.0;
+    else if (28 <= pointsAllowed && pointsAllowed <= 34) return -1.0;
+    else return -4.0; // 35+ points allowed
+  };
+
   // Sort team stats by DK defense score (descending)
   const sortedTeamStats = [...teamStats].sort((a, b) => (b.dk_defense_score || 0) - (a.dk_defense_score || 0));
 
@@ -148,7 +161,7 @@ export default function TeamStatsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5" />
-                  Team Defense Rankings
+                  Team Defense Scoring
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -159,10 +172,14 @@ export default function TeamStatsPage() {
                       <TableHead>Team</TableHead>
                       <TableHead>DK Score</TableHead>
                       <TableHead>Pts Allowed</TableHead>
+                      <TableHead>DK Points</TableHead>
                       <TableHead>Sacks</TableHead>
                       <TableHead>INTs</TableHead>
-                      <TableHead>TDs</TableHead>
+                      <TableHead>Fumble Rec</TableHead>
+                      <TableHead>Def TDs</TableHead>
+                      <TableHead>ST TDs</TableHead>
                       <TableHead>Safeties</TableHead>
+                      <TableHead>Blocked Kicks</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -206,10 +223,19 @@ export default function TeamStatsPage() {
                               {stats.points_allowed || 'N/A'}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            {stats.points_allowed !== null && stats.points_allowed !== undefined 
+                              ? `${getDKPointsForPointsAllowed(stats.points_allowed) > 0 ? '+' : ''}${getDKPointsForPointsAllowed(stats.points_allowed).toFixed(1)}`
+                              : 'N/A'
+                            }
+                          </TableCell>
                           <TableCell>{stats.def_sacks || 0}</TableCell>
                           <TableCell>{stats.def_interceptions || 0}</TableCell>
+                          <TableCell>{stats.fumble_recovery_opp || 0}</TableCell>
                           <TableCell>{stats.def_tds || 0}</TableCell>
+                          <TableCell>{stats.special_teams_tds || 0}</TableCell>
                           <TableCell>{stats.def_safeties || 0}</TableCell>
+                          <TableCell>{stats.blocked_kicks || 0}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -241,9 +267,11 @@ export default function TeamStatsPage() {
                   <div className="font-medium">Defensive Stats:</div>
                   <div>• Sacks: +1 point each</div>
                   <div>• Interceptions: +2 points each</div>
+                  <div>• Fumble Recovery: +2 points each</div>
                   <div>• Defensive TDs: +6 points each</div>
                   <div>• Special Teams TDs: +6 points each</div>
                   <div>• Safeties: +2 points each</div>
+                  <div>• Blocked Kicks: +2 points each</div>
                 </div>
                 <div className="space-y-1 pt-2 border-t">
                   <div className="font-medium">Points Allowed:</div>
