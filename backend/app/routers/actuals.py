@@ -611,6 +611,7 @@ async def get_player_actuals_summary(
 async def import_from_nflverse(
     request_data: Dict[str, Any],
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
@@ -660,6 +661,7 @@ async def import_from_nflverse(
             import_result = await import_matched_actuals(
                 request_data={'week_id': week_id, 'matched_players': auto_import_players},
                 request=request,
+                background_tasks=background_tasks,
                 db=db
             )
             
