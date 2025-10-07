@@ -612,7 +612,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
                       <SelectContent>
                         {weeks.map((week) => (
                           <SelectItem key={week.id} value={week.id.toString()}>
-                            {getWeekLabel(week)} {week.status === 'Active' ? '(Active)' : ''}
+                            {getWeekLabel(week)}
                           </SelectItem>
                         ))}
                       </SelectContent>
