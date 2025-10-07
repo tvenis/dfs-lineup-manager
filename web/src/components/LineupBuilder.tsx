@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { PlayerService } from '@/lib/playerService'
-import { LineupService } from '@/lib/lineupService'
+import { LineupService, LineupCreateWithDraftGroup } from '@/lib/lineupService'
 import { WeekService } from '@/lib/weekService'
 import { API_CONFIG, buildApiUrl } from '@/config/api'
 import { LineupDisplayData, LineupPlayer } from '@/types/prd'
@@ -676,11 +676,12 @@ export function LineupBuilder({
         }
       })
 
-      const lineupData = {
+      const lineupData: LineupCreateWithDraftGroup = {
         week_id: currentWeek.id,
         name: lineupName.trim(),
         tags: tags.split(',').map(t => t.trim()).filter(t => t.length > 0),
-        slots
+        slots,
+        draftGroup: draftGroupFilter !== 'all' ? draftGroupFilter : draftGroups[0]?.draftGroup?.toString() || '1'
       }
 
       await LineupService.createLineup(lineupData)

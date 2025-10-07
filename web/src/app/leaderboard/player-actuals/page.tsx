@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PlayerActualsTable } from "@/components/PlayerActualsTable";
+import { Top25ByPositionTable } from "@/components/Top25ByPositionTable";
 
 export default function PlayerActualsPage() {
   return (
@@ -15,13 +16,11 @@ export default function PlayerActualsPage() {
         </p>
       </div>
 
-      {/* Player Actuals Table */}
-      <PlayerActualsTable />
-      
-      {/* Future components can be added here */}
-      {/* Example: <PlayerActualsAnalytics /> */}
-      {/* Example: <PlayerActualsTrends /> */}
-      {/* Example: <PlayerActualsSummary /> */}
+      {/* Tables Side by Side */}
+      <div className="flex gap-6">
+        <PlayerActualsTable />
+        <Top25ByPositionTable />
+      </div>
     </div>
   );
 }

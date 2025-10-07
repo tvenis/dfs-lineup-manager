@@ -9,6 +9,10 @@ export interface LineupCreate {
   slots: Partial<Record<LineupSlotId, number>>; // playerDkId per slot
 }
 
+export interface LineupCreateWithDraftGroup extends LineupCreate {
+  draftGroup: string;
+}
+
 export interface LineupUpdate {
   name?: string;
   tags?: string[];
@@ -81,14 +85,18 @@ export class LineupService {
     }
   }
 
-  static async createLineup(lineup: LineupCreate): Promise<Lineup> {
+  static async createLineup(lineup: LineupCreateWithDraftGroup): Promise<Lineup> {
     try {
-      const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.LINEUPS), {
+      const { draftGroup, ...lineupData } = lineup;
+      const url = new URL(buildApiUrl(API_CONFIG.ENDPOINTS.LINEUPS));
+      url.searchParams.set('draftGroup', draftGroup);
+      
+      const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(lineup),
+        body: JSON.stringify(lineupData),
       });
       
       if (!response.ok) {

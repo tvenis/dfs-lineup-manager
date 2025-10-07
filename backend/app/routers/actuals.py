@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Dict, Any, Optional
 from app.database import get_db
 from app.models import PlayerActuals, Player, Week, PlayerPoolEntry, WeeklyPlayerSummary, Game, Team
@@ -357,6 +358,16 @@ async def get_all_player_actuals(
                 query = query.order_by(PlayerActuals.dk_actuals.desc().nullslast())
             else:
                 query = query.order_by(PlayerActuals.dk_actuals.asc().nullslast())
+        elif sort_by == "proj_consistency":
+            # Calculate Proj Consistency: (dk_points / projection) * 100
+            if sort_direction == "desc":
+                query = query.order_by(
+                    (PlayerActuals.dk_actuals / WeeklyPlayerSummary.consensus_projection * 100).desc().nullslast()
+                )
+            else:
+                query = query.order_by(
+                    (PlayerActuals.dk_actuals / WeeklyPlayerSummary.consensus_projection * 100).asc().nullslast()
+                )
         elif sort_by == "player_name":
             if sort_direction == "desc":
                 query = query.order_by(Player.displayName.desc())
@@ -372,6 +383,16 @@ async def get_all_player_actuals(
                 query = query.order_by(WeeklyPlayerSummary.consensus_projection.desc().nullslast())
             else:
                 query = query.order_by(WeeklyPlayerSummary.consensus_projection.asc().nullslast())
+        elif sort_by == "act_value":
+            # Calculate Act Value: dk_points / (salary / 1000)
+            if sort_direction == "desc":
+                query = query.order_by(
+                    (PlayerActuals.dk_actuals / (WeeklyPlayerSummary.baseline_salary / 1000.0)).desc().nullslast()
+                )
+            else:
+                query = query.order_by(
+                    (PlayerActuals.dk_actuals / (WeeklyPlayerSummary.baseline_salary / 1000.0)).asc().nullslast()
+                )
         elif sort_by == "ownership":
             if sort_direction == "desc":
                 query = query.order_by(WeeklyPlayerSummary.consensus_ownership.desc().nullslast())
@@ -431,6 +452,81 @@ async def get_all_player_actuals(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching player actuals: {str(e)}")
+
+@router.get("/top25")
+def get_top25_players_by_position(
+    position: str = Query(..., description="Position to filter by"),
+    limit: int = Query(25, ge=1, le=100, description="Maximum number of players to return"),
+    season: int = Query(2024, description="Season year"),
+    sort_by: str = Query("total_dk_points", description="Sort field"),
+    sort_direction: str = Query("desc", description="Sort direction (asc/desc)"),
+    db: Session = Depends(get_db)
+):
+    """Get top 25 players by position with YTD summed stats"""
+    try:
+        # Query to get YTD summed stats by player
+        query = db.query(
+            PlayerActuals.playerDkId,
+            Player.displayName.label('player_name'),
+            Player.position,
+            func.sum(PlayerActuals.dk_actuals).label('total_dk_points'),
+            func.sum(WeeklyPlayerSummary.consensus_projection).label('total_projection'),
+            func.count(PlayerActuals.id).label('games_played'),
+            func.avg(PlayerActuals.dk_actuals).label('avg_dk_points'),
+            func.avg(WeeklyPlayerSummary.consensus_projection).label('avg_projection')
+        ).join(
+            Player, PlayerActuals.playerDkId == Player.playerDkId
+        ).join(
+            WeeklyPlayerSummary, 
+            and_(
+                WeeklyPlayerSummary.playerDkId == PlayerActuals.playerDkId,
+                WeeklyPlayerSummary.week_id == PlayerActuals.week_id
+            )
+        ).filter(
+            Player.position == position
+        ).group_by(
+            PlayerActuals.playerDkId,
+            Player.displayName,
+            Player.position
+        )
+        
+        # Apply sorting
+        if sort_by == "total_dk_points":
+            if sort_direction == "desc":
+                query = query.order_by(func.sum(PlayerActuals.dk_actuals).desc())
+            else:
+                query = query.order_by(func.sum(PlayerActuals.dk_actuals).asc())
+        elif sort_by == "total_projection":
+            if sort_direction == "desc":
+                query = query.order_by(func.sum(WeeklyPlayerSummary.consensus_projection).desc())
+            else:
+                query = query.order_by(func.sum(WeeklyPlayerSummary.consensus_projection).asc())
+        
+        query = query.limit(limit)
+
+        results = query.all()
+        
+        players = []
+        for result in results:
+            players.append({
+                "player_id": result.playerDkId,
+                "player_name": result.player_name,
+                "position": result.position,
+                "total_projection": float(result.total_projection or 0),
+                "total_dk_points": float(result.total_dk_points or 0),
+                "games_played": result.games_played,
+                "avg_projection": float(result.avg_projection or 0),
+                "avg_dk_points": float(result.avg_dk_points or 0)
+            })
+
+        return {
+            "players": players,
+            "position": position,
+            "total_count": len(players)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching top 25 players: {str(e)}")
 
 @router.get("/summary", response_model=Dict[str, Any])
 async def get_player_actuals_summary(

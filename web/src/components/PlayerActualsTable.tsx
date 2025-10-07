@@ -192,7 +192,7 @@ export function PlayerActualsTable() {
   }, [searchTerm]);
 
   const handleWeekChange = (value: string) => {
-    setSelectedWeekId(value === "all" ? null : parseInt(value));
+    setSelectedWeekId(parseInt(value));
   };
 
   // Reset to page 1 when filters change
@@ -335,14 +335,32 @@ export function PlayerActualsTable() {
 
           <Card className="bg-purple-50 border-purple-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-700">Positions</CardTitle>
-              <Filter className="h-4 w-4 text-purple-500" />
+              <CardTitle className="text-sm font-medium text-purple-700">Projection Consistency</CardTitle>
+              <Target className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-900">
-                {Object.keys(summaryStats.position_breakdown).length}
+                {(() => {
+                  if (summaryStats.total_players === 0) return "0.00%";
+                  
+                  // Calculate weighted average of (actual / projection) for all players
+                  const totalActual = playerActuals.reduce((sum, player) => {
+                    return sum + (player.dk_points || 0);
+                  }, 0);
+                  
+                  const totalProjection = playerActuals.reduce((sum, player) => {
+                    return sum + (player.projection || 0);
+                  }, 0);
+                  
+                  if (totalProjection === 0) return "0.00%";
+                  
+                  const consistency = (totalActual / totalProjection) * 100;
+                  return `${consistency.toFixed(2)}%`;
+                })()}
               </div>
-              <div className="text-xs text-purple-600 mt-1">Different Positions</div>
+              <div className="text-xs text-purple-600 mt-1">
+                Actual vs Projected
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -351,13 +369,12 @@ export function PlayerActualsTable() {
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         {/* Week Filter */}
-        <Select value={selectedWeekId?.toString() || "all"} onValueChange={handleWeekChange}>
+        <Select value={selectedWeekId?.toString() || ""} onValueChange={handleWeekChange}>
           <SelectTrigger>
-            <SelectValue placeholder="All Weeks" />
+            <SelectValue placeholder="Select Week" />
           </SelectTrigger>
           <SelectContent>
             {activeWeekId && <SelectItem value={activeWeekId.toString()}>Week {weeks.find(w => w.id === activeWeekId)?.week_number} (Active)</SelectItem>}
-            <SelectItem value="all">All Weeks</SelectItem>
             {weeks.filter(week => week.id !== activeWeekId).map((week) => (
               <SelectItem key={week.id} value={week.id.toString()}>Week {week.week_number}</SelectItem>
             ))}
@@ -375,7 +392,6 @@ export function PlayerActualsTable() {
             <SelectItem value="RB">RB</SelectItem>
             <SelectItem value="WR">WR</SelectItem>
             <SelectItem value="TE">TE</SelectItem>
-            <SelectItem value="K">K</SelectItem>
             <SelectItem value="DST">DST</SelectItem>
           </SelectContent>
         </Select>
@@ -498,6 +514,28 @@ export function PlayerActualsTable() {
               </TableHead>
               <TableHead 
                 className="cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort("proj_consistency")}
+              >
+                <div className="flex items-center gap-1">
+                  Proj Consistency
+                  {sortColumn === "proj_consistency" && (
+                    sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                  )}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort("act_value")}
+              >
+                <div className="flex items-center gap-1">
+                  Act Value
+                  {sortColumn === "act_value" && (
+                    sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                  )}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort("ownership")}
               >
                 <div className="flex items-center gap-1">
@@ -545,14 +583,28 @@ export function PlayerActualsTable() {
                   {player.dk_points ? player.dk_points.toFixed(1) : "-"}
                 </TableCell>
                 <TableCell>
+                  {(() => {
+                    if (player.dk_points && player.projection && player.projection > 0) {
+                      const consistency = (player.dk_points / player.projection) * 100;
+                      return `${consistency.toFixed(2)}%`;
+                    }
+                    return "-";
+                  })()}
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    if (player.dk_points && player.salary) {
+                      const value = player.dk_points / (player.salary / 1000);
+                      return value.toFixed(2);
+                    }
+                    return "-";
+                  })()}
+                </TableCell>
+                <TableCell>
                   {player.ownership ? `${player.ownership.toFixed(1)}%` : "-"}
                 </TableCell>
                 <TableCell>
-                  {player.tier && (
-                    <Badge className={`${getTierColor(player.tier)} text-xs`}>
-                      {getTierLabel(player.tier)}
-                    </Badge>
-                  )}
+                  {player.tier ? player.tier : "-"}
                 </TableCell>
               </TableRow>
             ))}
