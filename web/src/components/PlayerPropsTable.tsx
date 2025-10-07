@@ -295,6 +295,17 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
 
   return (
     <div className="space-y-4 w-1/2">
+      {/* Player Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Input
+          placeholder="Search players..."
+          value={playerSearchTerm}
+          onChange={(e) => setPlayerSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="bg-blue-50 border-blue-200">
@@ -353,7 +364,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
         {/* Week Filter */}
         <Select value={selectedWeekId?.toString() || "all"} onValueChange={handleWeekChange}>
           <SelectTrigger>
@@ -384,16 +395,6 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           </SelectContent>
         </Select>
 
-        {/* Player Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search players..."
-            value={playerSearchTerm}
-            onChange={(e) => setPlayerSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
 
         {/* Tier Filter */}
         <Select value={selectedTier} onValueChange={handleTierChange}>
