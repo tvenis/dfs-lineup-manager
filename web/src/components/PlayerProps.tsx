@@ -283,7 +283,7 @@ export default function PlayerProps({ playerId, preFilteredWeek, preFilteredBook
                     <TableCell>{p.outcome_point ?? ''}</TableCell>
                     <TableCell>{p.probability != null ? `${p.probability.toFixed(1)}%` : ''}</TableCell>
                     <TableCell>{p.actual_value != null ? p.actual_value.toFixed(1) : '-'}</TableCell>
-                    <TableCell>{getResultIcon(p.result_status)}</TableCell>
+                    <TableCell>{getResultIcon(p.result_status ?? null)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
