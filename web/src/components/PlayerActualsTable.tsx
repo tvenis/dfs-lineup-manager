@@ -243,7 +243,7 @@ export function PlayerActualsTable() {
     return { value: oprkValue, color };
   };
 
-  const formatOpponent = (opponent: string | null, homeoraway: string | null) => {
+  const formatOpponent = (opponent: string | null | undefined, homeoraway: string | null | undefined) => {
     if (!opponent) return "";
     const prefix = homeoraway === "H" ? "vs " : homeoraway === "A" ? "@ " : "";
     return `${prefix}${opponent}`;
