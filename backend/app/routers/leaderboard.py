@@ -11,7 +11,7 @@ router = APIRouter()
 def get_player_props_for_leaderboard(
     week: str = Query("active", description="Week ID number, 'active', or 'all'"),
     bookmaker: str = Query("all", description="Bookmaker name or 'all'"),
-    market: str = Query("player_tds_over", description="Market type"),
+    market: str = Query("anytime_td", description="Market type"),
     player_name: str = Query("all", description="Player name or 'all'"),
     result_status: str = Query("all", description="Result status: 'HIT', 'MISS', 'PUSH', 'NULL', or 'all'"),
     db: Session = Depends(get_db)
@@ -49,8 +49,25 @@ def get_player_props_for_leaderboard(
         if bookmaker != "all":
             query = query.filter(PlayerPropBet.bookmaker == bookmaker)
         
-        if market:
-            query = query.filter(PlayerPropBet.market == market)
+        if market and market != "all":
+            if market == "anytime_td":
+                # Special case: anytime_td filter should show player_tds_over with 0.5 points
+                query = query.filter(
+                    and_(
+                        PlayerPropBet.market == "player_tds_over",
+                        PlayerPropBet.outcome_point == 0.5
+                    )
+                )
+            elif market == "player_tds_1_5":
+                # Special case: player_tds_1_5 filter should show player_tds_over with 1.5 points
+                query = query.filter(
+                    and_(
+                        PlayerPropBet.market == "player_tds_over",
+                        PlayerPropBet.outcome_point == 1.5
+                    )
+                )
+            else:
+                query = query.filter(PlayerPropBet.market == market)
         
         if player_name != "all":
             query = query.filter(Player.displayName.ilike(f"%{player_name}%"))

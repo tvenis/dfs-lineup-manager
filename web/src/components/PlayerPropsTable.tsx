@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Check, X, Minus, Trophy, Target, Clock } from "lucide-react";
+import { Check, X, Minus, Trophy, Target, Clock, ChevronUp, ChevronDown } from "lucide-react";
 import { buildApiUrl } from "@/config/api";
 import { WeekService } from "@/lib/weekService";
 import type { Week } from "@/types/prd";
@@ -28,11 +28,12 @@ interface PlayerPropsData {
 interface PlayerPropsTableProps {}
 
 const MARKET_OPTIONS = [
-  { value: "player_tds_over", label: "Player TDs Over" },
+  { value: "anytime_td", label: "Anytime TD" },
+  { value: "player_tds_1_5", label: "1.5+ Player TDs" },
   { value: "player_pass_yds", label: "Passing Yards" },
   { value: "player_pass_tds", label: "Passing TDs" },
   { value: "player_pass_attempts", label: "Pass Attempts" },
-  { value: "player_pass_comp", label: "Pass Completions" },
+  { value: "player_pass_completions", label: "Pass Completions" },
   { value: "player_rush_yds", label: "Rushing Yards" },
   { value: "player_rush_tds", label: "Rushing TDs" },
   { value: "player_rec_yds", label: "Receiving Yards" },
@@ -48,11 +49,15 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
   const [activeWeekId, setActiveWeekId] = useState<number | null>(null);
   const [selectedBookmaker, setSelectedBookmaker] = useState<string>("all");
-  const [selectedMarket, setSelectedMarket] = useState<string>("player_tds_over");
+  const [selectedMarket, setSelectedMarket] = useState<string>("all");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("all");
   const [selectedResult, setSelectedResult] = useState<string>("all");
   const [availableBookmakers, setAvailableBookmakers] = useState<string[]>([]);
   const [availablePlayers, setAvailablePlayers] = useState<string[]>([]);
+  
+  // Sorting state
+  const [sortColumn, setSortColumn] = useState<string>("probability");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Calculate summary statistics from filtered props data
   const summaryStats = useMemo(() => {
@@ -76,14 +81,51 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
       }
     });
 
+    // Calculate percentages
+    const oversPercentage = totalProps > 0 ? (oversHits / totalProps) * 100 : 0;
+    const pushesPercentage = totalProps > 0 ? (pushes / totalProps) * 100 : 0;
+    const undersPercentage = totalProps > 0 ? (undersMisses / totalProps) * 100 : 0;
+    const notGradedPercentage = totalProps > 0 ? (notGraded / totalProps) * 100 : 0;
+
     return {
       totalProps,
       oversHits,
       pushes,
       undersMisses,
       notGraded,
+      oversPercentage,
+      pushesPercentage,
+      undersPercentage,
+      notGradedPercentage,
     };
   }, [propsData]);
+
+  // Sort the props data based on current sort settings
+  const sortedPropsData = useMemo(() => {
+    const sorted = [...propsData].sort((a, b) => {
+      let aValue: any = a[sortColumn as keyof PlayerPropsData];
+      let bValue: any = b[sortColumn as keyof PlayerPropsData];
+      
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) aValue = "";
+      if (bValue === null || bValue === undefined) bValue = "";
+      
+      // Handle numeric values
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Handle string values
+      const aStr = String(aValue).toLowerCase();
+      const bStr = String(bValue).toLowerCase();
+      
+      if (aStr < bStr) return sortDirection === "asc" ? -1 : 1;
+      if (aStr > bStr) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+    
+    return sorted;
+  }, [propsData, sortColumn, sortDirection]);
 
   // Fetch weeks on component mount (battle-tested pattern)
   useEffect(() => {
@@ -150,6 +192,37 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     }
   };
 
+  const handleWeekChange = (value: string) => {
+    setSelectedWeekId(value === "all" ? null : parseInt(value));
+  };
+
+  const handleBookmakerChange = (value: string) => {
+    setSelectedBookmaker(value);
+  };
+
+  const handleMarketChange = (value: string) => {
+    setSelectedMarket(value);
+  };
+
+  const handlePlayerChange = (value: string) => {
+    setSelectedPlayer(value);
+  };
+
+  const handleResultChange = (value: string) => {
+    setSelectedResult(value);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to ascending
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   const getResultIcon = (resultStatus: string | null) => {
     switch (resultStatus) {
       case "HIT":
@@ -167,6 +240,24 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     if (!opponent) return "";
     const prefix = homeoraway === "H" ? "vs " : homeoraway === "A" ? "@ " : "";
     return `${prefix}${opponent}`;
+  };
+
+  const formatMarket = (market: string | null, outcomePoint: number | null) => {
+    if (!market) return "";
+    
+    // Special case for player_tds_over with 0.5 point = "Anytime TD"
+    if (market === "player_tds_over" && outcomePoint === 0.5) {
+      return "Anytime TD";
+    }
+    
+    // Special case for player_tds_over with 1.5 point = "1.5+ Player TDs"
+    if (market === "player_tds_over" && outcomePoint === 1.5) {
+      return "1.5+ Player TDs";
+    }
+    
+    // Find the formatted label from MARKET_OPTIONS
+    const marketOption = MARKET_OPTIONS.find(m => m.value === market);
+    return marketOption ? marketOption.label : market;
   };
 
   if (loading) {
@@ -198,6 +289,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900">{summaryStats.oversHits}</div>
+            <div className="text-xs text-green-600 mt-1">{summaryStats.oversPercentage.toFixed(2)}%</div>
           </CardContent>
         </Card>
 
@@ -208,6 +300,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-900">{summaryStats.pushes}</div>
+            <div className="text-xs text-yellow-600 mt-1">{summaryStats.pushesPercentage.toFixed(2)}%</div>
           </CardContent>
         </Card>
 
@@ -218,6 +311,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-900">{summaryStats.undersMisses}</div>
+            <div className="text-xs text-red-600 mt-1">{summaryStats.undersPercentage.toFixed(2)}%</div>
           </CardContent>
         </Card>
 
@@ -228,12 +322,14 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">{summaryStats.notGraded}</div>
+            <div className="text-xs text-gray-600 mt-1">{summaryStats.notGradedPercentage.toFixed(2)}%</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        {/* Week Filter */}
         <Select value={selectedWeekId?.toString() || "all"} onValueChange={handleWeekChange}>
           <SelectTrigger>
             <SelectValue placeholder="All Weeks" />
@@ -241,35 +337,13 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           <SelectContent>
             {activeWeekId && <SelectItem value={activeWeekId.toString()}>Week {weeks.find(w => w.id === activeWeekId)?.week_number} (Active)</SelectItem>}
             <SelectItem value="all">All Weeks</SelectItem>
-            {weeks.map((week) => (
+            {weeks.filter(week => week.id !== activeWeekId).map((week) => (
               <SelectItem key={week.id} value={week.id.toString()}>Week {week.week_number}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Select value={selectedBookmaker} onValueChange={handleBookmakerChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="All Bookmakers" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Bookmakers</SelectItem>
-            {availableBookmakers.map((bookmaker) => (
-              <SelectItem key={bookmaker} value={bookmaker}>{bookmaker}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={selectedMarket} onValueChange={handleMarketChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="All Markets" />
-          </SelectTrigger>
-          <SelectContent>
-            {MARKET_OPTIONS.map((market) => (
-              <SelectItem key={market.value} value={market.value}>{market.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
+        {/* Player Filter */}
         <Select value={selectedPlayer} onValueChange={handlePlayerChange}>
           <SelectTrigger>
             <SelectValue placeholder="All Players" />
@@ -282,6 +356,20 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           </SelectContent>
         </Select>
 
+        {/* Market Filter */}
+        <Select value={selectedMarket} onValueChange={handleMarketChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Markets" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Markets</SelectItem>
+            {MARKET_OPTIONS.map((market) => (
+              <SelectItem key={market.value} value={market.value}>{market.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Result Filter */}
         <Select value={selectedResult} onValueChange={handleResultChange}>
           <SelectTrigger>
             <SelectValue placeholder="All Results" />
@@ -292,6 +380,19 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
             <SelectItem value="MISS">MISS</SelectItem>
             <SelectItem value="PUSH">PUSH</SelectItem>
             <SelectItem value="NULL">NOT GRADED</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Bookmaker Filter */}
+        <Select value={selectedBookmaker} onValueChange={handleBookmakerChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Bookmakers" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Bookmakers</SelectItem>
+            {availableBookmakers.map((bookmaker) => (
+              <SelectItem key={bookmaker} value={bookmaker}>{bookmaker}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -306,20 +407,120 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50">
-                <th className="text-center p-2 font-medium w-16">Week</th>
-                <th className="text-left p-2 font-medium w-32">Player Name</th>
-                <th className="text-center p-2 font-medium w-20">Opponent</th>
-                <th className="text-center p-2 font-medium w-24">Bookmaker</th>
-                <th className="text-center p-2 font-medium w-32">Market</th>
-                <th className="text-right p-2 font-medium w-16">Price</th>
-                <th className="text-right p-2 font-medium w-16">Point</th>
-                <th className="text-right p-2 font-medium w-20">Probability</th>
-                <th className="text-right p-2 font-medium w-20">Actual Result</th>
-                <th className="text-center p-2 font-medium w-20">Result</th>
+                <th 
+                  className="text-center p-2 font-medium w-16 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("week_number")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Week
+                    {sortColumn === "week_number" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-left p-2 font-medium w-32 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("player_name")}
+                >
+                  <div className="flex items-center gap-1">
+                    Player Name
+                    {sortColumn === "player_name" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-center p-2 font-medium w-20 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("opponent")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Opponent
+                    {sortColumn === "opponent" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-center p-2 font-medium w-24 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("bookmaker")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Bookmaker
+                    {sortColumn === "bookmaker" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-center p-2 font-medium w-32 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("market")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Market
+                    {sortColumn === "market" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-right p-2 font-medium w-16 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("outcome_price")}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Price
+                    {sortColumn === "outcome_price" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-right p-2 font-medium w-16 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("outcome_point")}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Prop
+                    {sortColumn === "outcome_point" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-right p-2 font-medium w-20 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("probability")}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Probability
+                    {sortColumn === "probability" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-right p-2 font-medium w-20 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("actual_value")}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Actual Result
+                    {sortColumn === "actual_value" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="text-center p-2 font-medium w-20 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("result_status")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Result
+                    {sortColumn === "result_status" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {propsData.map((prop, idx) => (
+              {sortedPropsData.map((prop, idx) => (
                 <tr key={`${prop.week_number}-${idx}-${prop.player_id}-${prop.market}`} className="border-b hover:bg-gray-50">
                   <td className="text-center p-2">{prop.week_number}</td>
                   <td className="text-left p-2">
@@ -332,7 +533,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
                   </td>
                   <td className="text-center p-2">{formatOpponent(prop.opponent, prop.homeoraway)}</td>
                   <td className="text-center p-2">{prop.bookmaker}</td>
-                  <td className="text-center p-2">{prop.market}</td>
+                  <td className="text-center p-2">{formatMarket(prop.market, prop.outcome_point)}</td>
                   <td className="text-right p-2">{prop.outcome_price ?? ''}</td>
                   <td className="text-right p-2">{prop.outcome_point ?? ''}</td>
                   <td className="text-right p-2">
