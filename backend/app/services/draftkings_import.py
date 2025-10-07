@@ -99,6 +99,19 @@ class DraftKingsImportService:
                 entries_skipped=0, auto_excluded_count=0, status_updates=0, errors=errors, total_processed=0
             )
         
+        # Check if this draft group has salary data (fail fast if not)
+        sample_salaries = [d.get('salary') for d in draftables[:10]]
+        has_any_salary = any(s is not None for s in sample_salaries)
+        
+        if not has_any_salary:
+            error_msg = f"Draft group {draft_group} has no salary data. This is likely a Full Slate before pricing is available. Please use a Main Slate draft group with salary information. Example working draft group: 134675"
+            errors.append(error_msg)
+            logger.error(error_msg)
+            return DraftKingsImportResponse(
+                players_added=0, players_updated=0, entries_added=0, entries_updated=0,
+                entries_skipped=0, auto_excluded_count=0, status_updates=0, errors=errors, total_processed=0
+            )
+        
         # Track processed players to avoid duplicates within this import
         processed_players = set()
         # Track players that were already processed in this import for better logging
@@ -115,6 +128,7 @@ class DraftKingsImportService:
                     # Extract player data
                     player_data = self._extract_player_data(draftable)
                     if not player_data:
+                        logger.warning(f"Failed to extract player data for draftable {i+1}/{len(draftables)}: {draftable.get('playerDkId', 'unknown')}")
                         continue
                     
                     player_dk_id = player_data['player']['playerDkId']
@@ -164,7 +178,9 @@ class DraftKingsImportService:
                     else:
                         # Process the pool entry
                         processed_pool_entries.add(pool_entry_key)
+                        logger.debug(f"Processing pool entry for {player_name} (ID: {player_dk_id}) in week {week_id}, draft group {draft_group}")
                         entry_result, status_was_updated = self._upsert_player_pool_entry_in_transaction(player_data['pool_entry'], week_id, draft_group, player_dk_id)
+                        logger.debug(f"Pool entry result for {player_name}: {entry_result}")
                         
                         # Count auto-excluded players
                         if player_data['pool_entry'].get('auto_excluded', False):
@@ -391,8 +407,12 @@ class DraftKingsImportService:
             
             # Validate required pool entry fields
             if pool_entry_data['salary'] is None:
-                logger.warning(f"Skipping draftable with no salary: {player_data['displayName']} (ID: {player_data['playerDkId']})")
+                error_msg = f"Draft group {draft_group} has no salary data. This typically means it's a Full Slate before pricing is available. Please use a draft group with salary information (Main Slate). Skipping player: {player_data['displayName']} (ID: {player_data['playerDkId']})"
+                logger.warning(error_msg)
                 return None
+            
+            # Log successful extraction for debugging
+            logger.debug(f"Successfully extracted data for {player_data['displayName']} (ID: {player_data['playerDkId']}): salary={pool_entry_data['salary']}, excluded={pool_entry_data['excluded']}, auto_excluded={pool_entry_data.get('auto_excluded', False)}")
             
             # Clean up status field - convert 'None' string to None or provide default
             if pool_entry_data['status'] == 'None' or pool_entry_data['status'] is None:
@@ -539,12 +559,12 @@ class DraftKingsImportService:
                 # Update existing entry - this handles cases where the same player appears
                 # at multiple positions (e.g., WR and FLEX) with potentially different attributes
                 # Define fields that can be updated
-                # Note: 'excluded' is NOT included here to preserve manual exclusion changes
+                # Note: 'excluded' has special logic to preserve manual exclusions while allowing auto-exclusions
                 updateable_fields = [
                     'draftableId', 'projectedPoints', 'salary', 'status', 'isDisabled', 
                     'playerGameHash', 'competitions', 'draftStatAttributes',
                     'playerAttributes', 'teamLeagueSeasonAttributes', 'playerGameAttributes',
-                    'draftAlerts', 'externalRequirements'
+                    'draftAlerts', 'externalRequirements', 'excluded', 'auto_excluded'
                 ]
                 updated = False
                 status_updated = False
@@ -552,15 +572,43 @@ class DraftKingsImportService:
                     if key in pool_entry_data and pool_entry_data[key] is not None:
                         current_value = getattr(existing_entry, key)
                         new_value = pool_entry_data[key]
-                        if current_value != new_value:
-                            setattr(existing_entry, key, new_value)
-                            updated = True
-                            # Track status updates specifically
-                            if key == 'status':
-                                status_updated = True
-                                logger.info(f"Updated player {player_dk_id} status: {current_value} -> {new_value}")
+                        
+                        # Special logic for excluded field: preserve manual exclusions, allow auto-exclusions to update
+                        if key == 'excluded':
+                            # Only update excluded status if:
+                            # 1. It's an auto-exclusion (auto_excluded=True), OR
+                            # 2. Current record is also auto-excluded (can be overridden), OR
+                            # 3. Current record is not excluded (can be excluded)
+                            current_auto_excluded = getattr(existing_entry, 'auto_excluded', False)
+                            new_auto_excluded = pool_entry_data.get('auto_excluded', False)
+                            
+                            if new_auto_excluded or current_auto_excluded or not current_value:
+                                # Allow the update
+                                if current_value != new_value:
+                                    setattr(existing_entry, key, new_value)
+                                    updated = True
+                                    logger.info(f"Updated player {player_dk_id} excluded status: {current_value} -> {new_value} (auto_excluded: {new_auto_excluded})")
                             else:
-                                logger.debug(f"Updated pool entry field {key}: {current_value} -> {new_value}")
+                                # Preserve manual exclusion
+                                logger.debug(f"Preserving manual exclusion for player {player_dk_id} (current: {current_value}, auto_excluded: {current_auto_excluded})")
+                                continue
+                        elif key == 'auto_excluded':
+                            # Always allow auto_excluded flag to be updated
+                            if current_value != new_value:
+                                setattr(existing_entry, key, new_value)
+                                updated = True
+                                logger.debug(f"Updated pool entry auto_excluded field: {current_value} -> {new_value}")
+                        else:
+                            # Standard field update logic
+                            if current_value != new_value:
+                                setattr(existing_entry, key, new_value)
+                                updated = True
+                                # Track status updates specifically
+                                if key == 'status':
+                                    status_updated = True
+                                    logger.info(f"Updated player {player_dk_id} status: {current_value} -> {new_value}")
+                                else:
+                                    logger.debug(f"Updated pool entry field {key}: {current_value} -> {new_value}")
                 
                 if updated:
                     logger.debug(f"Updated existing pool entry for player {player_dk_id}")

@@ -35,6 +35,7 @@ export default function PlayerPoolImportPage() {
     week_id: number;
     draftGroup_description: string;
     games: number;
+    is_default: boolean;
     created_at: string;
     updated_at: string;
   }>>([]);
@@ -69,6 +70,17 @@ export default function PlayerPoolImportPage() {
         const groups = Array.isArray(data) ? data : [];
         console.log('📋 Setting draft groups to:', groups);
         setDraftGroups(groups);
+        
+        // Auto-select the default draft group if available
+        const defaultGroup = groups.find((group: any) => group.is_default === true);
+        if (defaultGroup) {
+          console.log('🎯 Found default draft group:', defaultGroup);
+          setDraftGroup(defaultGroup.draftGroup.toString());
+        } else if (groups.length > 0) {
+          // If no default is set, use the first available group
+          console.log('⚠️ No default draft group found, using first available:', groups[0]);
+          setDraftGroup(groups[0].draftGroup.toString());
+        }
       } else {
         console.error('❌ Failed to fetch draft groups:', response.statusText);
       }
@@ -249,7 +261,7 @@ export default function PlayerPoolImportPage() {
                 <SelectContent>
                   {draftGroups.map((group) => (
                     <SelectItem key={group.draftGroup} value={group.draftGroup.toString()}>
-                      {group.draftGroup} - {group.draftGroup_description}
+                      {group.draftGroup} - {group.draftGroup_description} {group.is_default ? '(Default)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

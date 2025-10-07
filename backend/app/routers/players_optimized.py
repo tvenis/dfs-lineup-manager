@@ -5,7 +5,7 @@ from typing import List, Optional
 import uuid
 
 from app.database import get_db
-from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet, PlayerActuals
+from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet, PlayerActuals, WeeklyPlayerSummary
 from app.schemas import (
     PlayerCreate, PlayerUpdate, Player as PlayerSchema,
     PlayerPoolEntryCreate, PlayerPoolEntryUpdate, PlayerPoolEntry as PlayerPoolEntrySchema,
@@ -53,17 +53,21 @@ def get_player_profiles_with_pool_data_optimized(
         PlayerPoolEntry.projectedPoints.isnot(None)
     ).group_by(PlayerPoolEntry.playerDkId).subquery()
     
-    # Main query with left join to consistency data
+    # Main query with left join to pool data, weekly summary, and consistency data
     query = (
         db.query(
             Player,
             PlayerPoolEntry,
+            WeeklyPlayerSummary,
             consistency_subquery.c.ytd_actuals,
             consistency_subquery.c.ytd_projected
         )
-        .join(PlayerPoolEntry, 
+        .outerjoin(PlayerPoolEntry, 
               and_(PlayerPoolEntry.playerDkId == Player.playerDkId,
                    PlayerPoolEntry.week_id == week_id))
+        .outerjoin(WeeklyPlayerSummary,
+              and_(WeeklyPlayerSummary.playerDkId == Player.playerDkId,
+                   WeeklyPlayerSummary.week_id == week_id))
         .outerjoin(consistency_subquery, 
                   consistency_subquery.c.playerDkId == Player.playerDkId)
     )
@@ -86,7 +90,7 @@ def get_player_profiles_with_pool_data_optimized(
     
     # Process results (no additional queries needed)
     players_with_pool_data = []
-    for player, pool_entry, ytd_actuals, ytd_projected in results:
+    for player, pool_entry, weekly_summary, ytd_actuals, ytd_projected in results:
         # Calculate consistency from pre-computed values
         consistency = None
         if ytd_projected and ytd_projected > 0:
@@ -107,10 +111,10 @@ def get_player_profiles_with_pool_data_optimized(
             'hidden': player.hidden,
             'created_at': player.created_at,
             'updated_at': player.updated_at,
-            'currentWeekProj': pool_entry.projectedPoints,
-            'currentWeekSalary': pool_entry.salary,
+            'currentWeekProj': weekly_summary.consensus_projection if weekly_summary else None,
+            'currentWeekSalary': weekly_summary.baseline_salary if weekly_summary else None,
             'consistency': consistency,
-            'ownership': pool_entry.ownership,
+            'ownership': weekly_summary.consensus_ownership if weekly_summary else None,
             'status': pool_entry.status,
             'poolEntryId': pool_entry.id
         }

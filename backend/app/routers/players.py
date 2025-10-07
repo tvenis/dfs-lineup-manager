@@ -5,7 +5,7 @@ from typing import List, Optional
 import uuid
 
 from app.database import get_db
-from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet, PlayerActuals, Projection, TeamStats
+from app.models import Player, Team, PlayerPoolEntry, Week, Game, PlayerPropBet, PlayerActuals, WeeklyPlayerSummary, Projection, TeamStats
 from sqlalchemy.orm import aliased
 from app.schemas import (
     PlayerCreate, PlayerUpdate, Player as PlayerSchema,
@@ -225,13 +225,7 @@ def get_player_profiles_with_pool_data_optimized(
     except Exception:
         return PlayerListWithPoolDataResponse(players=[], total=0, page=1, size=limit)
     
-    # If no draft_group provided, get the default draft group for this week
-    if not draft_group:
-        from app.services.draft_group_service import DraftGroupService
-        default_draft_group = DraftGroupService.get_default_draft_group(db, week_id)
-        if not default_draft_group:
-            return PlayerListWithPoolDataResponse(players=[], total=0, page=1, size=limit)
-        draft_group = str(default_draft_group.draftGroup)
+    # Note: No longer filtering by draft group - using weekly_player_summary for consolidated data
     
     # Build the main query with consistency calculation in a single SQL query
     # This uses a subquery to calculate YTD totals for each player
@@ -253,18 +247,21 @@ def get_player_profiles_with_pool_data_optimized(
         PlayerActuals.dk_actuals.isnot(None)
     ).group_by(PlayerPoolEntry.playerDkId).subquery()
     
-    # Main query with left join to pool data and consistency data
+    # Main query with left join to pool data, weekly summary, and consistency data
     query = (
         db.query(
             Player,
             PlayerPoolEntry,
+            WeeklyPlayerSummary,
             consistency_subquery.c.ytd_actuals,
             consistency_subquery.c.ytd_projected
         )
         .outerjoin(PlayerPoolEntry, 
               and_(PlayerPoolEntry.playerDkId == Player.playerDkId,
-                   PlayerPoolEntry.week_id == week_id,
-                   PlayerPoolEntry.draftGroup == draft_group))
+                   PlayerPoolEntry.week_id == week_id))
+        .outerjoin(WeeklyPlayerSummary,
+              and_(WeeklyPlayerSummary.playerDkId == Player.playerDkId,
+                   WeeklyPlayerSummary.week_id == week_id))
         .outerjoin(consistency_subquery, 
                   consistency_subquery.c.playerDkId == Player.playerDkId)
     )
@@ -287,7 +284,7 @@ def get_player_profiles_with_pool_data_optimized(
     
     # Process results (no additional queries needed)
     players_with_pool_data = []
-    for player, pool_entry, ytd_actuals, ytd_projected in results:
+    for player, pool_entry, weekly_summary, ytd_actuals, ytd_projected in results:
         # Calculate consistency from pre-computed values
         consistency = None
         if ytd_projected and ytd_projected > 0:
@@ -308,10 +305,10 @@ def get_player_profiles_with_pool_data_optimized(
             'hidden': player.hidden,
             'created_at': player.created_at,
             'updated_at': player.updated_at,
-            'currentWeekProj': pool_entry.projectedPoints if pool_entry else None,
-            'currentWeekSalary': pool_entry.salary if pool_entry else None,
+            'currentWeekProj': weekly_summary.consensus_projection if weekly_summary else None,
+            'currentWeekSalary': weekly_summary.baseline_salary if weekly_summary else None,
             'consistency': consistency,
-            'ownership': pool_entry.ownership if pool_entry else None,
+            'ownership': weekly_summary.consensus_ownership if weekly_summary else None,
             'status': pool_entry.status if pool_entry else None,
             'poolEntryId': pool_entry.id if pool_entry else None
         }
