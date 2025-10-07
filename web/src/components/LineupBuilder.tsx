@@ -1068,7 +1068,7 @@ export function LineupBuilder({
                     <SelectItem value="all">All Draft Groups</SelectItem>
                     {draftGroups.map((group) => (
                       <SelectItem key={group.draftGroup} value={group.draftGroup.toString()}>
-                        {group.draftGroup_description || `Group ${group.draftGroup}`}
+                        {group.draftGroup_description} - {group.draftGroup}
                       </SelectItem>
                     ))}
                   </SelectContent>

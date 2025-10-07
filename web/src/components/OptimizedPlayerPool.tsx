@@ -197,7 +197,7 @@ export default function OptimizedPlayerPool() {
                 <SelectItem value="all">All Draft Groups</SelectItem>
                 {getUniqueDraftGroups.map((draftGroup) => (
                   <SelectItem key={draftGroup} value={draftGroup}>
-                    Draft Group {draftGroup}
+                    {draftGroup}
                   </SelectItem>
                 ))}
               </SelectContent>

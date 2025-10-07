@@ -393,17 +393,12 @@ class DraftKingsImportService:
                     elif isinstance(attr, dict) and attr.get('id') == 90:
                         logger.info(f"Found projected points data for {player_data.get('displayName', 'Unknown')}: {attr}")
             
-            # Auto-exclude players with zero or null projections (only applies to new records)
-            # Existing records will preserve their current 'excluded' status
-            if pool_entry_data['projectedPoints'] is None or pool_entry_data['projectedPoints'] == 0:
-                pool_entry_data['excluded'] = True
-                pool_entry_data['auto_excluded'] = True  # Flag to track auto-exclusion
-                logger.info(f"Auto-excluding player {player_data.get('displayName', 'Unknown')} (ID: {player_data.get('playerDkId', 'Unknown')}) due to zero/null projection (value: {pool_entry_data['projectedPoints']})")
-            else:
-                pool_entry_data['excluded'] = draftable.get('excluded', False)
-                pool_entry_data['auto_excluded'] = False
-                if pool_entry_data['excluded']:
-                    logger.debug(f"Player {player_data.get('displayName', 'Unknown')} manually excluded from DraftKings data")
+            # Set excluded status from DraftKings data (don't auto-exclude for missing projections)
+            # Since we're no longer importing projections, we don't auto-exclude based on projection values
+            pool_entry_data['excluded'] = draftable.get('excluded', False)
+            pool_entry_data['auto_excluded'] = False  # No auto-exclusion for missing projections
+            if pool_entry_data['excluded']:
+                logger.debug(f"Player {player_data.get('displayName', 'Unknown')} manually excluded from DraftKings data")
             
             # Validate required pool entry fields
             if pool_entry_data['salary'] is None:

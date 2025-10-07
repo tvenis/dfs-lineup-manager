@@ -32,6 +32,16 @@ export default function PlayerPoolPage() {
   const [activeTab, setActiveTab] = useState<string>('QB');
   const [tierFilter, setTierFilter] = useState<number | 'all'>('all');
   const [draftGroupFilter, setDraftGroupFilter] = useState<string>('all');
+  const [draftGroups, setDraftGroups] = useState<Array<{
+    id: number;
+    draftGroup: number;
+    week_id: number;
+    draftGroup_description: string;
+    games: number;
+    is_default: boolean;
+    created_at: string;
+    updated_at: string;
+  }>>([]);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,12 +80,44 @@ export default function PlayerPoolPage() {
     fetchWeeks();
   }, []);
 
-  // Fetch player data when week changes
+  // Fetch default draft group and set it automatically
+  const fetchDefaultDraftGroup = async (weekId: number) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/draftgroups/?week_id=${weekId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const groups = Array.isArray(data) ? data : [];
+        setDraftGroups(groups);
+        
+        // Auto-select the default draft group if available
+        const defaultGroup = groups.find((group: any) => group.is_default === true);
+        if (defaultGroup) {
+          console.log('🎯 Found default draft group for Player Pool:', defaultGroup);
+          setDraftGroupFilter(defaultGroup.draftGroup.toString());
+        } else if (groups.length > 0) {
+          // If no default is set, use the first available group
+          console.log('⚠️ No default draft group found, using first available:', groups[0]);
+          setDraftGroupFilter(groups[0].draftGroup.toString());
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching default draft group:', error);
+    }
+  };
+
+  // Fetch default draft group when week changes
+  useEffect(() => {
+    if (selectedWeek) {
+      fetchDefaultDraftGroup(selectedWeek);
+    }
+  }, [selectedWeek]);
+
+  // Fetch player data when week or draft group filter changes
   useEffect(() => {
     if (selectedWeek) {
       fetchPlayerData(selectedWeek);
     }
-  }, [selectedWeek]);
+  }, [selectedWeek, draftGroupFilter]);
 
   // Fetch player data using the optimized endpoint
   const fetchPlayerData = async (weekId: number) => {
@@ -84,7 +126,8 @@ export default function PlayerPoolPage() {
       setError(null);
 
       const data = await PlayerService.getPlayerPoolComplete(weekId, {
-        limit: 1000
+        limit: 1000,
+        draft_group: draftGroupFilter !== 'all' ? draftGroupFilter : undefined
       }, true);
 
       setPlayerPool(data.entries || []);
@@ -100,17 +143,16 @@ export default function PlayerPoolPage() {
       }
     };
 
-  // Get unique draft groups
+  // Get unique draft groups with descriptions
   const getUniqueDraftGroups = useMemo(() => {
-    const draftGroups = new Set<string>();
-    playerPool.forEach(player => {
-      const entry = player.entry || player; // Handle both structures
-      if (entry.draftGroup) {
-        draftGroups.add(entry.draftGroup);
-      }
-    });
-    return Array.from(draftGroups).sort();
-  }, [playerPool]);
+    return draftGroups.map(group => ({
+      id: group.draftGroup.toString(),
+      label: `${group.draftGroup_description} - ${group.draftGroup}`,
+      description: group.draftGroup_description,
+      draftGroup: group.draftGroup.toString(),
+      is_default: group.is_default
+    }));
+  }, [draftGroups]);
 
 
   // Group players by position

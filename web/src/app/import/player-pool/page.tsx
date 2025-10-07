@@ -261,7 +261,7 @@ export default function PlayerPoolImportPage() {
                 <SelectContent>
                   {draftGroups.map((group) => (
                     <SelectItem key={group.draftGroup} value={group.draftGroup.toString()}>
-                      {group.draftGroup} - {group.draftGroup_description} {group.is_default ? '(Default)' : ''}
+                      {group.draftGroup_description} - {group.draftGroup} {group.is_default ? '(Default)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

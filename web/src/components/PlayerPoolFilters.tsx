@@ -128,8 +128,8 @@ export function PlayerPoolFilters({
               <SelectContent>
                 <SelectItem value="all">All Draft Groups</SelectItem>
                 {uniqueDraftGroups.map((draftGroup) => (
-                  <SelectItem key={draftGroup} value={draftGroup}>
-                    Draft Group {draftGroup}
+                  <SelectItem key={draftGroup.id} value={draftGroup.draftGroup}>
+                    {draftGroup.label}
                   </SelectItem>
                 ))}
               </SelectContent>
