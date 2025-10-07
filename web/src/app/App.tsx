@@ -35,6 +35,7 @@ import {
   Database,
   Globe,
   BarChart3,
+  Target,
 } from "lucide-react";
 import { Toaster } from "sonner";
 
@@ -95,11 +96,11 @@ export default function App({ children }: { children: React.ReactNode }) {
 
   const leaderboardSubItems = [
     {
-      id: "team-defense",
-      label: "Team Defense",
-      description: "Team defense statistics and scoring",
-      icon: Shield,
-      href: "/team-stats",
+      id: "player-actuals",
+      label: "Player Actuals",
+      description: "Player actual performance data and statistics",
+      icon: Target,
+      href: "/leaderboard/player-actuals",
     },
     {
       id: "player-props",
@@ -107,6 +108,13 @@ export default function App({ children }: { children: React.ReactNode }) {
       description: "Player prop betting results and analytics",
       icon: Trophy,
       href: "/leaderboard/player-props",
+    },
+    {
+      id: "team-defense",
+      label: "Team Defense",
+      description: "Team defense statistics and scoring",
+      icon: Shield,
+      href: "/team-stats",
     },
     // Future leaderboard items can be added here
     // {

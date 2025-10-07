@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks, Query
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.database import get_db
-from app.models import PlayerActuals, Player, Week, PlayerPoolEntry
+from app.models import PlayerActuals, Player, Week, PlayerPoolEntry, WeeklyPlayerSummary, Game, Team
 from app.schemas import (
     PlayerActualsImportRequest, 
     PlayerActualsImportResponse,
@@ -11,7 +11,7 @@ from app.schemas import (
 )
 from app.services.nflverse_service import NFLVerseService
 from app.services.activity_logging import ActivityLoggingService
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 import time
 
 router = APIRouter(prefix="/api/actuals", tags=["actuals"])
@@ -270,6 +270,246 @@ async def get_player_actuals(player_dk_id: int, week_id: int, db: Session = Depe
         raise HTTPException(status_code=404, detail="Player actuals not found for this week")
     
     return actuals
+
+@router.get("/all", response_model=List[Dict[str, Any]])
+async def get_all_player_actuals(
+    position: Optional[str] = Query(None, description="Filter by player position"),
+    week: Optional[int] = Query(None, description="Filter by week number"),
+    season: Optional[int] = Query(None, description="Filter by season year"),
+    search: Optional[str] = Query(None, description="Search by player name or team"),
+    tier: Optional[int] = Query(None, description="Filter by tier (1-4)"),
+    limit: int = Query(50, ge=1, le=1000, description="Maximum number of records to return"),
+    offset: int = Query(0, ge=0, description="Number of records to skip"),
+    sort_by: str = Query("dk_points", description="Sort field"),
+    sort_direction: str = Query("desc", description="Sort direction (asc/desc)"),
+    db: Session = Depends(get_db)
+):
+    """Get all player actuals with weekly summary data, filtering, and pagination"""
+    
+    try:
+        # Build base query with joins to get all required data
+        query = db.query(
+            PlayerActuals,
+            Player.displayName.label('player_name'),
+            Player.position,
+            Player.team,
+            Week.week_number.label('week'),
+            Week.year.label('season'),
+            WeeklyPlayerSummary.consensus_projection,
+            WeeklyPlayerSummary.consensus_ownership,
+            WeeklyPlayerSummary.baseline_salary,
+            PlayerPoolEntry.tier,
+            PlayerPoolEntry.draftStatAttributes,
+            Team.abbreviation.label('opponent'),
+            Game.homeoraway
+        ).join(
+            Player, PlayerActuals.playerDkId == Player.playerDkId
+        ).join(
+            Week, PlayerActuals.week_id == Week.id
+        ).outerjoin(
+            WeeklyPlayerSummary, 
+            and_(
+                WeeklyPlayerSummary.week_id == PlayerActuals.week_id,
+                WeeklyPlayerSummary.playerDkId == PlayerActuals.playerDkId
+            )
+        ).outerjoin(
+            PlayerPoolEntry,
+            and_(
+                PlayerPoolEntry.week_id == PlayerActuals.week_id,
+                PlayerPoolEntry.playerDkId == PlayerActuals.playerDkId
+            )
+        ).outerjoin(
+            Game,
+            and_(
+                Game.week_id == PlayerActuals.week_id,
+                Game.team_id == Player.team_id
+            )
+        ).outerjoin(
+            Team,
+            Team.id == Game.opponent_team_id
+        )
+        
+        # Apply filters
+        if position:
+            query = query.filter(Player.position == position)
+        
+        if week:
+            query = query.filter(Week.week_number == week)
+            
+        if season:
+            query = query.filter(Week.year == season)
+            
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Player.displayName.ilike(search_term),
+                    Player.team.ilike(search_term)
+                )
+            )
+            
+        if tier:
+            query = query.filter(PlayerPoolEntry.tier == tier)
+        
+        # Apply sorting
+        if sort_by == "dk_points":
+            if sort_direction == "desc":
+                query = query.order_by(PlayerActuals.dk_actuals.desc().nullslast())
+            else:
+                query = query.order_by(PlayerActuals.dk_actuals.asc().nullslast())
+        elif sort_by == "player_name":
+            if sort_direction == "desc":
+                query = query.order_by(Player.displayName.desc())
+            else:
+                query = query.order_by(Player.displayName.asc())
+        elif sort_by == "salary":
+            if sort_direction == "desc":
+                query = query.order_by(WeeklyPlayerSummary.baseline_salary.desc().nullslast())
+            else:
+                query = query.order_by(WeeklyPlayerSummary.baseline_salary.asc().nullslast())
+        elif sort_by == "projection":
+            if sort_direction == "desc":
+                query = query.order_by(WeeklyPlayerSummary.consensus_projection.desc().nullslast())
+            else:
+                query = query.order_by(WeeklyPlayerSummary.consensus_projection.asc().nullslast())
+        elif sort_by == "ownership":
+            if sort_direction == "desc":
+                query = query.order_by(WeeklyPlayerSummary.consensus_ownership.desc().nullslast())
+            else:
+                query = query.order_by(WeeklyPlayerSummary.consensus_ownership.asc().nullslast())
+        
+        # Apply pagination
+        query = query.offset(offset).limit(limit)
+        
+        # Execute query
+        results = query.all()
+        
+        # Format response
+        formatted_results = []
+        for result in results:
+            actuals, player_name, position, team, week_num, season_year, projection, ownership, salary, tier_val, draft_stats, opponent, homeoraway = result
+            
+            # Extract OPKR data from draftStatAttributes
+            oprk_value = None
+            oprk_quality = None
+            if draft_stats and isinstance(draft_stats, list):
+                oprk_attr = next((attr for attr in draft_stats if attr.get('id') == -2), None)
+                if oprk_attr:
+                    oprk_value = oprk_attr.get('value')
+                    oprk_quality = oprk_attr.get('quality')
+            
+            formatted_results.append({
+                "player_id": actuals.playerDkId,
+                "player_name": player_name,
+                "position": position,
+                "team": team,
+                "week": week_num,
+                "season": season_year,
+                "projection": projection,
+                "ownership": float(ownership) if ownership else None,
+                "salary": salary,
+                "tier": tier_val,
+                "oprk_value": oprk_value,
+                "oprk_quality": oprk_quality,
+                "opponent": opponent,
+                "homeoraway": homeoraway,
+                "dk_points": actuals.dk_actuals,
+                "passing_yards": actuals.pass_yds,
+                "passing_tds": actuals.pass_tds,
+                "interceptions": actuals.interceptions,
+                "rushing_yards": actuals.rush_yds,
+                "rushing_tds": actuals.rush_tds,
+                "receiving_yards": actuals.rec_yds,
+                "receiving_tds": actuals.rec_tds,
+                "receptions": actuals.receptions,
+                "fumbles": actuals.fumbles,
+                "created_at": actuals.created_at.isoformat() if actuals.created_at else None,
+                "updated_at": actuals.updated_at.isoformat() if actuals.updated_at else None
+            })
+        
+        return formatted_results
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching player actuals: {str(e)}")
+
+@router.get("/summary", response_model=Dict[str, Any])
+async def get_player_actuals_summary(
+    position: Optional[str] = Query(None, description="Filter by player position"),
+    week: Optional[int] = Query(None, description="Filter by week number"),
+    season: Optional[int] = Query(None, description="Filter by season year"),
+    tier: Optional[int] = Query(None, description="Filter by tier (1-4)"),
+    db: Session = Depends(get_db)
+):
+    """Get summary statistics for player actuals"""
+    
+    try:
+        # Build base query with joins
+        query = db.query(
+            PlayerActuals.dk_actuals,
+            Player.position,
+            PlayerPoolEntry.tier
+        ).join(
+            Player, PlayerActuals.playerDkId == Player.playerDkId
+        ).join(
+            Week, PlayerActuals.week_id == Week.id
+        ).outerjoin(
+            PlayerPoolEntry,
+            and_(
+                PlayerPoolEntry.week_id == PlayerActuals.week_id,
+                PlayerPoolEntry.playerDkId == PlayerActuals.playerDkId
+            )
+        )
+        
+        # Apply filters
+        if position:
+            query = query.filter(Player.position == position)
+        
+        if week:
+            query = query.filter(Week.week_number == week)
+            
+        if season:
+            query = query.filter(Week.year == season)
+            
+        if tier:
+            query = query.filter(PlayerPoolEntry.tier == tier)
+        
+        # Execute query
+        results = query.all()
+        
+        if not results:
+            return {
+                "total_players": 0,
+                "average_dk_score": 0,
+                "top_performers": 0,
+                "low_performers": 0,
+                "position_breakdown": {}
+            }
+        
+        # Calculate statistics
+        dk_points_list = [r[0] for r in results if r[0] is not None]
+        positions = [r[1] for r in results]
+        tiers = [r[2] for r in results if r[2] is not None]
+        
+        total_players = len(dk_points_list)
+        average_dk_score = sum(dk_points_list) / len(dk_points_list) if dk_points_list else 0
+        top_performers = len([p for p in dk_points_list if p >= 20])
+        low_performers = len([p for p in dk_points_list if p < 5])
+        
+        # Position breakdown
+        position_counts = {}
+        for pos in positions:
+            position_counts[pos] = position_counts.get(pos, 0) + 1
+        
+        return {
+            "total_players": total_players,
+            "average_dk_score": round(average_dk_score, 2),
+            "top_performers": top_performers,
+            "low_performers": low_performers,
+            "position_breakdown": position_counts
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching player actuals summary: {str(e)}")
 
 @router.post("/import-nflverse")
 async def import_from_nflverse(
