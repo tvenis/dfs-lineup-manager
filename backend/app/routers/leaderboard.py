@@ -10,6 +10,7 @@ router = APIRouter()
 @router.get("/player-props")
 def get_player_props_for_leaderboard(
     week: str = Query("active", description="Week ID number, 'active', or 'all'"),
+    position: str = Query("all", description="Player position or 'all'"),
     bookmaker: str = Query("all", description="Bookmaker name or 'all'"),
     market: str = Query("anytime_td", description="Market type"),
     player_name: str = Query("all", description="Player name or 'all'"),
@@ -50,6 +51,9 @@ def get_player_props_for_leaderboard(
                 query = query.filter(PlayerPropBet.week_id == week_id)
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid week ID parameter")
+        
+        if position != "all":
+            query = query.filter(Player.position == position)
         
         if bookmaker != "all":
             query = query.filter(PlayerPropBet.bookmaker == bookmaker)

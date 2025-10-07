@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Check, X, Minus, Trophy, Target, Clock, ChevronUp, ChevronDown } from "lucide-react";
+import { Input } from "./ui/input";
+import { Check, X, Minus, Trophy, Target, Clock, ChevronUp, ChevronDown, Search } from "lucide-react";
 import { buildApiUrl } from "@/config/api";
 import { WeekService } from "@/lib/weekService";
 import type { Week } from "@/types/prd";
@@ -48,13 +49,13 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
   const [activeWeekId, setActiveWeekId] = useState<number | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedBookmaker, setSelectedBookmaker] = useState<string>("all");
   const [selectedMarket, setSelectedMarket] = useState<string>("anytime_td");
-  const [selectedPlayer, setSelectedPlayer] = useState<string>("all");
+  const [playerSearchTerm, setPlayerSearchTerm] = useState<string>("");
   const [selectedTier, setSelectedTier] = useState<string>("all");
   const [selectedResult, setSelectedResult] = useState<string>("all");
   const [availableBookmakers, setAvailableBookmakers] = useState<string[]>([]);
-  const [availablePlayers, setAvailablePlayers] = useState<string[]>([]);
   
   // Sorting state
   const [sortColumn, setSortColumn] = useState<string>("probability");
@@ -156,7 +157,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     if (selectedWeekId) {
       fetchPlayerProps();
     }
-  }, [selectedWeekId, selectedBookmaker, selectedMarket, selectedPlayer, selectedTier, selectedResult]);
+  }, [selectedWeekId, selectedPosition, selectedBookmaker, selectedMarket, playerSearchTerm, selectedTier, selectedResult]);
 
 
   const fetchPlayerProps = async () => {
@@ -164,9 +165,10 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     try {
       const params = new URLSearchParams({
         week: selectedWeekId ? selectedWeekId.toString() : "active",
+        position: selectedPosition,
         bookmaker: selectedBookmaker,
         market: selectedMarket,
-        player_name: selectedPlayer !== "all" ? selectedPlayer : "all",
+        player_name: playerSearchTerm || "all",
         tier: selectedTier !== "all" ? selectedTier : "all",
         result_status: selectedResult !== "all" ? selectedResult : "all",
       });
@@ -176,12 +178,9 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
         const data = await response.json();
         setPropsData(data);
         
-      // Extract unique bookmakers and players from the data
-      const bookmakers = [...new Set(data.map((p: any) => p.bookmaker).filter(Boolean))].sort() as string[];
-      setAvailableBookmakers(bookmakers);
-      
-      const players = [...new Set(data.map((p: any) => p.player_name).filter(Boolean))].sort() as string[];
-      setAvailablePlayers(players);
+              // Extract unique bookmakers from the data
+              const bookmakers = [...new Set(data.map((p: any) => p.bookmaker).filter(Boolean))].sort() as string[];
+              setAvailableBookmakers(bookmakers);
       } else {
         console.error("Failed to fetch player props");
         setPropsData([]);
@@ -206,8 +205,8 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     setSelectedMarket(value);
   };
 
-  const handlePlayerChange = (value: string) => {
-    setSelectedPlayer(value);
+  const handlePositionChange = (value: string) => {
+    setSelectedPosition(value);
   };
 
   const handleTierChange = (value: string) => {
@@ -354,7 +353,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
         {/* Week Filter */}
         <Select value={selectedWeekId?.toString() || "all"} onValueChange={handleWeekChange}>
           <SelectTrigger>
@@ -369,18 +368,32 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
           </SelectContent>
         </Select>
 
-        {/* Player Filter */}
-        <Select value={selectedPlayer} onValueChange={handlePlayerChange}>
+        {/* Position Filter */}
+        <Select value={selectedPosition} onValueChange={handlePositionChange}>
           <SelectTrigger>
-            <SelectValue placeholder="All Players" />
+            <SelectValue placeholder="All Positions" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Players</SelectItem>
-            {availablePlayers.map((player) => (
-              <SelectItem key={player} value={player}>{player}</SelectItem>
-            ))}
+            <SelectItem value="all">All Positions</SelectItem>
+            <SelectItem value="QB">QB</SelectItem>
+            <SelectItem value="RB">RB</SelectItem>
+            <SelectItem value="WR">WR</SelectItem>
+            <SelectItem value="TE">TE</SelectItem>
+            <SelectItem value="K">K</SelectItem>
+            <SelectItem value="DST">DST</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Player Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search players..."
+            value={playerSearchTerm}
+            onChange={(e) => setPlayerSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
 
         {/* Tier Filter */}
         <Select value={selectedTier} onValueChange={handleTierChange}>
