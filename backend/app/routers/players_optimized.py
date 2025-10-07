@@ -53,18 +53,14 @@ def get_player_profiles_with_pool_data_optimized(
         PlayerPoolEntry.projectedPoints.isnot(None)
     ).group_by(PlayerPoolEntry.playerDkId).subquery()
     
-    # Main query with left join to pool data, weekly summary, and consistency data
+    # Main query with left join to weekly summary and consistency data
     query = (
         db.query(
             Player,
-            PlayerPoolEntry,
             WeeklyPlayerSummary,
             consistency_subquery.c.ytd_actuals,
             consistency_subquery.c.ytd_projected
         )
-        .outerjoin(PlayerPoolEntry, 
-              and_(PlayerPoolEntry.playerDkId == Player.playerDkId,
-                   PlayerPoolEntry.week_id == week_id))
         .outerjoin(WeeklyPlayerSummary,
               and_(WeeklyPlayerSummary.playerDkId == Player.playerDkId,
                    WeeklyPlayerSummary.week_id == week_id))
@@ -90,7 +86,7 @@ def get_player_profiles_with_pool_data_optimized(
     
     # Process results (no additional queries needed)
     players_with_pool_data = []
-    for player, pool_entry, weekly_summary, ytd_actuals, ytd_projected in results:
+    for player, weekly_summary, ytd_actuals, ytd_projected in results:
         # Calculate consistency from pre-computed values
         consistency = None
         if ytd_projected and ytd_projected > 0:
@@ -115,8 +111,8 @@ def get_player_profiles_with_pool_data_optimized(
             'currentWeekSalary': weekly_summary.baseline_salary if weekly_summary else None,
             'consistency': consistency,
             'ownership': weekly_summary.consensus_ownership if weekly_summary else None,
-            'status': pool_entry.status,
-            'poolEntryId': pool_entry.id
+            'status': 'Available',  # Default status since we're not using pool entries
+            'poolEntryId': None  # No pool entry ID since we're not using pool entries
         }
         players_with_pool_data.append(enhanced_player)
     

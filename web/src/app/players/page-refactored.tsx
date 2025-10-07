@@ -82,15 +82,11 @@ export default function PlayerPoolPage() {
     }
   };
 
-  // Get unique draft groups
+  // Get unique draft groups (placeholder - refactored version)
   const getUniqueDraftGroups = useMemo(() => {
-    const draftGroups = new Set<string>();
-    playerPool.forEach(player => {
-      if (player.entry.draftGroup) {
-        draftGroups.add(player.entry.draftGroup);
-      }
-    });
-    return Array.from(draftGroups).sort();
+    // This is a placeholder implementation for the refactored version
+    // The actual implementation should fetch draft group data with descriptions
+    return [];
   }, [playerPool]);
 
   // Group players by position

@@ -23,7 +23,13 @@ interface PlayerPoolFiltersProps {
   // Draft group filter
   draftGroupFilter: string;
   onDraftGroupChange: (draftGroup: string) => void;
-  uniqueDraftGroups: string[];
+  uniqueDraftGroups: Array<{
+    id: string;
+    label: string;
+    description: string;
+    draftGroup: string;
+    is_default: boolean;
+  }>;
   
   
   // Tier filter
