@@ -15,6 +15,8 @@ interface PlayerPropsData {
   player_name: string;
   opponent: string | null;
   homeoraway: string | null;
+  oprk_value: number | null;
+  oprk_quality: string | null;
   bookmaker: string | null;
   market: string | null;
   outcome_name: string | null;
@@ -35,9 +37,7 @@ const MARKET_OPTIONS = [
   { value: "player_pass_attempts", label: "Pass Attempts" },
   { value: "player_pass_completions", label: "Pass Completions" },
   { value: "player_rush_yds", label: "Rushing Yards" },
-  { value: "player_rush_tds", label: "Rushing TDs" },
-  { value: "player_rec_yds", label: "Receiving Yards" },
-  { value: "player_rec_tds", label: "Receiving TDs" },
+  { value: "player_reception_yds", label: "Receiving Yards" },
   { value: "player_receptions", label: "Receptions" },
   { value: "player_rush_attempts", label: "Rush Attempts" },
 ];
@@ -49,8 +49,9 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
   const [activeWeekId, setActiveWeekId] = useState<number | null>(null);
   const [selectedBookmaker, setSelectedBookmaker] = useState<string>("all");
-  const [selectedMarket, setSelectedMarket] = useState<string>("all");
+  const [selectedMarket, setSelectedMarket] = useState<string>("anytime_td");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("all");
+  const [selectedTier, setSelectedTier] = useState<string>("all");
   const [selectedResult, setSelectedResult] = useState<string>("all");
   const [availableBookmakers, setAvailableBookmakers] = useState<string[]>([]);
   const [availablePlayers, setAvailablePlayers] = useState<string[]>([]);
@@ -155,7 +156,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     if (selectedWeekId) {
       fetchPlayerProps();
     }
-  }, [selectedWeekId, selectedBookmaker, selectedMarket, selectedPlayer, selectedResult]);
+  }, [selectedWeekId, selectedBookmaker, selectedMarket, selectedPlayer, selectedTier, selectedResult]);
 
 
   const fetchPlayerProps = async () => {
@@ -166,6 +167,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
         bookmaker: selectedBookmaker,
         market: selectedMarket,
         player_name: selectedPlayer !== "all" ? selectedPlayer : "all",
+        tier: selectedTier !== "all" ? selectedTier : "all",
         result_status: selectedResult !== "all" ? selectedResult : "all",
       });
 
@@ -206,6 +208,10 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
 
   const handlePlayerChange = (value: string) => {
     setSelectedPlayer(value);
+  };
+
+  const handleTierChange = (value: string) => {
+    setSelectedTier(value);
   };
 
   const handleResultChange = (value: string) => {
@@ -258,6 +264,26 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     // Find the formatted label from MARKET_OPTIONS
     const marketOption = MARKET_OPTIONS.find(m => m.value === market);
     return marketOption ? marketOption.label : market;
+  };
+
+  const formatOPRK = (oprkValue: number | null, oprkQuality: string | null) => {
+    if (oprkValue === null) return '-';
+    
+    // Derive quality from value if quality is missing
+    let derivedQuality: 'High' | 'Medium' | 'Low' = 'Medium';
+    if (oprkQuality) {
+      derivedQuality = oprkQuality as 'High' | 'Medium' | 'Low';
+    } else if (typeof oprkValue === 'number') {
+      if (oprkValue <= 10) derivedQuality = 'High';
+      else if (oprkValue <= 20) derivedQuality = 'Medium';
+      else derivedQuality = 'Low';
+    }
+    
+    const color = derivedQuality === 'High' ? 'text-green-600' : 
+                 derivedQuality === 'Low' ? 'text-red-600' : 
+                 'text-yellow-600';
+    
+    return { value: oprkValue, color };
   };
 
   if (loading) {
@@ -328,7 +354,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
         {/* Week Filter */}
         <Select value={selectedWeekId?.toString() || "all"} onValueChange={handleWeekChange}>
           <SelectTrigger>
@@ -353,6 +379,20 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
             {availablePlayers.map((player) => (
               <SelectItem key={player} value={player}>{player}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        {/* Tier Filter */}
+        <Select value={selectedTier} onValueChange={handleTierChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Tiers" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tiers</SelectItem>
+            <SelectItem value="1">Tier 1</SelectItem>
+            <SelectItem value="2">Tier 2</SelectItem>
+            <SelectItem value="3">Tier 3</SelectItem>
+            <SelectItem value="4">Tier 4</SelectItem>
           </SelectContent>
         </Select>
 
@@ -441,6 +481,17 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
                   </div>
                 </th>
                 <th 
+                  className="text-center p-2 font-medium w-16 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort("oprk_value")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    OPRK
+                    {sortColumn === "oprk_value" && (
+                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
+                </th>
+                <th 
                   className="text-center p-2 font-medium w-24 cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort("bookmaker")}
                 >
@@ -496,23 +547,12 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
                   </div>
                 </th>
                 <th 
-                  className="text-right p-2 font-medium w-20 cursor-pointer hover:bg-gray-100 select-none"
+                  className="text-right p-2 font-medium w-24 cursor-pointer hover:bg-gray-100 select-none"
                   onClick={() => handleSort("actual_value")}
                 >
                   <div className="flex items-center justify-end gap-1">
                     Actual Result
                     {sortColumn === "actual_value" && (
-                      sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </th>
-                <th 
-                  className="text-center p-2 font-medium w-20 cursor-pointer hover:bg-gray-100 select-none"
-                  onClick={() => handleSort("result_status")}
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    Result
-                    {sortColumn === "result_status" && (
                       sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                     )}
                   </div>
@@ -532,6 +572,16 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
                     </Link>
                   </td>
                   <td className="text-center p-2">{formatOpponent(prop.opponent, prop.homeoraway)}</td>
+                  <td className="text-center p-2">
+                    {(() => {
+                      const oprk = formatOPRK(prop.oprk_value, prop.oprk_quality);
+                      return oprk === '-' ? '-' : (
+                        <span className={oprk.color}>
+                          {oprk.value}
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td className="text-center p-2">{prop.bookmaker}</td>
                   <td className="text-center p-2">{formatMarket(prop.market, prop.outcome_point)}</td>
                   <td className="text-right p-2">{prop.outcome_price ?? ''}</td>
@@ -540,10 +590,10 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
                     {prop.probability != null ? `${prop.probability.toFixed(1)}%` : ''}
                   </td>
                   <td className="text-right p-2">
-                    {prop.actual_value != null ? prop.actual_value.toFixed(1) : '-'}
-                  </td>
-                  <td className="text-center p-2">
-                    {getResultIcon(prop.result_status)}
+                    <div className="flex items-center justify-end gap-2">
+                      <span>{prop.actual_value != null ? prop.actual_value.toFixed(1) : '-'}</span>
+                      {getResultIcon(prop.result_status)}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
 from app.database import get_db
-from app.models import Player, Week, PlayerPropBet, Game
+from app.models import Player, Week, PlayerPropBet, Game, PlayerPoolEntry
 
 router = APIRouter()
 
@@ -13,6 +13,7 @@ def get_player_props_for_leaderboard(
     bookmaker: str = Query("all", description="Bookmaker name or 'all'"),
     market: str = Query("anytime_td", description="Market type"),
     player_name: str = Query("all", description="Player name or 'all'"),
+    tier: str = Query("all", description="Player tier (1-4) or 'all'"),
     result_status: str = Query("all", description="Result status: 'HIT', 'MISS', 'PUSH', 'NULL', or 'all'"),
     db: Session = Depends(get_db)
 ):
@@ -22,10 +23,14 @@ def get_player_props_for_leaderboard(
     try:
         # Build the base query with joins (matching the working player props endpoint pattern)
         query = (
-            db.query(PlayerPropBet, Game, Week, Player)
+            db.query(PlayerPropBet, Game, Week, Player, PlayerPoolEntry)
             .join(Game, PlayerPropBet.game_id == Game.id)
             .join(Week, PlayerPropBet.week_id == Week.id)
             .join(Player, PlayerPropBet.playerDkId == Player.playerDkId)
+            .join(PlayerPoolEntry, and_(
+                PlayerPropBet.playerDkId == PlayerPoolEntry.playerDkId,
+                PlayerPropBet.week_id == PlayerPoolEntry.week_id
+            ))
         )
         
         # Apply filters
@@ -72,6 +77,9 @@ def get_player_props_for_leaderboard(
         if player_name != "all":
             query = query.filter(Player.displayName.ilike(f"%{player_name}%"))
         
+        if tier != "all":
+            query = query.filter(PlayerPoolEntry.tier == int(tier))
+        
         if result_status != "all":
             if result_status == "NULL":
                 query = query.filter(PlayerPropBet.result_status.is_(None))
@@ -86,7 +94,7 @@ def get_player_props_for_leaderboard(
         
         # Convert to list of dictionaries (matching the working endpoint pattern)
         props_data = []
-        for prop_row, game_row, week_row, player_row in results:
+        for prop_row, game_row, week_row, player_row, pool_entry_row in results:
             # Get opponent abbreviation from game data
             opponent_abbr = None
             try:
@@ -95,12 +103,34 @@ def get_player_props_for_leaderboard(
             except Exception:
                 opponent_abbr = None
             
+            # Extract OPRK data from draftStatAttributes
+            oprk_value = None
+            oprk_quality = None
+            try:
+                if pool_entry_row and pool_entry_row.draftStatAttributes:
+                    import json
+                    if isinstance(pool_entry_row.draftStatAttributes, str):
+                        attrs = json.loads(pool_entry_row.draftStatAttributes)
+                    else:
+                        attrs = pool_entry_row.draftStatAttributes
+                    
+                    # Find OPRK attribute (id === -2)
+                    oprk_attr = next((attr for attr in attrs if attr.get('id') == -2), None)
+                    if oprk_attr:
+                        oprk_value = oprk_attr.get('value')
+                        oprk_quality = oprk_attr.get('quality')
+            except Exception:
+                oprk_value = None
+                oprk_quality = None
+            
             props_data.append({
                 "week_number": week_row.week_number,
                 "player_id": player_row.playerDkId,
                 "player_name": player_row.displayName,
                 "opponent": opponent_abbr,
                 "homeoraway": game_row.homeoraway if game_row else None,
+                "oprk_value": oprk_value,
+                "oprk_quality": oprk_quality,
                 "bookmaker": prop_row.bookmaker,
                 "market": prop_row.market,
                 "outcome_name": prop_row.outcome_name,
