@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { PlayerPropsResponse, PlayerPropBetWithMeta } from "@/types/prd";
 import { PlayerService } from "@/lib/playerService";
-import { ArrowUpDown, Loader2 } from "lucide-react";
+import { ArrowUpDown, Loader2, Check, X, Minus } from "lucide-react";
 import { Button } from "./ui/button";
 
 type SortKey = keyof Pick<
@@ -19,7 +19,8 @@ type SortKey = keyof Pick<
   | "outcome_price"
   | "outcome_point"
   | "probability"
-  | "updated"
+  | "actual_value"
+  | "result_status"
 >;
 
 interface Props {
@@ -150,6 +151,19 @@ export default function PlayerProps({ playerId, preFilteredWeek, preFilteredBook
     }
   };
 
+  const getResultIcon = (resultStatus: string | null) => {
+    switch (resultStatus) {
+      case "HIT":
+        return <Check className="h-4 w-4 text-green-600" />;
+      case "MISS":
+        return <X className="h-4 w-4 text-red-600" />;
+      case "PUSH":
+        return <Minus className="h-4 w-4 text-yellow-600" />;
+      default:
+        return <span className="text-gray-400 text-sm">Unscored</span>;
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -246,8 +260,11 @@ export default function PlayerProps({ playerId, preFilteredWeek, preFilteredBook
                   <TableHead className="cursor-pointer" onClick={() => setSort("probability")}>
                     Probability
                   </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => setSort("updated")}>
-                    Updated
+                  <TableHead className="cursor-pointer" onClick={() => setSort("actual_value")}>
+                    Actual Result <ArrowUpDown className="inline ml-1 h-3 w-3" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => setSort("result_status")}>
+                    Result <ArrowUpDown className="inline ml-1 h-3 w-3" />
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -265,7 +282,8 @@ export default function PlayerProps({ playerId, preFilteredWeek, preFilteredBook
                     <TableCell>{p.outcome_price ?? ''}</TableCell>
                     <TableCell>{p.outcome_point ?? ''}</TableCell>
                     <TableCell>{p.probability != null ? `${p.probability.toFixed(1)}%` : ''}</TableCell>
-                    <TableCell>{p.updated ? new Date(p.updated).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }) : ''}</TableCell>
+                    <TableCell>{p.actual_value != null ? p.actual_value.toFixed(1) : '-'}</TableCell>
+                    <TableCell>{getResultIcon(p.result_status)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
