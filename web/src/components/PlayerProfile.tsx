@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -21,22 +23,30 @@ import { ProjectionsVsActualsChart } from "./ProjectionsVsActualsChart";
 
 interface PlayerProfileProps {
   playerId: string;
+  initialPlayerData?: any;
+  initialWeeklyData?: any;
+  initialPlayerPoolData?: any;
 }
 
 
-export function PlayerProfile({ playerId }: PlayerProfileProps) {
+export function PlayerProfile({ 
+  playerId, 
+  initialPlayerData, 
+  initialWeeklyData, 
+  initialPlayerPoolData 
+}: PlayerProfileProps) {
   const searchParams = useSearchParams();
   const from = searchParams?.get('from') || 'profile';
   
-  const [playerData, setPlayerData] = useState<Player | null>(null);
-  const [playerPoolData, setPlayerPoolData] = useState<PlayerPoolEntry | null>(null);
+  const [playerData, setPlayerData] = useState<Player | null>(initialPlayerData || null);
+  const [playerPoolData, setPlayerPoolData] = useState<PlayerPoolEntry | null>(initialPlayerPoolData || null);
   const [weeklySummaryData, setWeeklySummaryData] = useState<{
     currentWeekProj: number | null;
     currentWeekSalary: number | null;
     ownership: number | null;
     status: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
+  } | null>(initialWeeklyData || null);
+  const [loading, setLoading] = useState(!initialPlayerData);
   const [error, setError] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -155,6 +165,19 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   };
 
   useEffect(() => {
+    // Only fetch data if we don't have initial data (client-side navigation)
+    if (initialPlayerData) {
+      console.log("PlayerProfile - Using initial data from SSR");
+      // Load comments and aliases for the initial player data
+      if (initialPlayerData.playerDkId) {
+        Promise.all([
+          loadComments(initialPlayerData.playerDkId),
+          loadAliases(initialPlayerData.playerDkId)
+        ]);
+      }
+      return;
+    }
+
     const fetchPlayerData = async () => {
       try {
         setLoading(true);
@@ -242,7 +265,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     if (playerId) {
       fetchPlayerData();
     }
-  }, [playerId]);
+  }, [playerId, initialPlayerData]);
 
   // Handle anchor scrolling when component mounts
   useEffect(() => {

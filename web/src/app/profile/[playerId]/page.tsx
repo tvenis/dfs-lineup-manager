@@ -1,36 +1,81 @@
-"use client";
-
-import { useParams } from "next/navigation";
 import { PlayerProfile } from "@/components/PlayerProfile";
-import { useEffect, useState } from "react";
+import { PlayerService } from "@/lib/playerService";
+import { notFound } from "next/navigation";
 
-export default function PlayerProfilePage() {
-  const params = useParams();
-  const playerId = params?.playerId as string;
-  const [isClient, setIsClient] = useState(false);
+interface PlayerProfilePageProps {
+  params: Promise<{
+    playerId: string;
+  }>;
+}
 
-  useEffect(() => {
-    setIsClient(true);
-    // Debug logging for Vercel
-    console.log("PlayerProfilePage - params:", params);
-    console.log("PlayerProfilePage - playerId:", playerId);
-    console.log("PlayerProfilePage - window.location:", window.location.href);
-    console.log("PlayerProfilePage - userAgent:", navigator.userAgent);
-  }, [params, playerId]);
+async function fetchPlayerData(playerId: string) {
+  try {
+    console.log("Server: Fetching data for playerId:", playerId);
 
-  // Show loading state until client-side hydration is complete
-  if (!isClient) {
-    return (
-      <div className="p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-lg text-gray-600">Loading player profile...</p>
-          </div>
-        </div>
-      </div>
+    // Use the optimized endpoint that searches across all draft groups
+    const profilesResponse = await PlayerService.getPlayerProfilesWithPoolData({ 
+      limit: 1000,
+      show_hidden: true // Include hidden players to be thorough
+    });
+
+    console.log("Server: Total players in response:", profilesResponse.players?.length);
+
+    const playerProfile = profilesResponse.players?.find(profile =>
+      profile.playerDkId.toString() === playerId.toString()
     );
+
+    if (playerProfile) {
+      // Player found in profiles - convert to Player format
+      const player = {
+        playerDkId: playerProfile.playerDkId,
+        firstName: playerProfile.firstName,
+        lastName: playerProfile.lastName,
+        suffix: playerProfile.suffix,
+        displayName: playerProfile.displayName,
+        shortName: playerProfile.shortName,
+        position: playerProfile.position,
+        team: playerProfile.team,
+        playerImage50: playerProfile.playerImage50,
+        playerImage160: playerProfile.playerImage160,
+        hidden: playerProfile.hidden,
+        created_at: playerProfile.created_at,
+        updated_at: playerProfile.updated_at
+      };
+
+      // Store weekly summary data
+      const weeklyData = {
+        currentWeekProj: playerProfile.currentWeekProj ?? null,
+        currentWeekSalary: playerProfile.currentWeekSalary ?? null,
+        ownership: playerProfile.ownership ?? null,
+        status: playerProfile.status || 'Available'
+      };
+
+      return { player, weeklyData, playerPoolData: null };
+    } else {
+      // Fallback: Try direct player lookup
+      console.log("Server: Player not found in profiles, trying direct lookup");
+      const playerPoolEntry = await PlayerService.getPlayerByDkId(parseInt(playerId));
+      
+      if (playerPoolEntry) {
+        console.log("Server: Found player directly:", playerPoolEntry);
+        return { 
+          player: playerPoolEntry.player, 
+          weeklyData: null,
+          playerPoolData: playerPoolEntry 
+        };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Server: Error fetching player data:", error);
+    // Return null to let the client component handle the data fetching
+    return null;
   }
+}
+
+export default async function PlayerProfilePage({ params }: PlayerProfilePageProps) {
+  const { playerId } = await params;
 
   // Validate playerId
   if (!playerId) {
@@ -44,9 +89,18 @@ export default function PlayerProfilePage() {
     );
   }
 
+  // Fetch player data on the server
+  const playerData = await fetchPlayerData(playerId);
+
+  // If server-side fetching fails, still render the component and let it handle client-side fetching
   return (
     <div className="p-6">
-      <PlayerProfile playerId={playerId} />
+      <PlayerProfile 
+        playerId={playerId} 
+        initialPlayerData={playerData?.player || null}
+        initialWeeklyData={playerData?.weeklyData || null}
+        initialPlayerPoolData={playerData?.playerPoolData || null}
+      />
     </div>
   );
 }
