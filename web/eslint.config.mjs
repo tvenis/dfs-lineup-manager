@@ -33,6 +33,8 @@ const eslintConfig = [
       
       // Allow missing dependencies in useEffect - convert to warnings
       "react-hooks/exhaustive-deps": "warn",
+      
+      // Updated: 2025-01-08 - CI/CD friendly configuration
     },
   },
 ];
