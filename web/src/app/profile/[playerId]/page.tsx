@@ -162,12 +162,7 @@ export default async function PlayerProfilePage({ params }: PlayerProfilePagePro
   // If server-side fetching fails, still render the component and let it handle client-side fetching
   return (
     <div className="p-6">
-      <ErrorBoundary
-        onError={(error, errorInfo) => {
-          console.error('PlayerProfile Error:', error, errorInfo);
-          // Could send to analytics/monitoring service here
-        }}
-      >
+      <ErrorBoundary>
         <PlayerProfile 
           playerId={playerId} 
           initialPlayerData={playerData?.player || null}
