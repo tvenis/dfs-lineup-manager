@@ -20,6 +20,23 @@ const nextConfig: NextConfig = {
   },
   // Ensure dynamic routes work properly on Vercel
   trailingSlash: false,
+  // Image optimization configuration
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'dkn.gs',
+        port: '',
+        pathname: '/sports/images/nfl/players/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'dkn.gs',
+        port: '',
+        pathname: '/sports/images/**',
+      },
+    ],
+  },
 };
 
 export default nextConfig;
