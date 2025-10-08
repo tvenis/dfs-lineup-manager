@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { StructuredData } from "./StructuredData";
+import { PlayerProfileSkeleton } from "./PlayerProfileSkeleton";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -31,7 +32,7 @@ interface PlayerProfileProps {
 }
 
 
-export function PlayerProfile({ 
+const PlayerProfile = memo(function PlayerProfile({ 
   playerId, 
   initialPlayerData, 
   initialWeeklyData, 
@@ -467,14 +468,7 @@ export function PlayerProfile({
   };
 
   if (loading) {
-    return (
-      <div className="p-6 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p>Loading player data for ID: {playerId}...</p>
-        </div>
-      </div>
-    );
+    return <PlayerProfileSkeleton />;
   }
 
   if (error || !playerData) {
@@ -859,4 +853,6 @@ export function PlayerProfile({
       </div>
     </div>
   );
-}
+});
+
+export { PlayerProfile };
