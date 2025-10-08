@@ -159,6 +159,25 @@ jobs:
           exit 1
         fi
     
+    - name: Run tests
+      run: |
+        echo "Running tests..."
+        echo "Current directory: $(pwd)"
+        echo "=== Checking web directory ==="
+        if [ -d "web" ] && [ -f "web/package.json" ]; then
+          echo "web directory and package.json exist"
+          cd web
+          echo "Current directory: $(pwd)"
+          echo "Running tests..."
+          npm test -- --passWithNoTests --coverage --watchAll=false
+          echo "Tests completed successfully"
+        else
+          echo "ERROR: Cannot run tests - web directory or package.json not found!"
+          echo "=== Web directory exists: $([ -d "web" ] && echo "YES" || echo "NO") ==="
+          echo "=== Web package.json exists: $([ -f "web/package.json" ] && echo "YES" || echo "NO") ==="
+          exit 1
+        fi
+
     - name: Build application
       run: |
         echo "Building application..."

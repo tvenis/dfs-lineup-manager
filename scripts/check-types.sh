@@ -1,6 +1,6 @@
 #!/bin/bash
-# TypeScript and linting check script
-# Usage: ./scripts/check-types.sh [--fix]
+# TypeScript, linting, and testing check script
+# Usage: ./scripts/check-types.sh [--fix] [--test] [--all]
 
 set -e
 
@@ -47,5 +47,28 @@ else
 fi
 
 echo -e "${GREEN}✅ All checks passed! Code is ready to commit.${NC}"
+
+# Optional: Run tests if --test flag is provided
+if [ "$2" = "--test" ]; then
+    echo -e "${BLUE}🧪 Running tests...${NC}"
+    if ./web/scripts/run-tests.sh; then
+        echo -e "${GREEN}✅ Tests passed!${NC}"
+    else
+        echo -e "${RED}❌ Tests failed!${NC}"
+        exit 1
+    fi
+fi
+
+# Optional: Run tests if --all flag is provided (includes tests by default)
+if [ "$1" = "--all" ] || [ "$2" = "--all" ]; then
+    echo -e "${BLUE}🧪 Running tests...${NC}"
+    if ./web/scripts/run-tests.sh; then
+        echo -e "${GREEN}✅ Tests passed!${NC}"
+    else
+        echo -e "${RED}❌ Tests failed!${NC}"
+        exit 1
+    fi
+fi
+
 cd ..
 exit 0

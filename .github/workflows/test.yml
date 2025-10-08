@@ -1,0 +1,123 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'web/src/**/*'
+      - 'web/src/__tests__/**/*'
+      - 'web/package.json'
+      - 'web/jest.config.js'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'web/src/**/*'
+      - 'web/src/__tests__/**/*'
+      - 'web/package.json'
+      - 'web/jest.config.js'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        echo "Installing dependencies..."
+        cd web
+        npm ci --legacy-peer-deps
+    
+    - name: Run TypeScript type check
+      run: |
+        echo "Running TypeScript type check..."
+        cd web
+        npm run type-check
+    
+    - name: Run ESLint
+      run: |
+        echo "Running ESLint..."
+        cd web
+        npm run lint
+    
+    - name: Run tests
+      run: |
+        echo "Running tests..."
+        cd web
+        npm test -- --coverage --watchAll=false --verbose
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: matrix.node-version == 18 # Only upload coverage once
+      with:
+        file: web/coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+        fail_ci_if_error: false
+    
+    - name: Comment test results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          try {
+            // Read test results if available
+            const testResultsPath = path.join(process.cwd(), 'web', 'coverage', 'coverage-summary.json');
+            if (fs.existsSync(testResultsPath)) {
+              const coverage = JSON.parse(fs.readFileSync(testResultsPath, 'utf8'));
+              const summary = coverage.total;
+              
+              const comment = `## 🧪 Test Results
+              
+              **Coverage Summary:**
+              - Lines: ${summary.lines.pct}%
+              - Functions: ${summary.functions.pct}%
+              - Branches: ${summary.branches.pct}%
+              - Statements: ${summary.statements.pct}%
+              
+              **Node.js Version:** ${{ matrix.node-version }}
+              
+              ✅ All tests passed!`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } else {
+              const comment = `## 🧪 Test Results
+              
+              **Node.js Version:** ${{ matrix.node-version }}
+              
+              ✅ All tests passed!`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+          } catch (error) {
+            console.log('Could not create comment:', error);
+          }

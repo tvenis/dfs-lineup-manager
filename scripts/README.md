@@ -57,8 +57,26 @@ npm run type-check  # TypeScript only
 npm run lint        # ESLint only
 ```
 
+### Testing Integration
+
+The project now includes comprehensive testing as part of the commit process:
+
+```bash
+# Run all checks including tests
+./scripts/check-types.sh --all
+
+# Run tests separately
+./web/scripts/run-tests.sh
+
+# Run tests with coverage
+./web/scripts/run-tests.sh --coverage
+
+# Run tests in watch mode
+./web/scripts/run-tests.sh --watch
+```
+
 ### CI/CD Integration
-The same checks run in GitHub Actions to ensure code quality in pull requests and deployments.
+The same checks run in GitHub Actions to ensure code quality in pull requests and deployments. Tests are automatically run in CI/CD pipelines.
 
 ## Troubleshooting
 
@@ -71,6 +89,12 @@ The same checks run in GitHub Actions to ensure code quality in pull requests an
 - Run with `--fix` to auto-fix some issues
 - Review and fix remaining warnings manually
 - Consider disabling specific rules if needed
+
+### Testing Issues
+- Run `./web/scripts/run-tests.sh` to run tests manually
+- Use `--verbose` flag for detailed test output
+- Check test files in `web/src/__tests__/` directory
+- Ensure all dependencies are installed with `npm install --legacy-peer-deps`
 
 ### Pre-commit Hook Issues
 - Ensure the hook is executable: `chmod +x .git/hooks/pre-commit`
