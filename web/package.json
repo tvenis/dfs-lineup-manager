@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:staged": "./scripts/lint-staged.sh",
+    "lint:staged:fix": "./scripts/lint-staged.sh --fix",
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",

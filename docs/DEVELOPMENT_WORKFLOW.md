@@ -46,7 +46,7 @@ git push origin feature/your-feature-name
 ### 3. Code Review Process
 
 - **Automated checks** run on every PR:
-  - Linting (ESLint)
+  - **Incremental Linting** (ESLint on changed files only - see [Incremental Linting Guide](./INCREMENTAL_LINTING.md))
   - Type checking (TypeScript)
   - Build verification
   - Tests (when available)
