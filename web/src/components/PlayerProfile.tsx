@@ -30,6 +30,12 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
   
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [playerPoolData, setPlayerPoolData] = useState<PlayerPoolEntry | null>(null);
+  const [weeklySummaryData, setWeeklySummaryData] = useState<{
+    currentWeekProj: number | null;
+    currentWeekSalary: number | null;
+    ownership: number | null;
+    status: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -172,7 +178,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
         console.log("PlayerProfile - Found player profile:", playerProfile);
 
         if (playerProfile) {
-          // Player found in profiles - convert to Player and PlayerPoolEntry format
+          // Player found in profiles - convert to Player format
           const player: Player = {
             playerDkId: playerProfile.playerDkId,
             firstName: playerProfile.firstName,
@@ -189,47 +195,17 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
             updated_at: playerProfile.updated_at
           };
 
-          // Create a mock PlayerPoolEntry if we have pool data
-          const playerPoolEntry: PlayerPoolEntry | null = playerProfile.poolEntryId ? {
-            id: playerProfile.poolEntryId,
-            week_id: 0, // Will be set by the current week
-            draftGroup: '', // Not needed for display
-            playerDkId: playerProfile.playerDkId,
-            draftableId: '',
-            projectedPoints: playerProfile.currentWeekProj,
+          // Store weekly summary data directly
+          const weeklyData = {
+            currentWeekProj: playerProfile.currentWeekProj,
+            currentWeekSalary: playerProfile.currentWeekSalary,
             ownership: playerProfile.ownership,
-            salary: playerProfile.currentWeekSalary || 0,
-            status: playerProfile.status || 'Available',
-            isDisabled: false,
-            excluded: false,
-            tier: 4,
-            playerGameHash: '',
-            competitions: undefined,
-            draftStatAttributes: undefined,
-            playerAttributes: undefined,
-            teamLeagueSeasonAttributes: undefined,
-            playerGameAttributes: undefined,
-            draftAlerts: undefined,
-            externalRequirements: undefined,
-            created_at: '',
-            updated_at: '',
-            player: player,
-            week: {
-              id: 0,
-              week_number: 0,
-              year: 0,
-              start_date: '',
-              end_date: '',
-              game_count: 0,
-              status: 'Active',
-              imported_at: '',
-              created_at: '',
-              updated_at: ''
-            }
-          } : null;
+            status: playerProfile.status || 'Available'
+          };
 
           setPlayerData(player);
-          setPlayerPoolData(playerPoolEntry);
+          setWeeklySummaryData(weeklyData);
+          setPlayerPoolData(null); // No longer needed
           
           // Load comments and aliases for this player
           await Promise.all([
@@ -496,14 +472,15 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
     );
   }
 
-  // Get real data from player pool entry
-  const currentWeekSalary = playerPoolData?.salary || 0;
-  const currentWeekProj = playerPoolData?.projectedPoints || 0;
-  const status = playerPoolData?.status || 'unknown';
-  const ownership = playerPoolData?.ownership || 0;
+  // Get data from weekly summary (primary) or fallback to pool data
+  const currentWeekSalary = weeklySummaryData?.currentWeekSalary || playerPoolData?.salary || 0;
+  const currentWeekProj = weeklySummaryData?.currentWeekProj || playerPoolData?.projectedPoints || 0;
+  const status = weeklySummaryData?.status || playerPoolData?.status || 'unknown';
+  const ownership = weeklySummaryData?.ownership || playerPoolData?.ownership || 0;
   
   // Debug logging (can be removed in production)
   console.log('PlayerProfile rendering - playerData:', playerData);
+  console.log('PlayerProfile rendering - weeklySummaryData:', weeklySummaryData);
   console.log('PlayerProfile rendering - playerPoolData:', playerPoolData);
   console.log('PlayerProfile rendering - loading:', loading);
   console.log('PlayerProfile rendering - error:', error);
@@ -577,7 +554,7 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
                   </div>
                   
                   {/* Current Week Pool Status Message */}
-                  {!playerPoolData && (
+                  {!weeklySummaryData && !playerPoolData && (
                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <div className="flex items-center">
                         <div className="text-yellow-600 mr-2">⚠️</div>
