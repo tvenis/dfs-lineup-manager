@@ -197,9 +197,9 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
 
           // Store weekly summary data directly
           const weeklyData = {
-            currentWeekProj: playerProfile.currentWeekProj,
-            currentWeekSalary: playerProfile.currentWeekSalary,
-            ownership: playerProfile.ownership,
+            currentWeekProj: playerProfile.currentWeekProj ?? null,
+            currentWeekSalary: playerProfile.currentWeekSalary ?? null,
+            ownership: playerProfile.ownership ?? null,
             status: playerProfile.status || 'Available'
           };
 
