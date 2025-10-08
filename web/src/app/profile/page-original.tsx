@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -255,9 +256,11 @@ export default function PlayerProfilePage() {
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
                     {player.playerImage50 ? (
-                      <img
+                      <Image
                         src={player.playerImage50}
                         alt={player.displayName}
+                        width={50}
+                        height={50}
                         className="w-full h-full object-cover"
                       />
                     ) : (

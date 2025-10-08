@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { StructuredData } from "./StructuredData";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -512,6 +514,9 @@ export function PlayerProfile({
 
   return (
     <div className="p-6 space-y-6">
+      {/* Structured Data for SEO */}
+      <StructuredData player={playerData} type="player" />
+      
       {/* Back Button */}
       <div className="mb-4">
         <Link href={backButtonConfig.href}>
@@ -531,10 +536,13 @@ export function PlayerProfile({
               <div className="flex items-start gap-6">
                 <Avatar className="h-20 w-20 flex-shrink-0">
                   {playerData.playerImage160 ? (
-                    <img
+                    <Image
                       src={playerData.playerImage160}
                       alt={playerData.displayName}
+                      width={160}
+                      height={160}
                       className="w-full h-full object-cover rounded-full"
+                      priority
                     />
                   ) : (
                     <AvatarFallback className="text-2xl">
