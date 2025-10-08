@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom'
 
-// Mock Next.js router
+// Mock Next.js router with enhanced functionality
 jest.mock('next/navigation', () => ({
   useRouter() {
     return {
@@ -32,8 +32,44 @@ jest.mock('next/link', () => {
   }
 })
 
+// Mock Next.js Image component
+jest.mock('next/image', () => {
+  return function MockImage({ src, alt, ...props }) {
+    return <img src={src} alt={alt} {...props} />
+  }
+})
+
 // Mock fetch globally
 global.fetch = jest.fn()
+
+// Mock IntersectionObserver for components that use it
+global.IntersectionObserver = jest.fn(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}))
+
+// Mock ResizeObserver for components that use it
+global.ResizeObserver = jest.fn(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}))
+
+// Mock window.matchMedia for responsive components
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(), // deprecated
+    removeListener: jest.fn(), // deprecated
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+})
 
 // Mock console methods to reduce noise in tests
 global.console = {
@@ -49,6 +85,14 @@ global.console = {
 beforeEach(() => {
   // Clear all mocks before each test
   jest.clearAllMocks()
+  
+  // Reset fetch mock to default behavior
+  global.fetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(''),
+  })
 })
 
 afterEach(() => {
@@ -56,4 +100,7 @@ afterEach(() => {
   if (global.fetch.mockClear) {
     global.fetch.mockClear()
   }
+  
+  // Clean up any timers
+  jest.clearAllTimers()
 })

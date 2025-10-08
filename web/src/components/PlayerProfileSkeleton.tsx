@@ -4,7 +4,7 @@ import { Skeleton } from './ui/skeleton';
 
 export function PlayerProfileSkeleton() {
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6" data-testid="player-profile-skeleton">
       {/* Back Button Skeleton */}
       <div className="mb-4">
         <Skeleton className="h-9 w-24" />
