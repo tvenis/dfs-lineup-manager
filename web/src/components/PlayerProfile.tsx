@@ -156,32 +156,89 @@ export function PlayerProfile({ playerId }: PlayerProfileProps) {
 
         console.log("PlayerProfile - Fetching data for playerId:", playerId);
 
-        // Get current week first
-        const currentWeek = await PlayerService.getCurrentWeek();
-        console.log("PlayerProfile - Current week:", currentWeek);
+        // Use the optimized endpoint that searches across all draft groups
+        const profilesResponse = await PlayerService.getPlayerProfilesWithPoolData({ 
+          limit: 1000,
+          show_hidden: true // Include hidden players to be thorough
+        });
+        console.log("PlayerProfile - Profiles response:", profilesResponse);
+        console.log("PlayerProfile - Looking for playerId:", playerId);
+        console.log("PlayerProfile - Total players in response:", profilesResponse.players?.length);
 
-        // First, try to get player from current week's player pool
-        const playerPoolResponse = await PlayerService.getPlayerPool(currentWeek.id, { limit: 1000 });
-        console.log("PlayerProfile - Player pool response:", playerPoolResponse);
-
-        const playerPoolEntry = playerPoolResponse.entries?.find(entry =>
-          entry.playerDkId.toString() === playerId
+        const playerProfile = profilesResponse.players?.find(profile =>
+          profile.playerDkId.toString() === playerId.toString()
         );
 
-        console.log("PlayerProfile - Found player pool entry:", playerPoolEntry);
+        console.log("PlayerProfile - Found player profile:", playerProfile);
 
-        if (playerPoolEntry) {
-          // Player found in current week's pool - use existing logic
-          setPlayerData(playerPoolEntry.player);
+        if (playerProfile) {
+          // Player found in profiles - convert to Player and PlayerPoolEntry format
+          const player: Player = {
+            playerDkId: playerProfile.playerDkId,
+            firstName: playerProfile.firstName,
+            lastName: playerProfile.lastName,
+            suffix: playerProfile.suffix,
+            displayName: playerProfile.displayName,
+            shortName: playerProfile.shortName,
+            position: playerProfile.position,
+            team: playerProfile.team,
+            playerImage50: playerProfile.playerImage50,
+            playerImage160: playerProfile.playerImage160,
+            hidden: playerProfile.hidden,
+            created_at: playerProfile.created_at,
+            updated_at: playerProfile.updated_at
+          };
+
+          // Create a mock PlayerPoolEntry if we have pool data
+          const playerPoolEntry: PlayerPoolEntry | null = playerProfile.poolEntryId ? {
+            id: playerProfile.poolEntryId,
+            week_id: 0, // Will be set by the current week
+            draftGroup: '', // Not needed for display
+            playerDkId: playerProfile.playerDkId,
+            draftableId: '',
+            projectedPoints: playerProfile.currentWeekProj,
+            ownership: playerProfile.ownership,
+            salary: playerProfile.currentWeekSalary || 0,
+            status: playerProfile.status || 'Available',
+            isDisabled: false,
+            excluded: false,
+            tier: 4,
+            playerGameHash: '',
+            competitions: undefined,
+            draftStatAttributes: undefined,
+            playerAttributes: undefined,
+            teamLeagueSeasonAttributes: undefined,
+            playerGameAttributes: undefined,
+            draftAlerts: undefined,
+            externalRequirements: undefined,
+            created_at: '',
+            updated_at: '',
+            player: player,
+            week: {
+              id: 0,
+              week_number: 0,
+              year: 0,
+              start_date: '',
+              end_date: '',
+              game_count: 0,
+              status: 'Active',
+              imported_at: '',
+              created_at: '',
+              updated_at: ''
+            }
+          } : null;
+
+          setPlayerData(player);
           setPlayerPoolData(playerPoolEntry);
+          
           // Load comments and aliases for this player
           await Promise.all([
-            loadComments(playerPoolEntry.playerDkId),
-            loadAliases(playerPoolEntry.playerDkId)
+            loadComments(playerProfile.playerDkId),
+            loadAliases(playerProfile.playerDkId)
           ]);
         } else {
-          // Player not in current week's pool - try to get player directly
-          console.log("PlayerProfile - Player not in current week pool, fetching directly");
+          // Player not found in profiles - try direct player lookup as fallback
+          console.log("PlayerProfile - Player not found in profiles, trying direct lookup");
           try {
             const playerPoolEntry = await PlayerService.getPlayerByDkId(parseInt(playerId));
             console.log("PlayerProfile - Found player directly:", playerPoolEntry);

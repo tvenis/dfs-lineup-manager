@@ -70,6 +70,22 @@ export interface PlayerListResponse {
   size: number;
 }
 
+export interface PlayerWithPoolData extends Player {
+  currentWeekProj?: number;
+  currentWeekSalary?: number;
+  consistency?: number;
+  ownership?: number;
+  status?: string;
+  poolEntryId?: number;
+}
+
+export interface PlayerListWithPoolDataResponse {
+  players: PlayerWithPoolData[];
+  total: number;
+  page: number;
+  size: number;
+}
+
 export interface WeekFilters {
   year?: number;
   status?: 'Completed' | 'Active' | 'Upcoming';
@@ -311,7 +327,7 @@ export class PlayerService {
     skip?: number;
     limit?: number;
     show_hidden?: boolean;
-  } = {}): Promise<PlayerListResponse> {
+  } = {}): Promise<PlayerListWithPoolDataResponse> {
     try {
       const params = new URLSearchParams();
       
