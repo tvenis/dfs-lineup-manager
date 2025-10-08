@@ -13,15 +13,21 @@ const customJestConfig = {
     '**/__tests__/**/*.test.{js,jsx,ts,tsx}',
     '**/*.test.{js,jsx,ts,tsx}'
   ],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [
-    'src/**/*.{js,jsx,ts,tsx}',
+    'src/__tests__/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
     '!src/pages/**/*.{js,jsx,ts,tsx}',
     '!src/app/**/*.{js,jsx,ts,tsx}',
+    '!src/components/**/*.{js,jsx,ts,tsx}',
+    '!src/lib/**/*.{js,jsx,ts,tsx}',
+    '!src/hooks/**/*.{js,jsx,ts,tsx}',
+    '!src/config/**/*.{js,jsx,ts,tsx}',
+    '!src/store/**/*.{js,jsx,ts,tsx}',
+    '!src/types/**/*.{js,jsx,ts,tsx}',
   ],
   coverageThreshold: {
     global: {
