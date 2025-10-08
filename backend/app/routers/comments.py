@@ -136,10 +136,11 @@ def get_player_comments(
 ):
     """Get all comments for a specific player"""
     try:
-        # Verify player exists
+        # Check if player exists, but don't fail if they don't - just return empty list
         player = db.query(Player).filter(Player.playerDkId == playerDkId).first()
         if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
+            # Player not found, return empty list instead of error
+            return []
         
         comments = db.query(Comment).filter(Comment.playerDkId == playerDkId).order_by(desc(Comment.created_at)).offset(offset).limit(limit).all()
         return comments

@@ -94,6 +94,12 @@ export class CommentService {
   static async hasRecentComments(playerDkId: number, days: number = 7): Promise<boolean> {
     try {
       const comments = await this.getPlayerComments(playerDkId);
+      
+      // If no comments returned, player has no recent comments
+      if (!comments || comments.length === 0) {
+        return false;
+      }
+      
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
       
@@ -102,7 +108,7 @@ export class CommentService {
         return commentDate >= cutoffDate;
       });
     } catch (error) {
-      console.error('Error checking recent comments:', error);
+      console.error(`Error checking recent comments for player ${playerDkId}:`, error);
       return false;
     }
   }
