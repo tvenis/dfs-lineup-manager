@@ -751,15 +751,15 @@ def process_matched_players(db: Session, week_id: int, projection_source: str, m
                 if i < 3:
                     print(f"DEBUG: Player {i+1}: CREATED new projection (PPR: {ppr_projection}, Actuals: {actuals})")
             
-            # Update player pool entry if it exists
-            pool_entry = db.query(PlayerPoolEntry).filter(
+            # Update ALL player pool entries for this player in this week
+            pool_entries = db.query(PlayerPoolEntry).filter(
                 and_(
                     PlayerPoolEntry.week_id == week_id,
                     PlayerPoolEntry.playerDkId == playerDkId
                 )
-            ).first()
+            ).all()
             
-            if pool_entry:
+            for pool_entry in pool_entries:
                 pool_entry.projectedPoints = selected_projection
                 try:
                     pool_entry.actuals = float(player_data.get('actuals')) if player_data.get('actuals') is not None else pool_entry.actuals
@@ -887,15 +887,15 @@ def process_projections(db: Session, week_id: int, projection_source: str, csv_d
                 db.add(new_projection)
                 projections_created += 1
             
-            # Update player pool entry if it exists
-            pool_entry = db.query(PlayerPoolEntry).filter(
+            # Update ALL player pool entries for this player in this week
+            pool_entries = db.query(PlayerPoolEntry).filter(
                 and_(
                     PlayerPoolEntry.week_id == week_id,
                     PlayerPoolEntry.playerDkId == matched_player.playerDkId
                 )
-            ).first()
+            ).all()
             
-            if pool_entry:
+            for pool_entry in pool_entries:
                 pool_entry.projectedPoints = player_data['selected_projection']
                 try:
                     pool_entry.actuals = float(player_data.get('actuals')) if player_data.get('actuals') is not None else pool_entry.actuals

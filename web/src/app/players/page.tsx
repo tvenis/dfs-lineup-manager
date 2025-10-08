@@ -186,7 +186,7 @@ export default function PlayerPoolPage() {
     ];
   };
 
-  // Filter players based on search, draft group, and other filters
+  // Filter players based on search, draft group, excluded status, and other filters
   const getFilteredPlayers = (position: string) => {
     let players = playersByPosition[position] || [];
     
@@ -207,6 +207,7 @@ export default function PlayerPoolPage() {
     if (draftGroupFilter !== 'all') {
       players = players.filter(player => player.draftGroup === draftGroupFilter);
     }
+
 
     return players;
   };

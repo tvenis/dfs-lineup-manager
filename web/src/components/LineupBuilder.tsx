@@ -98,7 +98,11 @@ export function LineupBuilder({
   const [sortField, setSortField] = useState<SortField>('projectedPoints')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [draftGroupFilter, setDraftGroupFilter] = useState<string>('all')
-  const [draftGroups, setDraftGroups] = useState<Array<{draftGroup: number, draftGroup_description: string}>>([])
+  const [draftGroups, setDraftGroups] = useState<Array<{
+    draftGroup: number;
+    draftGroup_description: string;
+    is_default: boolean;
+  }>>([])
   const [roster, setRoster] = useState<RosterSlot[]>([
     { position: 'QB', player: null, eligiblePositions: ['QB'] },
     { position: 'RB1', player: null, eligiblePositions: ['RB'] },
@@ -241,10 +245,15 @@ export function LineupBuilder({
         return
       }
       
-      console.log('Loading player pool for weekId:', weekId)
+      console.log('Loading player pool for weekId:', weekId, 'draftGroupFilter:', draftGroupFilter)
       setLoading(true)
       try {
-        const response = await PlayerService.getPlayerPool(weekId, { excluded: false, limit: 1000 })
+        const filters: any = { excluded: false, limit: 1000 }
+        if (draftGroupFilter !== 'all') {
+          filters.draft_group = draftGroupFilter
+        }
+        
+        const response = await PlayerService.getPlayerPool(weekId, filters)
         console.log('Player pool response:', response)
         console.log('Player pool entries count:', response.entries?.length || 0)
         console.log('Player pool entries sample:', response.entries?.slice(0, 3))
@@ -297,7 +306,7 @@ export function LineupBuilder({
     }
     
     loadPlayerPool()
-  }, [weekId])
+  }, [weekId, draftGroupFilter])
 
   // Load draft groups for the active week
   useEffect(() => {
@@ -314,7 +323,19 @@ export function LineupBuilder({
           const data = await response.json()
           console.log('Draft groups response:', data)
           // The API returns an array directly, not an object with draftgroups property
-          setDraftGroups(Array.isArray(data) ? data : [])
+          const groups = Array.isArray(data) ? data : []
+          setDraftGroups(groups)
+          
+          // Auto-select the default draft group if available
+          const defaultGroup = groups.find((group: any) => group.is_default === true)
+          if (defaultGroup) {
+            console.log('🎯 Found default draft group for Lineup Builder:', defaultGroup)
+            setDraftGroupFilter(defaultGroup.draftGroup.toString())
+          } else if (groups.length > 0) {
+            // If no default is set, use the first available group
+            console.log('⚠️ No default draft group found, using first available:', groups[0])
+            setDraftGroupFilter(groups[0].draftGroup.toString())
+          }
         } else {
           console.error('Failed to fetch draft groups:', response.statusText)
         }
@@ -1068,7 +1089,7 @@ export function LineupBuilder({
                     <SelectItem value="all">All Draft Groups</SelectItem>
                     {draftGroups.map((group) => (
                       <SelectItem key={group.draftGroup} value={group.draftGroup.toString()}>
-                        {group.draftGroup_description} - {group.draftGroup}
+                        {group.draftGroup_description} - {group.draftGroup} {group.is_default ? '(Default)' : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>

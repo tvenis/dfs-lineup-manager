@@ -570,22 +570,26 @@ class DraftKingsImportService:
                         
                         # Special logic for excluded field: preserve manual exclusions, allow auto-exclusions to update
                         if key == 'excluded':
-                            # Only update excluded status if:
-                            # 1. It's an auto-exclusion (auto_excluded=True), OR
-                            # 2. Current record is also auto-excluded (can be overridden), OR
-                            # 3. Current record is not excluded (can be excluded)
                             current_auto_excluded = getattr(existing_entry, 'auto_excluded', False)
                             new_auto_excluded = pool_entry_data.get('auto_excluded', False)
                             
-                            if new_auto_excluded or current_auto_excluded or not current_value:
-                                # Allow the update
+                            # Only update excluded status if:
+                            # 1. It's an auto-exclusion (auto_excluded=True), OR
+                            # 2. Current record is also auto-excluded (can be overridden), OR
+                            # 3. Both current and new are auto-excluded=False (preserve manual changes)
+                            if new_auto_excluded or current_auto_excluded:
+                                # Allow the update for auto-exclusions
                                 if current_value != new_value:
                                     setattr(existing_entry, key, new_value)
                                     updated = True
                                     logger.info(f"Updated player {player_dk_id} excluded status: {current_value} -> {new_value} (auto_excluded: {new_auto_excluded})")
+                            elif not new_auto_excluded and not current_auto_excluded:
+                                # Both are manual changes - preserve the current value (don't override manual changes)
+                                logger.debug(f"Preserving manual exclusion status for player {player_dk_id} (current: {current_value}, both manual)")
+                                continue
                             else:
-                                # Preserve manual exclusion
-                                logger.debug(f"Preserving manual exclusion for player {player_dk_id} (current: {current_value}, auto_excluded: {current_auto_excluded})")
+                                # Fallback case
+                                logger.debug(f"Preserving exclusion status for player {player_dk_id} (current: {current_value}, auto_excluded: {current_auto_excluded})")
                                 continue
                         elif key == 'auto_excluded':
                             # Always allow auto_excluded flag to be updated
