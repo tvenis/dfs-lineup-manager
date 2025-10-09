@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
@@ -46,9 +47,13 @@ const customJestConfig = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testTimeout: 10000,
-  // Enhanced configuration for component testing
+  // Enhanced configuration for component testing with React 19 support
   testEnvironmentOptions: {
     customExportConditions: ['node', 'node-addons'],
+  },
+  // Globals for React 19 compatibility
+  globals: {
+    IS_REACT_ACT_ENVIRONMENT: true,
   },
   // Clear mocks between tests
   clearMocks: true,

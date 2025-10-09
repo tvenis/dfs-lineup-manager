@@ -1,5 +1,19 @@
 import '@testing-library/jest-dom'
 
+// Polyfill for React 19 compatibility with Testing Library
+// React 19 removed React.act from the main export, but testing library still expects it
+// This polyfill makes act available globally for testing library
+import { act } from 'react'
+import * as React from 'react'
+
+// Make act available as React.act for testing library compatibility
+if (!React.act) {
+  React.act = act
+}
+
+// Also make it available globally for testing utilities
+global.IS_REACT_ACT_ENVIRONMENT = true
+
 // Mock Next.js router with enhanced functionality
 jest.mock('next/navigation', () => ({
   useRouter() {
@@ -35,6 +49,7 @@ jest.mock('next/link', () => {
 // Mock Next.js Image component
 jest.mock('next/image', () => {
   return function MockImage({ src, alt, ...props }) {
+    // eslint-disable-next-line @next/next/no-img-element
     return <img src={src} alt={alt} {...props} />
   }
 })
