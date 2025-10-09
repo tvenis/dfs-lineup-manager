@@ -4,13 +4,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronUp, ChevronDown, ExternalLink, MessageSquare } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
+import { ChevronUp, ChevronDown, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { PlayerPoolProps } from '@/components/PlayerPoolProps';
-import { CommentIcon } from '@/components/CommentIcon';
 import { CommentService } from '@/lib/commentService';
 import type { PlayerPoolEntry } from '@/types/prd';
 import type { PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
@@ -18,14 +17,20 @@ import type { PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 interface PlayerPoolTableProps {
   players: (PlayerPoolEntry | PlayerPoolEntryWithAnalysisDto)[];
   position: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gamesMap: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   propsData: Record<number, Record<string, any>>;
   hideExcluded: boolean;
   tierFilter: number | 'all';
   selectedWeek: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onPlayerUpdate: (playerId: number, updates: any) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onBulkUpdate: (updates: Array<{ playerId: number; updates: any }>) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getTierConfig: (tier: number) => any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getTierStats: (position: string) => any;
 }
 
@@ -38,20 +43,21 @@ export function PlayerPoolTable({
   tierFilter,
   selectedWeek,
   onPlayerUpdate,
-  onBulkUpdate,
   getTierConfig,
   getTierStats
 }: PlayerPoolTableProps) {
   const [playersWithComments, setPlayersWithComments] = useState<Set<number>>(new Set());
-  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [playerComments, setPlayerComments] = useState<Record<number, string>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
+  const [openCommentPopover, setOpenCommentPopover] = useState<number | null>(null);
 
   // Load comment data for all players
   useEffect(() => {
     const loadCommentData = async () => {
       if (players.length === 0) return;
       
-      setCommentsLoading(true);
       const playersWithRecentComments = new Set<number>();
+      const commentsMap: Record<number, string> = {};
       
       // Check comments for each player
       const commentPromises = players.map(async (player) => {
@@ -60,22 +66,89 @@ export function PlayerPoolTable({
         if (!playerDkId) return;
         
         try {
-          const hasComments = await CommentService.hasRecentComments(playerDkId, 7);
-          if (hasComments) {
+          const comments = await CommentService.getPlayerComments(playerDkId);
+          // Filter comments for the current week
+          const weekComments = comments.filter(comment => comment.week_id === selectedWeek);
+          
+          if (weekComments.length > 0) {
             playersWithRecentComments.add(playerDkId);
+            // Use the most recent comment for this week
+            const latestComment = weekComments.sort((a, b) => 
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )[0];
+            commentsMap[playerDkId] = latestComment.content;
           }
         } catch (error) {
-          console.error(`Error checking comments for player ${playerDkId}:`, error);
+          console.error(`Error loading comments for player ${playerDkId}:`, error);
         }
       });
       
       await Promise.all(commentPromises);
       setPlayersWithComments(playersWithRecentComments);
-      setCommentsLoading(false);
+      setPlayerComments(commentsMap);
     };
 
     loadCommentData();
-  }, [players]);
+  }, [players, selectedWeek]);
+
+  // Comment handling functions
+  const handleSaveComment = async (playerDkId: number) => {
+    const comment = commentInputs[playerDkId]?.trim();
+    if (comment) {
+      try {
+        await CommentService.createComment({
+          content: comment,
+          playerDkId: playerDkId,
+          week_id: selectedWeek
+        });
+        setPlayerComments(prev => ({ ...prev, [playerDkId]: comment }));
+        // Refresh the playersWithComments set
+        setPlayersWithComments(prev => new Set([...prev, playerDkId]));
+      } catch (error) {
+        console.error('Failed to save comment:', error);
+      }
+    } else {
+      // Remove comment if empty
+      setPlayerComments(prev => {
+        const newComments = { ...prev };
+        delete newComments[playerDkId];
+        return newComments;
+      });
+    }
+    setOpenCommentPopover(null);
+  };
+
+  const handleClearComment = async (playerDkId: number) => {
+    try {
+      // Get existing comments for this player to delete them
+      const comments = await CommentService.getPlayerComments(playerDkId);
+      const weekComments = comments.filter(comment => comment.week_id === selectedWeek);
+      
+      // Delete each comment for this week
+      for (const comment of weekComments) {
+        await CommentService.deleteComment(comment.id);
+      }
+      
+      setPlayerComments(prev => {
+        const newComments = { ...prev };
+        delete newComments[playerDkId];
+        return newComments;
+      });
+      setCommentInputs(prev => {
+        const newInputs = { ...prev };
+        delete newInputs[playerDkId];
+        return newInputs;
+      });
+      // Remove from playersWithComments set
+      setPlayersWithComments(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(playerDkId);
+        return newSet;
+      });
+    } catch (error) {
+      console.error('Failed to clear comment:', error);
+    }
+  };
 
   // Get status color
   const getStatusColor = (status: string) => {
@@ -145,6 +218,7 @@ export function PlayerPoolTable({
     return [...filteredPlayers].sort((a, b) => {
       const aEntry = getEntry(a);
       const bEntry = getEntry(b);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let aValue: any, bValue: any;
       
       switch (sortField) {
@@ -229,7 +303,7 @@ export function PlayerPoolTable({
         return aValue < bValue ? 1 : -1;
       }
     });
-  }, [filteredPlayers, sortField, sortDirection]);
+  }, [filteredPlayers, sortField, sortDirection, gamesMap]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -520,15 +594,8 @@ export function PlayerPoolTable({
                       >
                         {entry.player?.displayName}
                       </Link>
-                      <div className="text-sm text-muted-foreground flex items-center">
+                      <div className="text-sm text-muted-foreground">
                         {entry.player?.position} • {entry.player?.team}
-                        {entry.player?.playerDkId && (
-                          <CommentIcon 
-                            playerDkId={entry.player.playerDkId}
-                            hasRecentComments={playersWithComments.has(entry.player.playerDkId)}
-                            size="sm"
-                          />
-                        )}
                       </div>
                     </div>
                   </TableCell>
@@ -792,21 +859,84 @@ export function PlayerPoolTable({
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`gap-1 ${
-                          playersWithComments.has(entry.player?.playerDkId || 0)
-                            ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
-                            : 'hover:bg-muted'
-                        }`}
+                      <Popover 
+                        open={openCommentPopover === entry.player?.playerDkId}
+                        onOpenChange={(open) => {
+                          if (open) {
+                            setOpenCommentPopover(entry.player?.playerDkId || 0);
+                            setCommentInputs(prev => ({
+                              ...prev,
+                              [entry.player?.playerDkId || 0]: playerComments[entry.player?.playerDkId || 0] || ''
+                            }));
+                          } else {
+                            setOpenCommentPopover(null);
+                          }
+                        }}
                       >
-                        <MessageSquare 
-                          className={`w-4 h-4 ${
-                            playersWithComments.has(entry.player?.playerDkId || 0) ? 'fill-current' : ''
-                          }`} 
-                        />
-                      </Button>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`gap-1 ${
+                              playersWithComments.has(entry.player?.playerDkId || 0)
+                                ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                                : 'hover:bg-muted'
+                            }`}
+                          >
+                            <MessageSquare 
+                              className={`w-4 h-4 ${
+                                playersWithComments.has(entry.player?.playerDkId || 0) ? 'fill-current' : ''
+                              }`} 
+                            />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80" align="end">
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <h4 className="font-medium">Quick Comment</h4>
+                              <p className="text-xs text-muted-foreground">
+                                Add a quick note about {entry.player?.displayName}
+                              </p>
+                            </div>
+                            <Textarea
+                              placeholder="e.g., Target in GPP, avoid in cash games, monitor weather..."
+                              value={commentInputs[entry.player?.playerDkId || 0] || ''}
+                              onChange={(e) => setCommentInputs(prev => ({
+                                ...prev,
+                                [entry.player?.playerDkId || 0]: e.target.value
+                              }))}
+                              rows={3}
+                              className="resize-none"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveComment(entry.player?.playerDkId || 0)}
+                                className="flex-1"
+                              >
+                                Save
+                              </Button>
+                              {playerComments[entry.player?.playerDkId || 0] && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleClearComment(entry.player?.playerDkId || 0)}
+                                >
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                            {playerComments[entry.player?.playerDkId || 0] && (
+                              <div className="pt-2 border-t">
+                                <p className="text-xs text-muted-foreground mb-1">Current note:</p>
+                                <p className="text-xs bg-muted p-2 rounded">
+                                  {playerComments[entry.player?.playerDkId || 0]}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                       
                       <Button
                         variant="ghost"
