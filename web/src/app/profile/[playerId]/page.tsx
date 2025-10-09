@@ -1,7 +1,6 @@
 import { PlayerProfile } from "@/components/PlayerProfile";
 import { PlayerService } from "@/lib/playerService";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 // ISR Configuration - Revalidate every 5 minutes
@@ -9,6 +8,30 @@ export const revalidate = 300;
 
 // Allow dynamic params for new player IDs
 export const dynamicParams = true;
+
+// Generate static params for known players at build time
+export async function generateStaticParams() {
+  try {
+    console.log("Generating static params for player profiles...");
+    
+    // Fetch a subset of player IDs for static generation
+    const profilesResponse = await PlayerService.getPlayerProfilesWithPoolData({
+      limit: 100, // Limit to first 100 players for build time
+      show_hidden: true
+    });
+
+    const playerIds = profilesResponse.players?.slice(0, 50).map(player => ({
+      playerId: player.playerDkId.toString()
+    })) || [];
+
+    console.log(`Generated ${playerIds.length} static params for player profiles`);
+    return playerIds;
+  } catch (error) {
+    console.error("Error generating static params:", error);
+    // Return empty array to allow dynamic generation
+    return [];
+  }
+}
 
 // Generate dynamic metadata for SEO
 export async function generateMetadata({ params }: PlayerProfilePageProps): Promise<Metadata> {

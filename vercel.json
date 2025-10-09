@@ -11,5 +11,11 @@
       "src": "/(.*)",
       "dest": "web/$1"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/profile/:playerId",
+      "destination": "/web/profile/:playerId"
+    }
   ]
 }
