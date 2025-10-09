@@ -40,7 +40,7 @@ interface PlayerPoolFiltersProps {
   activeTab: string;
   onTabChange: (position: string) => void;
   playersByPosition: Record<string, any[]>;
-  getFlexPlayers: () => any[];
+  flexPlayers: any[];
 }
 
 export function PlayerPoolFilters({
@@ -60,7 +60,7 @@ export function PlayerPoolFilters({
   activeTab,
   onTabChange,
   playersByPosition,
-  getFlexPlayers
+  flexPlayers
 }: PlayerPoolFiltersProps) {
   // Ensure weeks is always an array
   const safeWeeks = Array.isArray(weeks) ? weeks : [];
@@ -149,7 +149,7 @@ export function PlayerPoolFilters({
         <div className="border-b border-gray-200">
           <div className="flex">
             {(['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'] as string[]).map((position) => {
-              const count = position === 'FLEX' ? getFlexPlayers().length : playersByPosition[position]?.length || 0;
+              const count = position === 'FLEX' ? flexPlayers.length : playersByPosition[position]?.length || 0;
               
               return (
                 <button

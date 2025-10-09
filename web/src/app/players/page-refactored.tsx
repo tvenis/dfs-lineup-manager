@@ -293,7 +293,7 @@ export default function PlayerPoolPage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         playersByPosition={playersByPosition}
-        getFlexPlayers={getFlexPlayers}
+        flexPlayers={getFlexPlayers()}
       />
 
       {/* Player Evaluation Tips & Strategy Section */}

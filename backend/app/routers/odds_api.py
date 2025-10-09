@@ -932,10 +932,10 @@ async def import_player_props(
                                     continue
 
                                 # Add bookmaker-specific outcome_point filtering for player_tds_over
-                                if market == "player_tds_over" and outcome_name == "Over":
-                                    if bookmaker == "betonlineag" and outcome_point != 0.5:
+                                if mk_key == "player_tds_over" and outcome_name == "Over":
+                                    if bookmaker.get("key") == "betonlineag" and outcome_point != 0.5:
                                         continue
-                                    elif bookmaker == "draftkings" and outcome_point != 1.5:
+                                    elif bookmaker.get("key") == "draftkings" and outcome_point != 1.5:
                                         continue
 
                                 player_obj = find_player_by_name(outcome_description) if outcome_description else None

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { PlayerService, PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 import { WeekService } from '@/lib/weekService';
 import type { PlayerPoolEntry, Week } from '@/types/prd';
@@ -177,56 +177,77 @@ export default function PlayerPoolPage() {
     return grouped;
   }, [playerPool]);
 
-  // Get flex players (RB + WR + TE)
-  const getFlexPlayers = () => {
+  // Get flex players (RB + WR + TE) - memoized
+  const flexPlayers = useMemo(() => {
     return [
       ...playersByPosition.RB,
       ...playersByPosition.WR,
       ...playersByPosition.TE
     ];
-  };
+  }, [playersByPosition]);
 
-  // Filter players based on search, draft group, excluded status, and other filters
-  const getFilteredPlayers = (position: string) => {
-    let players = playersByPosition[position] || [];
-    
-    if (position === 'FLEX') {
-      players = getFlexPlayers();
-    }
+  // Pre-compute filtered players for all positions - MEMOIZED for performance
+  const filteredPlayersByPosition = useMemo(() => {
+    const positions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'];
+    const filtered: Record<string, PlayerPoolEntry[]> = {};
 
-    // Apply search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      players = players.filter(player => 
-        player.player?.displayName?.toLowerCase().includes(term) ||
-        player.player?.team?.toLowerCase().includes(term)
-      );
-    }
+    positions.forEach(position => {
+      let players = position === 'FLEX' 
+        ? flexPlayers 
+        : (playersByPosition[position] || []);
 
-    // Apply draft group filter
-    if (draftGroupFilter !== 'all') {
-      players = players.filter(player => player.draftGroup === draftGroupFilter);
-    }
+      // Apply search filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        players = players.filter(player => 
+          player.player?.displayName?.toLowerCase().includes(term) ||
+          player.player?.team?.toLowerCase().includes(term)
+        );
+      }
 
+      // Apply draft group filter
+      if (draftGroupFilter !== 'all') {
+        players = players.filter(player => player.draftGroup === draftGroupFilter);
+      }
 
-    return players;
-  };
-
-  // Get tier statistics for a position
-  const getTierStats = (position: string) => {
-    const players = getFilteredPlayers(position);
-    const stats = { tier1: 0, tier2: 0, tier3: 0, tier4: 0 };
-    
-    players.forEach(player => {
-      const tier = player.tier || 4;
-      if (tier === 1) stats.tier1++;
-      else if (tier === 2) stats.tier2++;
-      else if (tier === 3) stats.tier3++;
-      else stats.tier4++;
+      filtered[position] = players;
     });
-    
-    return stats;
-  };
+
+    return filtered;
+  }, [playersByPosition, flexPlayers, searchTerm, draftGroupFilter]);
+
+  // Memoized function to get filtered players (now just a lookup)
+  const getFilteredPlayers = useCallback((position: string) => {
+    return filteredPlayersByPosition[position] || [];
+  }, [filteredPlayersByPosition]);
+
+  // Pre-compute tier statistics for all positions - MEMOIZED for performance
+  const tierStatsByPosition = useMemo(() => {
+    const positions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'];
+    const statsMap: Record<string, { tier1: number; tier2: number; tier3: number; tier4: number }> = {};
+
+    positions.forEach(position => {
+      const players = filteredPlayersByPosition[position] || [];
+      const stats = { tier1: 0, tier2: 0, tier3: 0, tier4: 0 };
+      
+      players.forEach(player => {
+        const tier = player.tier || 4;
+        if (tier === 1) stats.tier1++;
+        else if (tier === 2) stats.tier2++;
+        else if (tier === 3) stats.tier3++;
+        else stats.tier4++;
+      });
+      
+      statsMap[position] = stats;
+    });
+
+    return statsMap;
+  }, [filteredPlayersByPosition]);
+
+  // Memoized function to get tier stats (now just a lookup)
+  const getTierStats = useCallback((position: string) => {
+    return tierStatsByPosition[position] || { tier1: 0, tier2: 0, tier3: 0, tier4: 0 };
+  }, [tierStatsByPosition]);
 
   // Get tier configuration (consistent with Lineup Builder)
   const getTierConfig = (tier: number) => {
@@ -399,7 +420,7 @@ export default function PlayerPoolPage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         playersByPosition={playersByPosition}
-        getFlexPlayers={getFlexPlayers}
+        flexPlayers={flexPlayers}
       />
 
       {/* Player Evaluation Tips & Strategy Section */}
