@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronUp, ChevronDown, MessageSquare } from 'lucide-react';
+import { ChevronUp, ChevronDown, MessageSquare, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { PlayerPoolProps } from '@/components/PlayerPoolProps';
 import { CommentService } from '@/lib/commentService';
@@ -126,6 +126,41 @@ export function PlayerPoolTable({
       }
     }
     setOpenCommentPopover(null);
+  };
+
+  const handleDeleteComment = async (playerDkId: number, commentId: number) => {
+    try {
+      await CommentService.deleteComment(commentId);
+      
+      // Remove the comment from the local state
+      setPlayerComments(prev => {
+        const playerCommentsArray = prev[playerDkId] || [];
+        const updatedComments = playerCommentsArray.filter(comment => comment.id !== commentId);
+        
+        if (updatedComments.length === 0) {
+          // If no comments left, remove the player from the set and delete the entry
+          const newComments = { ...prev };
+          delete newComments[playerDkId];
+          return newComments;
+        } else {
+          return { ...prev, [playerDkId]: updatedComments };
+        }
+      });
+      
+      // Update playersWithComments set if no comments remain
+      setPlayerComments(prev => {
+        if (!prev[playerDkId] || prev[playerDkId].length === 0) {
+          setPlayersWithComments(prevSet => {
+            const newSet = new Set(prevSet);
+            newSet.delete(playerDkId);
+            return newSet;
+          });
+        }
+        return prev;
+      });
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+    }
   };
 
   const handleClearComment = async (playerDkId: number) => {
@@ -876,7 +911,7 @@ export function PlayerPoolTable({
                             setOpenCommentPopover(entry.player?.playerDkId || 0);
                             setCommentInputs(prev => ({
                               ...prev,
-                              [entry.player?.playerDkId || 0]: playerComments[entry.player?.playerDkId || 0] || ''
+                              [entry.player?.playerDkId || 0]: ''
                             }));
                           } else {
                             setOpenCommentPopover(null);
@@ -940,12 +975,24 @@ export function PlayerPoolTable({
                               <div className="pt-2 border-t">
                                 <p className="text-xs text-muted-foreground mb-2">Notes:</p>
                                 <div className="space-y-2">
-                                  {playerComments[entry.player?.playerDkId || 0].map((comment, index) => (
-                                    <div key={comment.id} className="text-xs bg-muted p-2 rounded">
-                                      <p className="mb-1">{comment.content}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {new Date(comment.created_at).toLocaleString()}
-                                      </p>
+                                  {playerComments[entry.player?.playerDkId || 0].map((comment) => (
+                                    <div key={comment.id} className="text-xs bg-muted p-2 rounded relative group">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1">
+                                          <p className="mb-1">{comment.content}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {new Date(comment.created_at).toLocaleString()}
+                                          </p>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDeleteComment(entry.player?.playerDkId || 0, comment.id)}
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6 hover:bg-red-100 hover:text-red-600"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
