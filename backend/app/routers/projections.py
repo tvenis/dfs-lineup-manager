@@ -1139,6 +1139,20 @@ def process_ownership_projections(db: Session, week_id: int, projection_source: 
                         
                         if i < 3:
                             print(f"DEBUG: Created new ownership estimate for {matched_player.displayName}: {player_data['ownership']}%")
+                    
+                    # Update player_pool_entries.ownership for all slates this week
+                    pool_entries = db.query(PlayerPoolEntry).filter(
+                        and_(
+                            PlayerPoolEntry.week_id == week_id,
+                            PlayerPoolEntry.playerDkId == matched_player.playerDkId
+                        )
+                    ).all()
+                    
+                    for pool_entry in pool_entries:
+                        pool_entry.ownership = player_data['ownership']
+                    
+                    if i < 3 and pool_entries:
+                        print(f"DEBUG: Updated {len(pool_entries)} pool entries with ownership for {matched_player.displayName}")
                             
                 except Exception as e:
                     print(f"DEBUG: Error creating ownership estimate for {matched_player.displayName}: {str(e)}")
