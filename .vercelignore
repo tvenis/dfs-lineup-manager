@@ -1,0 +1,42 @@
+# Backend files (not needed for frontend deployment)
+backend/
+api/
+
+# Documentation
+docs/
+*.md
+!web/README.md
+
+# Test files
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/jest.config.js
+**/jest.setup.js
+coverage/
+
+# Scripts
+scripts/
+start_dev.sh
+
+# Development files
+.git/
+.github/
+*.log
+*.pid
+dev.log
+dev.pid
+
+# CSV test data
+*.csv
+
+# Python files
+**/*.py
+**/__pycache__/
+**/venv/
+**/.pytest_cache/
+
+# Node modules (will be installed fresh)
+node_modules/
+web/node_modules/
+

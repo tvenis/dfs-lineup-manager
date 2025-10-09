@@ -9,7 +9,6 @@
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "cd web && npm test",
     "test:backend": "cd backend && python -m pytest test_weeks_api.py -v || python test_weeks_api.py",
-    "prebuild": "npm run test",
     "build": "cd web && npm run build",
     "install:all": "npm install && cd web && npm install && cd ../backend && pip install -r requirements.txt",
     "setup": "chmod +x start_dev.sh && npm install && cd web && npm install && cd ../backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt"

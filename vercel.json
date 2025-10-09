@@ -1,23 +1,5 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "web/package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "web/$1"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/profile/:playerId",
-      "destination": "/web/profile/:playerId"
-    }
-  ],
   "buildCommand": "cd web && npm run build",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./"
+  "installCommand": "cd web && npm install",
+  "outputDirectory": "web/.next"
 }
