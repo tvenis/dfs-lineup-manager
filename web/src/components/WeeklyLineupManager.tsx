@@ -867,8 +867,8 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                     </div>
                                     <span className="block h-4 bg-muted justify-self-stretch" />
                                     <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>${Math.round(player.salary).toLocaleString()}</span>
-                                    <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
-                                    <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
+                                    <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.projectedPoints != null ? player.projectedPoints.toFixed(1) : '—'}</span>
+                                    <span className="text-xs text-muted-foreground text-right" style={{ fontVariantNumeric: 'tabular-nums' }}>{player.ownership != null ? `${player.ownership.toFixed(1)}%` : '—'}</span>
                                     <span 
                                       className={`text-xs text-right ${isDST ? 'font-semibold text-blue-600' : 'text-muted-foreground'} flex items-center justify-end gap-1`} 
                                       style={{ fontVariantNumeric: 'tabular-nums' }}
@@ -909,8 +909,8 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                     </div>
                                     <div className="flex items-center justify-between text-xs text-muted-foreground" style={{ fontVariantNumeric: 'tabular-nums' }}>
                                       <span className="pr-3 border-r border-muted">${Math.round(player.salary).toLocaleString()}</span>
-                                      <span>{player.projectedPoints !== undefined ? player.projectedPoints.toFixed(1) : '—'}</span>
-                                      <span>{player.ownership !== undefined ? `${player.ownership.toFixed(1)}%` : '—'}</span>
+                                      <span>{player.projectedPoints != null ? player.projectedPoints.toFixed(1) : '—'}</span>
+                                      <span>{player.ownership != null ? `${player.ownership.toFixed(1)}%` : '—'}</span>
                                         <span 
                                           className={`${isDST ? 'font-semibold text-blue-600' : ''} flex items-center gap-1`}
                                           title={isDST ? 'DK Defense Score' : 'Actual Points'}
@@ -924,11 +924,11 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                                 <span className={`text-[10px] ${indicatorClass}`}>{pa <= 6 ? '▲' : pa <= 20 ? '△' : '▼'}</span>
                                               );
                                               return <>
-                                                {score !== undefined ? score.toFixed(1) : '—'} {indicator}
+                                                {score != null ? score.toFixed(1) : '—'} {indicator}
                                               </>;
                                             })()
                                           ) : (
-                                            displayActuals !== undefined ? displayActuals.toFixed(1) : '—'
+                                            displayActuals != null ? displayActuals.toFixed(1) : '—'
                                           )}
                                         </span>
                                     </div>
