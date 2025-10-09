@@ -3,16 +3,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { PlayerService, PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 import { WeekService } from '@/lib/weekService';
-import type { PlayerPoolEntry, Week } from '@/types/prd';
-import { PlayerWeekAnalysis, WeekAnalysisData } from '@/components/PlayerWeekAnalysis';
+import type { Week } from '@/types/prd';
 import { PlayerPoolTips } from '@/components/PlayerPoolTips';
 import { PlayerPoolFilters } from '@/components/PlayerPoolFilters';
 import { PlayerPoolTable } from '@/components/PlayerPoolTable';
-import { PlayerPoolProps } from '@/components/PlayerPoolProps';
 import { PlayerPoolPagination } from '@/components/PlayerPoolPagination';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { User } from 'lucide-react';
 
 export default function PlayerPoolPage() {
   // State management
@@ -23,7 +19,9 @@ export default function PlayerPoolPage() {
   const [playerPool, setPlayerPool] = useState<PlayerPoolEntryWithAnalysisDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [gamesMap, setGamesMap] = useState<Record<string, any>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [propsData, setPropsData] = useState<Record<number, Record<string, any>>>({});
   
   // Filter states
@@ -90,7 +88,7 @@ export default function PlayerPoolPage() {
         setDraftGroups(groups);
         
         // Auto-select the default draft group if available
-        const defaultGroup = groups.find((group: any) => group.is_default === true);
+        const defaultGroup = groups.find((group: { is_default: boolean }) => group.is_default === true);
         if (defaultGroup) {
           console.log('🎯 Found default draft group for Player Pool:', defaultGroup);
           setDraftGroupFilter(defaultGroup.draftGroup.toString());
@@ -112,15 +110,8 @@ export default function PlayerPoolPage() {
     }
   }, [selectedWeek]);
 
-  // Fetch player data when week or draft group filter changes
-  useEffect(() => {
-    if (selectedWeek) {
-      fetchPlayerData(selectedWeek);
-    }
-  }, [selectedWeek, draftGroupFilter]);
-
   // Fetch player data using the optimized endpoint
-  const fetchPlayerData = async (weekId: number) => {
+  const fetchPlayerData = useCallback(async (weekId: number) => {
     try {
       setLoading(true);
       setError(null);
@@ -141,7 +132,14 @@ export default function PlayerPoolPage() {
       } finally {
         setLoading(false);
       }
-    };
+    }, [draftGroupFilter]);
+
+  // Fetch player data when week or draft group filter changes
+  useEffect(() => {
+    if (selectedWeek) {
+      fetchPlayerData(selectedWeek);
+    }
+  }, [selectedWeek, draftGroupFilter, fetchPlayerData]);
 
   // Get unique draft groups with descriptions
   const getUniqueDraftGroups = useMemo(() => {
@@ -157,7 +155,7 @@ export default function PlayerPoolPage() {
 
   // Group players by position
   const playersByPosition = useMemo(() => {
-    const grouped: Record<string, PlayerPoolEntry[]> = {
+    const grouped: Record<string, PlayerPoolEntryWithAnalysisDto[]> = {
       QB: [],
       RB: [],
       WR: [],
@@ -170,7 +168,7 @@ export default function PlayerPoolPage() {
       const entry = player.entry || player; // Use entry if it exists, otherwise use player directly
       const position = entry.player?.position;
       if (position && grouped[position]) {
-        grouped[position].push(entry);
+        grouped[position].push(player);
       }
     });
 
@@ -189,7 +187,7 @@ export default function PlayerPoolPage() {
   // Pre-compute filtered players for all positions - MEMOIZED for performance
   const filteredPlayersByPosition = useMemo(() => {
     const positions = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'];
-    const filtered: Record<string, PlayerPoolEntry[]> = {};
+    const filtered: Record<string, PlayerPoolEntryWithAnalysisDto[]> = {};
 
     positions.forEach(position => {
       let players = position === 'FLEX' 
@@ -200,14 +198,14 @@ export default function PlayerPoolPage() {
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         players = players.filter(player => 
-          player.player?.displayName?.toLowerCase().includes(term) ||
-          player.player?.team?.toLowerCase().includes(term)
+          player.entry.player?.displayName?.toLowerCase().includes(term) ||
+          player.entry.player?.team?.toLowerCase().includes(term)
         );
       }
 
       // Apply draft group filter
       if (draftGroupFilter !== 'all') {
-        players = players.filter(player => player.draftGroup === draftGroupFilter);
+        players = players.filter(player => player.entry.draftGroup === draftGroupFilter);
       }
 
       filtered[position] = players;
@@ -231,7 +229,7 @@ export default function PlayerPoolPage() {
       const stats = { tier1: 0, tier2: 0, tier3: 0, tier4: 0 };
       
       players.forEach(player => {
-        const tier = player.tier || 4;
+        const tier = player.entry.tier || 4;
         if (tier === 1) stats.tier1++;
         else if (tier === 2) stats.tier2++;
         else if (tier === 3) stats.tier3++;
@@ -310,8 +308,14 @@ export default function PlayerPoolPage() {
     }
   };
 
-  // Handle player updates
-  const handlePlayerUpdate = async (playerId: number, updates: any) => {
+  // Handle player updates with OPTIMISTIC UI UPDATE
+  const handlePlayerUpdate = async (playerId: number, updates: {
+    excluded?: boolean;
+    status?: string;
+    isDisabled?: boolean;
+    tier?: number;
+    tierFilter?: number | 'all';
+  }) => {
     if (playerId === 0) {
       // Handle filter updates
       if (updates.tierFilter !== undefined) {
@@ -320,58 +324,81 @@ export default function PlayerPoolPage() {
       return;
     }
 
-    try {
-      // Update player in database
-      await PlayerService.updatePlayerPoolEntry(playerId, updates);
-      
-      // Update local state
-      setPlayerPool(prev => 
-        prev.map(player => {
-          const entry = player.entry || player; // Handle both structures
-          if (entry.id === playerId) {
-            // Update the entry within the structure
-            if (player.entry) {
-              return { ...player, entry: { ...player.entry, ...updates } };
-            } else {
-              return { ...player, ...updates };
-            }
+    // 1. OPTIMISTIC UPDATE - Update UI immediately for instant feedback
+    const previousState = playerPool;
+    setPlayerPool(prev => 
+      prev.map(player => {
+        const entry = player.entry || player; // Handle both structures
+        if (entry.id === playerId) {
+          // Update the entry within the structure
+          if (player.entry) {
+            return { ...player, entry: { ...player.entry, ...updates } };
+          } else {
+            return { ...player, ...updates };
           }
-          return player;
-        })
-      );
+        }
+        return player;
+      })
+    );
+
+    // 2. API CALL - Persist to backend in background
+    try {
+      await PlayerService.updatePlayerPoolEntry(playerId, updates);
+      // Success! UI already updated optimistically
     } catch (error) {
+      // 3. REVERT ON ERROR - Restore previous state if API call fails
       console.error('Error updating player:', error);
+      setPlayerPool(previousState);
+      
+      // TODO: Show user-friendly error notification (toast/alert)
+      // Example: toast.error('Failed to update player. Please try again.');
+      alert('Failed to update player. Please try again.');
     }
   };
 
-  // Handle bulk updates
-  const handleBulkUpdate = async (updates: Array<{ playerId: number; updates: any }>) => {
+  // Handle bulk updates with OPTIMISTIC UI UPDATE
+  const handleBulkUpdate = async (updates: Array<{ 
+    playerId: number; 
+    updates: {
+      excluded?: boolean;
+      status?: string;
+      isDisabled?: boolean;
+      tier?: number;
+    }
+  }>) => {
+    // 1. OPTIMISTIC UPDATE - Update UI immediately for instant feedback
+    const previousState = playerPool;
+    setPlayerPool(prev => 
+      prev.map(player => {
+        const entry = player.entry || player; // Handle both structures
+        const update = updates.find(u => u.playerId === entry.id);
+        if (update) {
+          // Update the entry within the structure
+          if (player.entry) {
+            return { ...player, entry: { ...player.entry, ...update.updates } };
+          } else {
+            return { ...player, ...update.updates };
+          }
+        }
+        return player;
+      })
+    );
+
+    // 2. API CALL - Persist to backend in background
     try {
-      // Update all players in database
       await Promise.all(
         updates.map(({ playerId, updates: playerUpdates }) =>
           PlayerService.updatePlayerPoolEntry(playerId, playerUpdates)
         )
       );
-      
-      // Update local state
-      setPlayerPool(prev => 
-        prev.map(player => {
-          const entry = player.entry || player; // Handle both structures
-          const update = updates.find(u => u.playerId === entry.id);
-          if (update) {
-            // Update the entry within the structure
-            if (player.entry) {
-              return { ...player, entry: { ...player.entry, ...update.updates } };
-    } else {
-              return { ...player, ...update.updates };
-            }
-          }
-          return player;
-        })
-      );
+      // Success! UI already updated optimistically
     } catch (error) {
+      // 3. REVERT ON ERROR - Restore previous state if API call fails
       console.error('Error updating players:', error);
+      setPlayerPool(previousState);
+      
+      // TODO: Show user-friendly error notification (toast/alert)
+      alert('Failed to update players. Please try again.');
     }
   };
 
@@ -451,8 +478,6 @@ export default function PlayerPoolPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           {(['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'] as string[]).map((position) => {
             const filteredPlayers = getFilteredPlayers(position);
-            const excludedCount = filteredPlayers.filter(player => player.excluded === true).length;
-            const tierStats = getTierStats(position);
 
             return (
               <TabsContent key={position} value={position} className="m-0 border-t">

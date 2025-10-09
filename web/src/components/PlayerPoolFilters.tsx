@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Eye, EyeOff, Search } from 'lucide-react';
 import type { Week } from '@/types/prd';
+import { PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 
 interface PlayerPoolFiltersProps {
   // Week selection
@@ -39,8 +39,8 @@ interface PlayerPoolFiltersProps {
   // Position tabs
   activeTab: string;
   onTabChange: (position: string) => void;
-  playersByPosition: Record<string, any[]>;
-  flexPlayers: any[];
+  playersByPosition: Record<string, PlayerPoolEntryWithAnalysisDto[]>;
+  flexPlayers: PlayerPoolEntryWithAnalysisDto[];
 }
 
 export function PlayerPoolFilters({
@@ -55,7 +55,10 @@ export function PlayerPoolFilters({
   draftGroupFilter,
   onDraftGroupChange,
   uniqueDraftGroups,
+  // tierFilter and onTierFilterChange are defined in the interface for future use but not currently used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   tierFilter,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTierFilterChange,
   activeTab,
   onTabChange,

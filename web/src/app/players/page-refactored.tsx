@@ -3,16 +3,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PlayerService, PlayerPoolEntryWithAnalysisDto } from '@/lib/playerService';
 import { WeekService } from '@/lib/weekService';
-import type { PlayerPoolEntry, Week } from '@/types/prd';
-import { PlayerWeekAnalysis, WeekAnalysisData } from '@/components/PlayerWeekAnalysis';
+import type { Week } from '@/types/prd';
 import { PlayerPoolTips } from '@/components/PlayerPoolTips';
 import { PlayerPoolFilters } from '@/components/PlayerPoolFilters';
 import { PlayerPoolTable } from '@/components/PlayerPoolTable';
-import { PlayerPoolProps } from '@/components/PlayerPoolProps';
 import { PlayerPoolPagination } from '@/components/PlayerPoolPagination';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { User } from 'lucide-react';
 
 export default function PlayerPoolPage() {
   // State management
@@ -21,7 +17,9 @@ export default function PlayerPoolPage() {
   const [playerPool, setPlayerPool] = useState<PlayerPoolEntryWithAnalysisDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [gamesMap, setGamesMap] = useState<Record<string, any>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [propsData, setPropsData] = useState<Record<number, Record<string, any>>>({});
   
   // Filter states
@@ -87,7 +85,7 @@ export default function PlayerPoolPage() {
     // This is a placeholder implementation for the refactored version
     // The actual implementation should fetch draft group data with descriptions
     return [];
-  }, [playerPool]);
+  }, []);
 
   // Group players by position
   const playersByPosition = useMemo(() => {
@@ -204,7 +202,13 @@ export default function PlayerPoolPage() {
   };
 
   // Handle player updates
-  const handlePlayerUpdate = async (playerId: number, updates: any) => {
+  const handlePlayerUpdate = async (playerId: number, updates: {
+    excluded?: boolean;
+    status?: string;
+    isDisabled?: boolean;
+    tier?: number;
+    tierFilter?: number | 'all';
+  }) => {
     if (playerId === 0) {
       // Handle filter updates
       if (updates.tierFilter !== undefined) {
@@ -231,7 +235,15 @@ export default function PlayerPoolPage() {
   };
 
   // Handle bulk updates
-  const handleBulkUpdate = async (updates: Array<{ playerId: number; updates: any }>) => {
+  const handleBulkUpdate = async (updates: Array<{ 
+    playerId: number; 
+    updates: {
+      excluded?: boolean;
+      status?: string;
+      isDisabled?: boolean;
+      tier?: number;
+    }
+  }>) => {
     try {
       // Update all players in database
       await Promise.all(
@@ -324,8 +336,6 @@ export default function PlayerPoolPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           {(['QB', 'RB', 'WR', 'TE', 'FLEX', 'DST'] as string[]).map((position) => {
             const filteredPlayers = getFilteredPlayers(position);
-            const excludedCount = filteredPlayers.filter(player => player.entry.excluded === true).length;
-            const tierStats = getTierStats(position);
 
             return (
               <TabsContent key={position} value={position} className="m-0 border-t">
