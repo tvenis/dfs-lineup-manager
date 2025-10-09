@@ -9,13 +9,11 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   Home,
@@ -57,10 +55,10 @@ export default function App({ children }: { children: React.ReactNode }) {
       href: "/scoreboard",
     },
     {
-      id: "home",
+      id: "lineups",
       label: "Lineup Manager",
       icon: Home,
-      href: "/",
+      href: "/lineups",
     },
     {
       id: "builder",

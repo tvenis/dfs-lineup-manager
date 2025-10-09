@@ -27,10 +27,10 @@ import {
 
 const navigationItems = [
   {
-    id: "home",
+    id: "lineups",
     label: "Weekly Lineup Manager",
     icon: Home,
-    href: "/",
+    href: "/lineups",
   },
   {
     id: "builder",
