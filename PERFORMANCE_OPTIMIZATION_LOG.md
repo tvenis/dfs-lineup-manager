@@ -163,9 +163,108 @@ const count = position === 'FLEX' ? flexPlayers.length : ...
 ### Next Steps (Remaining Optimizations)
 
 - [ ] Optimization #2: Optimize State Update Pattern (30-40% improvement)
-- [ ] Optimization #3: Add Optimistic UI Updates (perceived instant response)
+- [x] Optimization #3: Add Optimistic UI Updates (perceived instant response) ✅
 - [ ] Optimization #4: Create Lightweight Backend Response (10-20% improvement)
 - [ ] Optimization #5: Remove db.refresh() Call (5-10ms improvement)
+
+---
+
+## Optimization #3: Add Optimistic UI Updates ✅ COMPLETED
+
+**Date:** October 9, 2025  
+**Priority:** MEDIUM  
+**Expected Impact:** ⚡ Perceived instant response (actual latency hidden)
+
+### Problem
+Even with memoization (Optimization #1), users still experienced a slight delay when updating tiers because the UI waited for the API response before updating. This created a perceived lag even though the actual operation was fast.
+
+### Solution Implemented
+
+Changed the update flow from:
+1. ~~API call (user waits)~~
+2. ~~Update UI on success~~
+
+To:
+1. **Update UI immediately (instant feedback)**
+2. API call in background
+3. Revert UI only if API fails
+
+#### Files Modified:
+- `web/src/app/players/page.tsx`
+
+#### Changes Made:
+
+**1. Updated `handlePlayerUpdate` with Optimistic UI Pattern**
+```typescript
+// Before: Wait for API, then update UI
+const handlePlayerUpdate = async (playerId: number, updates: any) => {
+  try {
+    await PlayerService.updatePlayerPoolEntry(playerId, updates);
+    setPlayerPool(prev => /* update logic */);
+  } catch (error) {
+    console.error('Error updating player:', error);
+  }
+};
+
+// After: Update UI first, sync in background
+const handlePlayerUpdate = async (playerId: number, updates: any) => {
+  // 1. OPTIMISTIC UPDATE - Update UI immediately
+  const previousState = playerPool;
+  setPlayerPool(prev => /* update logic */);
+
+  // 2. API CALL - Persist to backend in background
+  try {
+    await PlayerService.updatePlayerPoolEntry(playerId, updates);
+    // Success! UI already updated
+  } catch (error) {
+    // 3. REVERT ON ERROR - Restore previous state
+    console.error('Error updating player:', error);
+    setPlayerPool(previousState);
+    alert('Failed to update player. Please try again.');
+  }
+};
+```
+
+**2. Updated `handleBulkUpdate` with Same Pattern**
+Applied the same optimistic update pattern to bulk updates for consistency.
+
+### Performance Impact
+
+**Before (even with memoization):**
+- User clicks tier dropdown → Sees loading state → API responds → UI updates
+- Perceived delay: ~100-300ms (network latency)
+
+**After:**
+- User clicks tier dropdown → UI updates instantly → API syncs in background
+- Perceived delay: **0ms (instant)** 
+- Actual network call still happens but is imperceptible
+
+### Benefits
+
+1. **Instant Feedback**: UI responds immediately to user actions
+2. **Better UX**: No waiting for network roundtrips
+3. **Error Handling**: Gracefully reverts on failure with user notification
+4. **Robust**: Maintains data consistency between frontend and backend
+
+### Error Handling
+
+- Stores previous state before optimistic update
+- Reverts to previous state if API call fails
+- Shows alert to user (placeholder - can be upgraded to toast notification)
+- Logs errors to console for debugging
+
+### Testing Recommendations
+
+1. **Normal Operation**: Tier updates should feel instant
+2. **Network Throttling**: Simulate slow 3G - UI should still update instantly
+3. **Offline Mode**: Disable network - should revert with error message
+4. **Rapid Updates**: Change multiple tiers quickly - all should feel instant
+
+### Notes
+
+- Using `alert()` for error notification (temporary)
+- TODO: Upgrade to toast notification system for better UX
+- Pattern can be applied to other update operations (excluded, status, etc.)
 
 ---
 
