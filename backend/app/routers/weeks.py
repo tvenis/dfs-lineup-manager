@@ -95,9 +95,51 @@ def get_seasons(db: Session = Depends(get_db)):
         print(f"Error in get_seasons: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/active", response_model=WeekSchema)
+def get_active_week(db: Session = Depends(get_db)):
+    """Get the current active week
+    
+    Returns the week with status='Active'. If no active week exists, returns 404.
+    This is the dedicated endpoint for getting the active week.
+    """
+    active_week = db.query(Week).filter(Week.status == "Active").first()
+    
+    if not active_week:
+        raise HTTPException(status_code=404, detail="No active week found")
+    
+    return active_week
+
+@router.get("/last-completed", response_model=WeekSchema)
+def get_last_completed_week(db: Session = Depends(get_db)):
+    """Get the most recent completed week
+    
+    Returns the most recently completed week (status='Completed'), 
+    sorted by year and week_number descending. If no completed week exists, returns 404.
+    This is the dedicated endpoint for getting the last completed week.
+    """
+    completed_week = db.query(Week).filter(
+        Week.status == "Completed"
+    ).order_by(
+        Week.year.desc(), 
+        Week.week_number.desc()
+    ).first()
+    
+    if not completed_week:
+        raise HTTPException(status_code=404, detail="No completed week found")
+    
+    return completed_week
+
 @router.get("/current", response_model=WeekSchema)
 def get_current_week(db: Session = Depends(get_db)):
-    """Get the current active week"""
+    """Get the current active week (legacy endpoint - use /active instead)
+    
+    This endpoint provides fallback logic:
+    1. First, try to find the active week
+    2. If no active week, find the week that contains today's date
+    3. If no current week, find the next upcoming week
+    
+    For simpler use cases, use /api/weeks/active or /api/weeks/last-completed instead.
+    """
     today = date.today()
     
     # First, try to find the active week

@@ -35,15 +35,35 @@ export class WeekService {
 
   static async getActiveWeek(): Promise<Week | null> {
     try {
-      const response = await fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS)}?status=Active&limit=1`);
+      const response = await fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS)}/active`);
+      if (response.status === 404) {
+        // No active week found
+        return null;
+      }
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      return data.weeks && data.weeks.length > 0 ? data.weeks[0] : null;
+      return await response.json();
     } catch (error) {
       console.error('Error fetching active week:', error);
-      throw error;
+      return null;
+    }
+  }
+
+  static async getLastCompletedWeek(): Promise<Week | null> {
+    try {
+      const response = await fetch(`${buildApiUrl(API_CONFIG.ENDPOINTS.WEEKS)}/last-completed`);
+      if (response.status === 404) {
+        // No completed week found
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching last completed week:', error);
+      return null;
     }
   }
 

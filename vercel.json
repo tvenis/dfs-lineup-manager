@@ -17,5 +17,7 @@
       "source": "/profile/:playerId",
       "destination": "/web/profile/:playerId"
     }
-  ]
+  ],
+  "buildCommand": "cd web && npm run build",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./"
 }

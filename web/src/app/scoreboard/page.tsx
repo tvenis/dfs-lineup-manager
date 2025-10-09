@@ -89,20 +89,27 @@ export default function ScoreboardPage() {
         setWeeks(weeksArray);
         setContestTypes(contestTypesData.contest_types || []);
         
-        // Set default week filter to Active week if available
-        const activeWeek = weeksArray.find((w: any) => w.status === 'Active');
-        if (activeWeek) {
-          setWeekFilter(`week-${activeWeek.week_number}`);
-        } else if (weeksArray.length > 0) {
-          // Fallback to most recent completed week
-          const completedWeeks = weeksArray.filter((w: any) => w.status === 'Completed');
-          if (completedWeeks.length > 0) {
-            const mostRecent = completedWeeks.sort((a: any, b: any) => b.week_number - a.week_number)[0];
-            setWeekFilter(`week-${mostRecent.week_number}`);
+        // Set default week filter to Last Completed week if available
+        // Note: We could also use WeekService.getLastCompletedWeek() here,
+        // but since we already fetched all weeks, we filter and sort them client-side
+        const completedWeeks = weeksArray.filter((w: { status: string }) => w.status === 'Completed');
+        if (completedWeeks.length > 0) {
+          // Sort by year and week_number descending to get the most recent completed week
+          const sortedCompleted = completedWeeks.sort((a: { year: number; week_number: number }, b: { year: number; week_number: number }) => {
+            if (a.year !== b.year) return b.year - a.year;
+            return b.week_number - a.week_number;
+          });
+          const mostRecentCompleted = sortedCompleted[0];
+          setWeekFilter(`week-${mostRecentCompleted.week_number}`);
+        } else {
+          // Fallback to Active week if no completed weeks exist
+          const activeWeek = weeksArray.find((w: { status: string }) => w.status === 'Active');
+          if (activeWeek) {
+            setWeekFilter(`week-${activeWeek.week_number}`);
           }
         }
-      } catch (e: any) {
-        setError(e.message || "Unknown error");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unknown error");
       } finally {
         setLoading(false);
       }
@@ -134,9 +141,9 @@ export default function ScoreboardPage() {
           return;
         }
         const data = await res.json();
-        const arr = (data.lineups || []).map((l: any) => ({ id: l.id, name: l.name, week_id: l.week_id }));
+        const arr = (data.lineups || []).map((l: { id: string; name: string; week_id: number }) => ({ id: l.id, name: l.name, week_id: l.week_id }));
         setSubmittedLineups(arr);
-      } catch (err) {
+      } catch {
         setSubmittedLineups([]);
       }
     }
@@ -214,16 +221,20 @@ export default function ScoreboardPage() {
     if (min !== undefined) filtered = filtered.filter(c => Number(c.entry_fee_usd ?? 0) >= min);
     if (max !== undefined) filtered = filtered.filter(c => Number(c.entry_fee_usd ?? 0) <= max);
 
-    filtered.sort((a: any, b: any) => {
-      let aVal = a[sortBy];
-      let bVal = b[sortBy];
+    filtered.sort((a: ContestRow, b: ContestRow) => {
+      let aVal = a[sortBy as keyof ContestRow];
+      let bVal = b[sortBy as keyof ContestRow];
       if (typeof aVal === "string") aVal = aVal.toLowerCase();
       if (typeof bVal === "string") bVal = bVal.toLowerCase();
+      // Handle null/undefined values
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
       return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
     });
 
     return filtered;
-  }, [allContests, weekFilter, contestTypeFilter, lineupFilter, opponentFilter, resultFilter, feeMinSel, feeMaxSel, sortBy, sortOrder]);
+  }, [allContests, weeks, weekFilter, contestTypeFilter, lineupFilter, opponentFilter, resultFilter, feeMinSel, feeMaxSel, sortBy, sortOrder]);
 
   const metrics = useMemo(() => {
     const totalEntries = filteredContests.length;
@@ -580,7 +591,6 @@ export default function ScoreboardPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredContests.map((c) => {
-                      const winnings = (c.winnings_non_ticket || 0) + (c.winnings_ticket || 0);
                       return (
                         <TableRow key={`${c.entry_key}-${c.contest_id}`}>
                           <TableCell>

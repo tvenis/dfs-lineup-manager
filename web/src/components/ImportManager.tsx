@@ -354,7 +354,9 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           
           if (oddsEndTime) {
             const endDate = new Date(oddsEndTime)
-            endDate.setUTCHours(23, 59, 0, 0) // Set to 23:59:00 UTC
+            // Move to next day and set to 9 AM UTC (5 AM ET) to capture Monday Night Football
+            endDate.setUTCDate(endDate.getUTCDate() + 1)
+            endDate.setUTCHours(9, 0, 0, 0)
             requestBody.commence_time_to = endDate.toISOString().replace('.000Z', 'Z')
           }
           requestBody.regions = oddsRegion
@@ -380,7 +382,9 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
           
           if (oddsEndTime) {
             const endDate = new Date(oddsEndTime)
-            endDate.setUTCHours(23, 59, 0, 0) // Set to 23:59:00 UTC
+            // Move to next day and set to 9 AM UTC (5 AM ET) to capture Monday Night Football
+            endDate.setUTCDate(endDate.getUTCDate() + 1)
+            endDate.setUTCHours(9, 0, 0, 0)
             requestBody.commence_time_to = endDate.toISOString().replace('.000Z', 'Z')
           }
           requestBody.regions = oddsRegion
