@@ -176,10 +176,27 @@ class WeeklySummaryService:
                 oprk_attr = next((attr for attr in draft_stats if isinstance(attr, dict) and attr.get('id') == -2), None)
                 
                 if oprk_attr:
-                    oprk_value = oprk_attr.get('value')
+                    oprk_value_raw = oprk_attr.get('value')
                     oprk_quality = oprk_attr.get('quality')
                     
-                    logger.debug(f"Extracted OPRK for player {playerDkId}: value={oprk_value}, quality={oprk_quality}")
+                    # Parse OPRK value - DraftKings returns ordinal strings like "1st", "13th", etc.
+                    # We need to extract just the integer part
+                    oprk_value = None
+                    if oprk_value_raw is not None:
+                        if isinstance(oprk_value_raw, int):
+                            oprk_value = oprk_value_raw
+                        elif isinstance(oprk_value_raw, str):
+                            # Remove ordinal suffixes (st, nd, rd, th) and parse as int
+                            import re
+                            match = re.match(r'^(\d+)', oprk_value_raw)
+                            if match:
+                                try:
+                                    oprk_value = int(match.group(1))
+                                except ValueError:
+                                    logger.warning(f"Failed to parse OPRK value '{oprk_value_raw}' for player {playerDkId}")
+                                    oprk_value = None
+                    
+                    logger.debug(f"Extracted OPRK for player {playerDkId}: raw='{oprk_value_raw}' parsed={oprk_value}, quality={oprk_quality}")
                     return oprk_value, oprk_quality
             
             return None, None
