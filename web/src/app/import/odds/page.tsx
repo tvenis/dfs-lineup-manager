@@ -46,6 +46,7 @@ export default function OddsImportPage() {
   
   // Result dialog state
   const [showResultDialog, setShowResultDialog] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [importResult, setImportResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
   const [lastEndpoint, setLastEndpoint] = useState<string>('');
 
@@ -122,6 +123,7 @@ export default function OddsImportPage() {
         const options: GameOption[] = [];
         // Always include All at top
         options.push({ value: 'All', label: 'All Games' });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const g of data.games as any[]) {
           const eid: string | null = g.odds_api_gameid;
           if (!eid) continue;
@@ -159,7 +161,8 @@ export default function OddsImportPage() {
       let apiUrl = '';
       let description = '';
       let sport = '';
-      let requestBody: any = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const requestBody: any = {};
       
       switch (endpoint) {
         case 'participants':

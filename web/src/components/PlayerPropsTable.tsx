@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
-import { Check, X, Minus, Trophy, Target, Clock, ChevronUp, ChevronDown, Search } from "lucide-react";
+import { Check, X, Minus, Target, Clock, ChevronUp, ChevronDown, Search } from "lucide-react";
 import { buildApiUrl } from "@/config/api";
 import { WeekService } from "@/lib/weekService";
 import type { Week } from "@/types/prd";
@@ -28,6 +28,8 @@ interface PlayerPropsData {
   result_status: string | null;
 }
 
+// Empty interface maintained for future prop additions
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface PlayerPropsTableProps {}
 
 const MARKET_OPTIONS = [
@@ -63,7 +65,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
 
   // Calculate summary statistics from filtered props data
   const summaryStats = useMemo(() => {
-    let totalProps = propsData.length;
+    const totalProps = propsData.length;
     let oversHits = 0;
     let pushes = 0;
     let undersMisses = 0;
@@ -105,7 +107,9 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
   // Sort the props data based on current sort settings
   const sortedPropsData = useMemo(() => {
     const sorted = [...propsData].sort((a, b) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let aValue: any = a[sortColumn as keyof PlayerPropsData];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let bValue: any = b[sortColumn as keyof PlayerPropsData];
       
       // Handle null/undefined values
@@ -152,15 +156,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     fetchWeeks();
   }, []);
 
-  // Fetch data when filters change
-  useEffect(() => {
-    if (selectedWeekId) {
-      fetchPlayerProps();
-    }
-  }, [selectedWeekId, selectedPosition, selectedBookmaker, selectedMarket, playerSearchTerm, selectedTier, selectedResult]);
-
-
-  const fetchPlayerProps = async () => {
+  const fetchPlayerProps = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -179,6 +175,7 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
         setPropsData(data);
         
               // Extract unique bookmakers from the data
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const bookmakers = [...new Set(data.map((p: any) => p.bookmaker).filter(Boolean))].sort() as string[];
               setAvailableBookmakers(bookmakers);
       } else {
@@ -191,7 +188,14 @@ export function PlayerPropsTable({}: PlayerPropsTableProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedWeekId, selectedPosition, selectedBookmaker, selectedMarket, playerSearchTerm, selectedTier, selectedResult]);
+
+  // Fetch data when filters change
+  useEffect(() => {
+    if (selectedWeekId) {
+      fetchPlayerProps();
+    }
+  }, [selectedWeekId, fetchPlayerProps]);
 
   const handleWeekChange = (value: string) => {
     setSelectedWeekId(value === "all" ? null : parseInt(value));

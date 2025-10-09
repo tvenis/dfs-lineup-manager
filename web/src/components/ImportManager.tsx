@@ -4,9 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button'
 import { Alert, AlertDescription } from './ui/alert'
 import { Label } from './ui/label'
-import { Input } from './ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
-import { Upload, FileText, CheckCircle, XCircle, Eye, RefreshCw, Database, Globe, Calendar as CalendarIcon } from 'lucide-react'
+import { Upload, FileText, CheckCircle, XCircle, Eye, RefreshCw, Globe, Calendar as CalendarIcon } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Checkbox } from './ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
@@ -33,18 +32,6 @@ const marketOptions = [
   { id: 'totals', label: 'Totals', description: 'Over/Under betting' }
 ]
 
-// Types for API responses
-interface DraftKingsImportResponse {
-  players_added: number
-  players_updated: number
-  entries_added: number
-  entries_updated: number
-  entries_skipped: number
-  errors: string[]
-  total_processed: number
-}
-
-
 interface RecentActivity {
   id: number
   timestamp: string
@@ -62,6 +49,7 @@ interface RecentActivity {
   importType?: 'player-pool' | 'projections' | 'odds-api' | 'actuals' // New field for tab-specific tracking
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string }) {
   const searchParams = useSearchParams()
   const section = searchParams?.get('section')
@@ -69,11 +57,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   const [history, setHistory] = useState<RecentActivity[]>([])
   const [weeks, setWeeks] = useState<Week[]>([])
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null)
-  const [isImporting, setIsImporting] = useState(false)
-  const [, setLastImportResult] = useState<DraftKingsImportResponse | null>(null)
-  
-  // Odds-API Integration state
-  const [oddsWeek, setOddsWeek] = useState<string>(selectedWeek) // Default to active week
   const [oddsSport, setOddsSport] = useState<string>('NFL')
   const [oddsStartTime, setOddsStartTime] = useState<Date | undefined>(undefined)
   const [oddsEndTime, setOddsEndTime] = useState<Date | undefined>(undefined)
@@ -120,6 +103,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         const options: GameOption[] = []
         // Always include All at top
         options.push({ value: 'All', label: 'All Games' })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const g of data.games as any[]) {
           const eid: string | null = g.odds_api_gameid
           if (!eid) continue
@@ -187,10 +171,6 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
   }
 
   // Filter weeks to show only past and active weeks (no upcoming)
-  const availableWeeks = weeks.filter(week => 
-    week.status === 'Completed' || week.status === 'Active'
-  )
-
   // Helper function to get week label by week ID
   const getWeekLabelById = (weekId: number) => {
     const week = weeks.find(w => w.id === weekId)
@@ -331,7 +311,8 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
       let apiUrl = ''
       let description = ''
       let sport = ''
-      let requestBody: any = {}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const requestBody: any = {}
       
       switch (endpoint) {
         case 'participants':
@@ -492,7 +473,7 @@ export function ImportManager({ selectedWeek = '1' }: { selectedWeek?: string })
         recordsSkipped: 0,
         errors: data.errors || [],
         user_name: null,
-        details: null,
+        details: details,
         importType: 'odds-api'
       }
       
