@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
+import { ChevronUp, ChevronDown, ExternalLink, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { PlayerPoolProps } from '@/components/PlayerPoolProps';
 import { CommentIcon } from '@/components/CommentIcon';
@@ -494,11 +494,11 @@ export function PlayerPoolTable({
           </TableHead>
               <TableHead>Props</TableHead>
               <TableHead 
-                className="w-20 cursor-pointer hover:bg-muted/50"
+                className="w-32 cursor-pointer hover:bg-muted/50"
                 onClick={() => handleSort('exclude')}
               >
                 <div className="flex items-center gap-2">
-                  Exclude
+                  Actions
                   {getSortIcon('exclude')}
                 </div>
               </TableHead>
@@ -790,13 +790,33 @@ export function PlayerPoolTable({
                       selectedWeek={selectedWeek}
                     />
                   </TableCell>
-                  <TableCell>
-                    <Checkbox
-                      checked={entry.excluded === true}
-                      onCheckedChange={(checked) => 
-                        onPlayerUpdate(entry.id, { excluded: checked })
-                      }
-                    />
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`gap-1 ${
+                          playersWithComments.has(entry.player?.playerDkId || 0)
+                            ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                            : 'hover:bg-muted'
+                        }`}
+                      >
+                        <MessageSquare 
+                          className={`w-4 h-4 ${
+                            playersWithComments.has(entry.player?.playerDkId || 0) ? 'fill-current' : ''
+                          }`} 
+                        />
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onPlayerUpdate(entry.id, { excluded: !entry.excluded })}
+                        className="gap-1 text-xs px-2 text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {entry.excluded ? 'Include' : 'Exclude'}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
