@@ -47,7 +47,7 @@ export function PlayerPoolTable({
   getTierStats
 }: PlayerPoolTableProps) {
   const [playersWithComments, setPlayersWithComments] = useState<Set<number>>(new Set());
-  const [playerComments, setPlayerComments] = useState<Record<number, string>>({});
+  const [playerComments, setPlayerComments] = useState<Record<number, Array<{id: number, content: string, created_at: string}>>>({});
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
   const [openCommentPopover, setOpenCommentPopover] = useState<number | null>(null);
 
@@ -57,7 +57,7 @@ export function PlayerPoolTable({
       if (players.length === 0) return;
       
       const playersWithRecentComments = new Set<number>();
-      const commentsMap: Record<number, string> = {};
+      const commentsMap: Record<number, Array<{id: number, content: string, created_at: string}>> = {};
       
       // Check comments for each player
       const commentPromises = players.map(async (player) => {
@@ -72,11 +72,14 @@ export function PlayerPoolTable({
           
           if (weekComments.length > 0) {
             playersWithRecentComments.add(playerDkId);
-            // Use the most recent comment for this week
-            const latestComment = weekComments.sort((a, b) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            )[0];
-            commentsMap[playerDkId] = latestComment.content;
+            // Store all comments for this week, sorted by creation date (newest first)
+            commentsMap[playerDkId] = weekComments
+              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+              .map(comment => ({
+                id: comment.id,
+                content: comment.content,
+                created_at: comment.created_at
+              }));
           }
         } catch (error) {
           console.error(`Error loading comments for player ${playerDkId}:`, error);
@@ -96,24 +99,31 @@ export function PlayerPoolTable({
     const comment = commentInputs[playerDkId]?.trim();
     if (comment) {
       try {
-        await CommentService.createComment({
+        const newComment = await CommentService.createComment({
           content: comment,
           playerDkId: playerDkId,
           week_id: selectedWeek
         });
-        setPlayerComments(prev => ({ ...prev, [playerDkId]: comment }));
+        
+        // Add the new comment to the existing comments array
+        setPlayerComments(prev => {
+          const existingComments = prev[playerDkId] || [];
+          const updatedComments = [{
+            id: newComment.id,
+            content: newComment.content,
+            created_at: newComment.created_at
+          }, ...existingComments];
+          return { ...prev, [playerDkId]: updatedComments };
+        });
+        
         // Refresh the playersWithComments set
         setPlayersWithComments(prev => new Set([...prev, playerDkId]));
+        
+        // Clear the input
+        setCommentInputs(prev => ({ ...prev, [playerDkId]: '' }));
       } catch (error) {
         console.error('Failed to save comment:', error);
       }
-    } else {
-      // Remove comment if empty
-      setPlayerComments(prev => {
-        const newComments = { ...prev };
-        delete newComments[playerDkId];
-        return newComments;
-      });
     }
     setOpenCommentPopover(null);
   };
@@ -146,7 +156,7 @@ export function PlayerPoolTable({
         return newSet;
       });
     } catch (error) {
-      console.error('Failed to clear comment:', error);
+      console.error('Failed to clear comments:', error);
     }
   };
 
@@ -916,22 +926,29 @@ export function PlayerPoolTable({
                               >
                                 Save
                               </Button>
-                              {playerComments[entry.player?.playerDkId || 0] && (
+                              {playerComments[entry.player?.playerDkId || 0] && playerComments[entry.player?.playerDkId || 0].length > 0 && (
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleClearComment(entry.player?.playerDkId || 0)}
                                 >
-                                  Clear
+                                  Clear All
                                 </Button>
                               )}
                             </div>
-                            {playerComments[entry.player?.playerDkId || 0] && (
+                            {playerComments[entry.player?.playerDkId || 0] && playerComments[entry.player?.playerDkId || 0].length > 0 && (
                               <div className="pt-2 border-t">
-                                <p className="text-xs text-muted-foreground mb-1">Current note:</p>
-                                <p className="text-xs bg-muted p-2 rounded">
-                                  {playerComments[entry.player?.playerDkId || 0]}
-                                </p>
+                                <p className="text-xs text-muted-foreground mb-2">Notes:</p>
+                                <div className="space-y-2">
+                                  {playerComments[entry.player?.playerDkId || 0].map((comment, index) => (
+                                    <div key={comment.id} className="text-xs bg-muted p-2 rounded">
+                                      <p className="mb-1">{comment.content}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {new Date(comment.created_at).toLocaleString()}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
