@@ -884,11 +884,11 @@ export function WeeklyLineupManager({ selectedWeek: _selectedWeek }: { selectedW
                                           }</span>
                                         );
                                         return <>
-                                          {score !== undefined ? score.toFixed(1) : '—'}
+                                          {score != null ? score.toFixed(1) : '—'}
                                           {indicator}
                                         </>;
                                       })()}
-                                      {!isDST && (displayActuals !== undefined ? displayActuals.toFixed(1) : '—')}
+                                      {!isDST && (displayActuals != null ? displayActuals.toFixed(1) : '—')}
                                     </span>
                                   </div>
 
