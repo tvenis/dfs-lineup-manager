@@ -788,6 +788,8 @@ class WeeklyPlayerSummary(Base):
     consensus_projection = Column(Float)
     consensus_ownership = Column(Numeric(5, 2))
     baseline_source = Column(String(100))
+    oprk_value = Column(Integer)  # Opponent Rank value (lower is better matchup)
+    oprk_quality = Column(String(20))  # Opponent Rank quality: 'High', 'Medium', 'Low'
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

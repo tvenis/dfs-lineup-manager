@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from app.models import WeeklyPlayerSummary, PlayerPoolEntry, Projection, OwnershipEstimate
 import logging
 
@@ -38,6 +38,11 @@ class WeeklySummaryService:
                 db, week_id, playerDkId
             )
             
+            # Get OPRK data from player pool entry
+            oprk_value, oprk_quality = WeeklySummaryService._get_oprk_data(
+                db, week_id, playerDkId, main_draftgroup
+            )
+            
             # Upsert weekly summary
             existing = db.query(WeeklyPlayerSummary).filter(
                 and_(
@@ -51,6 +56,8 @@ class WeeklySummaryService:
                 existing.consensus_projection = consensus_projection
                 existing.consensus_ownership = consensus_ownership
                 existing.baseline_source = main_draftgroup or "multi_slate"
+                existing.oprk_value = oprk_value
+                existing.oprk_quality = oprk_quality
             else:
                 new_summary = WeeklyPlayerSummary(
                     week_id=week_id,
@@ -58,7 +65,9 @@ class WeeklySummaryService:
                     baseline_salary=baseline_salary,
                     consensus_projection=consensus_projection,
                     consensus_ownership=consensus_ownership,
-                    baseline_source=main_draftgroup or "multi_slate"
+                    baseline_source=main_draftgroup or "multi_slate",
+                    oprk_value=oprk_value,
+                    oprk_quality=oprk_quality
                 )
                 db.add(new_summary)
             
@@ -119,3 +128,62 @@ class WeeklySummaryService:
         ).scalar()
         
         return round(avg_ownership, 2) if avg_ownership else None
+    
+    @staticmethod
+    def _get_oprk_data(db: Session, week_id: int, playerDkId: int, main_draftgroup: str = None) -> Tuple[Optional[int], Optional[str]]:
+        """
+        Get OPRK (Opponent Rank) data from player pool entry's draftStatAttributes
+        Returns: (oprk_value, oprk_quality)
+        
+        OPRK is stored in draftStatAttributes as an object with id == -2
+        """
+        # Try main draft group first if provided
+        pool_entry = None
+        
+        if main_draftgroup:
+            pool_entry = db.query(PlayerPoolEntry).filter(
+                and_(
+                    PlayerPoolEntry.week_id == week_id,
+                    PlayerPoolEntry.playerDkId == playerDkId,
+                    PlayerPoolEntry.draftGroup == main_draftgroup
+                )
+            ).first()
+        
+        # Fallback to any pool entry for this player/week
+        if not pool_entry:
+            pool_entry = db.query(PlayerPoolEntry).filter(
+                and_(
+                    PlayerPoolEntry.week_id == week_id,
+                    PlayerPoolEntry.playerDkId == playerDkId
+                )
+            ).first()
+        
+        if not pool_entry or not pool_entry.draftStatAttributes:
+            return None, None
+        
+        # Extract OPRK from draftStatAttributes
+        try:
+            draft_stats = pool_entry.draftStatAttributes
+            
+            # Handle if it's stored as a string (shouldn't be, but just in case)
+            if isinstance(draft_stats, str):
+                import json
+                draft_stats = json.loads(draft_stats)
+            
+            # draftStatAttributes is a list of attribute objects
+            if isinstance(draft_stats, list):
+                # Find the OPRK attribute (id == -2)
+                oprk_attr = next((attr for attr in draft_stats if isinstance(attr, dict) and attr.get('id') == -2), None)
+                
+                if oprk_attr:
+                    oprk_value = oprk_attr.get('value')
+                    oprk_quality = oprk_attr.get('quality')
+                    
+                    logger.debug(f"Extracted OPRK for player {playerDkId}: value={oprk_value}, quality={oprk_quality}")
+                    return oprk_value, oprk_quality
+            
+            return None, None
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract OPRK for player {playerDkId}: {str(e)}")
+            return None, None

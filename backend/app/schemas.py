@@ -1272,6 +1272,8 @@ class WeeklyPlayerSummaryBase(BaseModel):
     consensus_projection: Optional[float] = Field(None, description="Consensus projection")
     consensus_ownership: Optional[float] = Field(None, ge=0, le=100, description="Consensus ownership percentage")
     baseline_source: Optional[str] = Field(None, max_length=100, description="Source of baseline data")
+    oprk_value: Optional[int] = Field(None, description="Opponent Rank value (lower is better matchup)")
+    oprk_quality: Optional[str] = Field(None, max_length=20, description="Opponent Rank quality: 'High', 'Medium', 'Low'")
 
 class WeeklyPlayerSummaryCreate(WeeklyPlayerSummaryBase):
     pass
@@ -1281,6 +1283,8 @@ class WeeklyPlayerSummaryUpdate(BaseModel):
     consensus_projection: Optional[float] = None
     consensus_ownership: Optional[float] = Field(None, ge=0, le=100)
     baseline_source: Optional[str] = Field(None, max_length=100)
+    oprk_value: Optional[int] = None
+    oprk_quality: Optional[str] = Field(None, max_length=20)
 
 class WeeklyPlayerSummary(WeeklyPlayerSummaryBase):
     id: int

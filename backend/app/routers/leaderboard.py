@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
 from app.database import get_db
-from app.models import Player, Week, PlayerPropBet, Game, PlayerPoolEntry
+from app.models import Player, Week, PlayerPropBet, Game, WeeklyPlayerSummary, PlayerPoolEntry
 
 router = APIRouter()
 
@@ -22,13 +22,19 @@ def get_player_props_for_leaderboard(
     Get player props data for the leaderboard table with player names and results.
     """
     try:
-        # Build the base query with joins (matching the working player props endpoint pattern)
+        # Build the base query with joins
+        # Join WeeklyPlayerSummary for OPRK data (week-specific but not pool-specific)
+        # Left join PlayerPoolEntry for tier filter only
         query = (
-            db.query(PlayerPropBet, Game, Week, Player, PlayerPoolEntry)
+            db.query(PlayerPropBet, Game, Week, Player, WeeklyPlayerSummary, PlayerPoolEntry)
             .join(Game, PlayerPropBet.game_id == Game.id)
             .join(Week, PlayerPropBet.week_id == Week.id)
             .join(Player, PlayerPropBet.playerDkId == Player.playerDkId)
-            .join(PlayerPoolEntry, and_(
+            .outerjoin(WeeklyPlayerSummary, and_(
+                PlayerPropBet.playerDkId == WeeklyPlayerSummary.playerDkId,
+                PlayerPropBet.week_id == WeeklyPlayerSummary.week_id
+            ))
+            .outerjoin(PlayerPoolEntry, and_(
                 PlayerPropBet.playerDkId == PlayerPoolEntry.playerDkId,
                 PlayerPropBet.week_id == PlayerPoolEntry.week_id
             ))
@@ -90,15 +96,19 @@ def get_player_props_for_leaderboard(
             else:
                 query = query.filter(PlayerPropBet.result_status == result_status)
         
+        # Add DISTINCT to prevent duplicates when player appears in multiple draft groups
+        # Use distinct on PlayerPropBet.id to ensure we only get unique prop bets
+        query = query.distinct(PlayerPropBet.id)
+        
         # Order by week (desc), then by player name
-        query = query.order_by(Week.week_number.desc(), Player.displayName)
+        query = query.order_by(PlayerPropBet.id, Week.week_number.desc(), Player.displayName)
         
         # Execute query
         results = query.all()
         
-        # Convert to list of dictionaries (matching the working endpoint pattern)
+        # Convert to list of dictionaries
         props_data = []
-        for prop_row, game_row, week_row, player_row, pool_entry_row in results:
+        for prop_row, game_row, week_row, player_row, weekly_summary_row, pool_entry_row in results:
             # Get opponent abbreviation from game data
             opponent_abbr = None
             try:
@@ -107,25 +117,12 @@ def get_player_props_for_leaderboard(
             except Exception:
                 opponent_abbr = None
             
-            # Extract OPRK data from draftStatAttributes
+            # Get OPRK data from WeeklyPlayerSummary (no longer need to parse JSON)
             oprk_value = None
             oprk_quality = None
-            try:
-                if pool_entry_row and pool_entry_row.draftStatAttributes:
-                    import json
-                    if isinstance(pool_entry_row.draftStatAttributes, str):
-                        attrs = json.loads(pool_entry_row.draftStatAttributes)
-                    else:
-                        attrs = pool_entry_row.draftStatAttributes
-                    
-                    # Find OPRK attribute (id === -2)
-                    oprk_attr = next((attr for attr in attrs if attr.get('id') == -2), None)
-                    if oprk_attr:
-                        oprk_value = oprk_attr.get('value')
-                        oprk_quality = oprk_attr.get('quality')
-            except Exception:
-                oprk_value = None
-                oprk_quality = None
+            if weekly_summary_row:
+                oprk_value = weekly_summary_row.oprk_value
+                oprk_quality = weekly_summary_row.oprk_quality
             
             props_data.append({
                 "week_number": week_row.week_number,
